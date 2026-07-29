@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@media (prefers-reduced-motion: no-preference) {
+    html {
+        scroll-behavior: smooth;
+    }
+}
+
+@theme {
+}
+
+@theme {
+    /* Wajib pakai prefix --bg-image- agar dideteksi sebagai background image */
+    --bg-image-blue-gradient: linear-gradient(
+        to bottom,
+        #2c8de2,
+        #267cc7,
+        #216cae,
+        #1c5c94,
+        #184d7c
+    );
+}
+
+@layer components {
+    .spinner {
+        margin: 3.2rem auto 1.6rem;
+        width: 60px;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        border: 8px solid var(--color-primary-900);
+        border-right-color: var(--color-primary-200);
+        animation: rotate 1s infinite linear;
+    }
+
+    .spinner-mini {
+        margin: 0;
+        width: 20px;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        border: 2px solid var(--color-primary-200);
+        border-right-color: transparent;
+        animation: rotate 1s infinite linear;
+    }
+
+    @keyframes rotate {
+        to {
+            transform: rotate(1turn);
+        }
+    }
+}
+@keyframe marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateY(-50%);
+    }
+}
+.animate-marquee {
+    animation: marquee 20s linear infinite;
+}

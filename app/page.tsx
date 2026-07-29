@@ -1,65 +1,67 @@
-import Image from "next/image";
+import bg from "@/public/bg.jpg";
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+import ScrollRunningText from "@/app/ui/scroll-running-text";
+import FamilyHistorySection from "@/app/ui/family-history-section";
+import StaysPreviewSection from "@/app/ui/stays-preview-section";
+import ServiceAndAmenitiesPreview from "@/app/ui/service-and-amenities-preview";
+import MoreServiceAndAmenities from "@/app/ui/more-service-and-amenities";
+import Gallery from "@/app/ui/gallery";
+import Reviews from "@/app/ui/reviews";
+import FaqSection from "@/app/ui/faq-section";
+import ParallaxImageSection from "@/app/ui/parallax-image-section";
+import Footer from "@/app/ui/footer";
+import Hero from "@/app/ui/hero";
+
+// TODO: `bg` is not defined/imported anywhere — this will throw a ReferenceError at runtime.
+// Remove this line or properly import/define `bg` before using it.
+console.log(bg);
+
+export default function Page() {
+    return (
+        <div className="relative">
+            <Hero />
+
+            {/* 
+              NOTE: empty spacer div used purely for layout gap.
+              Consider replacing with margin/padding on the adjacent element instead,
+              since an empty div carries no semantic meaning and is harder to maintain.
+
+              WARNING: `h-25` is not a default Tailwind spacing class (default scale jumps
+              from h-24 to h-28). Verify this exists in tailwind.config, otherwise it has no effect.
+            */}
+            {/* <div className="h-25" /> */}
+
+            <div className="relative bg-white">
+                <ScrollRunningText />
+
+                <FamilyHistorySection />
+
+                {/* ADA MASALAH DI SINI MENGENAI RESPONSIVITAS HERO IMAGE TIDAK TERCROP */}
+                <StaysPreviewSection />
+
+                <ServiceAndAmenitiesPreview />
+
+                <MoreServiceAndAmenities />
+
+                {/* 
+                  PERF: this section is likely heavy (image-heavy gallery).
+                  Consider lazy-loading with next/dynamic + a loading fallback,
+                  since it's below the fold and not needed on initial paint.
+                */}
+                <Gallery />
+
+                <Reviews />
+
+                <FaqSection />
+
+                {/* <ParallaxImageSection /> */}
+
+                {/* ADA MASALAH DI SINI MENGENAI RESPONSIVITAS HERO IMAGE TIDAK TERCROP */}
+                {/* <Footer /> */}
+            </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    );
 }
+
+// TODO: consider adding `export const metadata = {...}` or `generateMetadata()`
+// for SEO purposes (title, description, og:image) if not defined elsewhere for this route.
