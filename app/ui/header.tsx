@@ -12,7 +12,7 @@ import MenuPanel from "@/app/ui/menu-panel";
 // Homepage only: the last two are anchors into this page's sections.
 const NAV_LINKS = [
     { label: "Stays", href: "/stays" },
-    { label: "Experiences", href: "/experiences" },
+    { label: "Experiences", href: "/spa" },
     { label: "Amenities", href: "/#amenities" },
     { label: "Gallery", href: "/#gallery" },
 ];
