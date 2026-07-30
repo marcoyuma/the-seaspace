@@ -1,13 +1,12 @@
 import Container from "@/app/ui/container";
 import Heading from "@/app/ui/heading";
 import OverlineText from "@/app/ui/overline-text";
+import PillLink from "@/app/ui/pill-link";
 import StayCardPreview from "@/app/ui/stay-card-preview";
 import Text from "@/app/ui/text";
 import stay1 from "@/public/villas/villa1/stay1.jpg";
 import stay4 from "@/public/villas/villa4/luxury-holiday-home-2.jpg";
 import { StaticImageData } from "next/image";
-
-import Link from "next/link";
 
 /**
  * Represents a single stay/villa entry shown in the homepage preview.
@@ -72,12 +71,13 @@ export default function StaysPreviewSection() {
                     {/* Navigation, not an in-place action — must be a link
                         (not a <button>) for correct semantics, SEO, and
                         keyboard/middle-click/new-tab behavior out of the box. */}
-                    <Link
+                    <PillLink
                         href={STAYS_PAGE_PATH}
-                        className="shrink-0 border border-black rounded-[20px] h-11 px-10.5 py-2.5 flex items-center justify-center text-[16px] transition-colors hover:bg-black hover:text-white"
+                        variant="outline"
+                        className="shrink-0"
                     >
                         Explore stays
-                    </Link>
+                    </PillLink>
                 </div>
 
                 {/* CSS Grid (not flex justify-between) keeps the gap fixed

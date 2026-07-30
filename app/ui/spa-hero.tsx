@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
 
 import { playfair } from "@/app/_styles/fonts";
+import PillLink from "@/app/ui/pill-link";
 import balconyImg from "@/public/scenery/balcony-with-view-santorini-greece.jpg";
 import treatmentBedImg from "@/public/leisure/spa/bed-with-sea-view.jpg";
 
@@ -17,8 +17,12 @@ const TREATMENTS_ANCHOR = "#treatments";
  * Server Component — nothing here is interactive beyond two links.
  */
 export default function SpaHero() {
+    // `gap-6` matches every other image grid in the project (stays preview,
+    // services row, stays index). Both tracks are `1fr`, so narrowing the gap
+    // widens the images rather than insetting them — the columns still reach
+    // the Container's edges.
     return (
-        <section className="grid grid-cols-2 gap-12 pt-16">
+        <section className="grid grid-cols-2 gap-6 pt-16">
             <div className="flex flex-col">
                 <h1
                     className={`${playfair.className} text-[54px] leading-[1.05] text-black`}
@@ -32,19 +36,13 @@ export default function SpaHero() {
                 </p>
 
                 <div className="mt-8 flex gap-4">
-                    <Link
-                        href={BOOKING_PATH}
-                        className="rounded-[40px] bg-[#131A2B] px-4 py-3 text-[16px] font-medium text-white transition-opacity duration-200 ease-out hover:opacity-90 motion-reduce:transition-none"
-                    >
+                    <PillLink href={BOOKING_PATH} variant="gradient">
                         Reserve a treatment
-                    </Link>
+                    </PillLink>
 
-                    <Link
-                        href={TREATMENTS_ANCHOR}
-                        className="rounded-[40px] border border-black px-4 py-3 text-[16px] font-medium text-black transition-colors hover:bg-black hover:text-white"
-                    >
+                    <PillLink href={TREATMENTS_ANCHOR} variant="outline">
                         See the ritual menu
-                    </Link>
+                    </PillLink>
                 </div>
 
                 {/* `flex-1` lets this image absorb whatever height the right

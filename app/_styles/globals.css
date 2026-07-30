@@ -7,11 +7,9 @@
 }
 
 @theme {
-}
-
-@theme {
-    /* Wajib pakai prefix --bg-image- agar dideteksi sebagai background image */
-    --bg-image-blue-gradient: linear-gradient(
+    /* Namespace harus --background-image-* agar Tailwind v4 membuat utility
+       `bg-blue-gradient`; prefix lain (mis. --bg-image-) tidak dikenali. */
+    --background-image-blue-gradient: linear-gradient(
         to bottom,
         #2c8de2,
         #267cc7,
