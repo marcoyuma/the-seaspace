@@ -10,7 +10,7 @@ import loungeImg from "@/public/villas/villa4/minimalist-coastal-interior-with-a
  */
 export default function SpaRelaxationSection() {
     return (
-        <section id="treatments" className="scroll-mt-14 pt-28">
+        <section id="treatments" className="scroll-mt-14 pt-6">
             <div className="relative h-155 w-full overflow-hidden rounded-[20px]">
                 <Image
                     src={loungeImg}

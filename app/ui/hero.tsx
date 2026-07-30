@@ -4,6 +4,7 @@ import Image from "next/image";
 // import bg from "@/public/bg.jpg";
 import bg from "@/public/bg-1.jpg";
 import { MapTrifoldIcon } from "@phosphor-icons/react/dist/ssr";
+import PillLink from "@/app/ui/pill-link";
 
 export default function Hero() {
     return (
@@ -46,9 +47,12 @@ export default function Hero() {
                         </p>
 
                         <div className="flex flex-row gap-1">
-                            <button className="font-semibold px-8 py-3 bg-white text-black rounded-[40px]">
+                            {/* <button className="font-semibold px-8 py-3 bg-white text-black rounded-[40px]">
                                 Stay a night
-                            </button>
+                            </button> */}
+                            <PillLink href="/stays" variant="white">
+                                Stay a night
+                            </PillLink>
                             {/* <button className="w-10 h-10 bg-white rounded-[25px] flex justify-center items-center cursor-pointer">
                                 <MapTrifoldIcon size={25} />
                             </button> */}

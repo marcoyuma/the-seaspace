@@ -5,6 +5,7 @@ import type { Stay } from "@/app/_lib/stays";
 import { playfair } from "@/app/_styles/fonts";
 import AmenitiesPanel from "@/app/ui/amenities-panel";
 import HorizontalLine from "@/app/ui/horizontal-line";
+import PillLink from "@/app/ui/pill-link";
 
 /** Uppercase field label sitting above a hairline, e.g. "BED TYPE". */
 function SpecField({
@@ -67,12 +68,13 @@ export default function StayInfoSection({ stay }: { stay: Stay }) {
                     {stay.description}
                 </p>
 
-                <Link
+                <PillLink
                     href={`/stays/${stay.id}/book`}
-                    className="mt-10 inline-block rounded-[40px]  bg-[#131A2B] px-8 py-3 text-[16px] font-medium text-white transition-opacity duration-200 ease-out hover:opacity-90 motion-reduce:transition-none"
+                    variant="gradient"
+                    className="mt-10"
                 >
                     Book room
-                </Link>
+                </PillLink>
 
                 <div className="mt-14 grid grid-cols-2 gap-x-6">
                     <SpecField
