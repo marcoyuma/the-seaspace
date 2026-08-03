@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 // import bg from "@/public/bg.jpg";
-import bg from "@/public/bg-1.jpg";
+import bg from "@/public/bg.jpg";
 import { MapTrifoldIcon } from "@phosphor-icons/react/dist/ssr";
 import PillLink from "@/app/ui/pill-link";
 
@@ -32,12 +32,16 @@ export default function Hero() {
                         sizes="100vw"
                         alt="Beach scape views"
                     />
-                    <div className="absolute inset-0 bg-linear-to-r from-black/10 to-100% to-transparent" />
+                    <div className="absolute inset-0 bg-linear-to-r from-black/20 to-100% to-transparent" />
                 </div>
 
                 <div className="flex items-center w-full h-dvh pt-7.25">
                     <div className="flex flex-col items-center mb-40 justify-center inset-x-0 gap-y-5 fixed">
-                        <h1 className="text-[64px] text-center text-white leading-14 font-bold tracking-[-0.03em] max-w-151.25">
+                        {/* leading-[1.05], bukan `leading-14` (56px pada teks
+                            64px): Playfair punya ascender/descender lebih
+                            panjang dari Manrope, dan pada leading serapat itu
+                            huruf "y" pada "symphony" terpotong. */}
+                        <h1 className="text-[64px] text-center text-white leading-[1.05] font-display font-bold tracking-[-0.03em] max-w-151.25">
                             Embrace the symphony of waves
                         </h1>
                         <p className="text-[16px] text-center text-white font-semibold tracking-[-0.03em] max-w-128.25">
@@ -87,7 +91,7 @@ export default function Hero() {
 
                 {/* Copy */}
                 <div className="px-6 pt-8 text-center">
-                    <h1 className="mx-auto max-w-2xl text-[clamp(2rem,7vw,3.5rem)] font-bold leading-[1.05] tracking-[-0.03em] text-white">
+                    <h1 className="mx-auto max-w-2xl text-[clamp(2rem,7vw,3.5rem)] font-display font-bold leading-[1.05] tracking-[-0.03em] text-white">
                         Embrace the symphony of waves
                     </h1>
                     <p className="mx-auto mt-4 max-w-md text-[clamp(0.875rem,2.5vw,1.125rem)] font-semibold tracking-[-0.03em] text-white">

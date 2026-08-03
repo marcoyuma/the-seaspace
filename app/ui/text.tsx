@@ -7,7 +7,7 @@ export default function Text({
 }) {
     return (
         <p
-            className={`text-[16px] text-black font-medium max-w-128.25 ${classname}`}
+            className={`text-[18px] text-black/50 font-medium max-w-128.25 ${classname}`}
         >
             {children}
         </p>
