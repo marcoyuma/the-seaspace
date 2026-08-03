@@ -1,9 +1,9 @@
 import Image from "next/image";
 
-import { playfair } from "@/app/_styles/fonts";
 import PillLink from "@/app/ui/pill-link";
 import balconyImg from "@/public/scenery/balcony-with-view-santorini-greece.jpg";
 import treatmentBedImg from "@/public/leisure/spa/bed-with-sea-view.jpg";
+import OverlineText from "@/app/ui/overline-text";
 
 /** Where the primary CTA sends guests until a dedicated spa booking flow exists. */
 const BOOKING_PATH = "/stays";
@@ -24,9 +24,8 @@ export default function SpaHero() {
     return (
         <section className="grid grid-cols-2 gap-6 pt-16">
             <div className="flex flex-col">
-                <h1
-                    className={`${playfair.className} text-[54px] leading-[1.05] text-black`}
-                >
+                <OverlineText>Spa & wellness</OverlineText>
+                <h1 className="font-display text-[54px] mt-6 leading-[1.05] text-black">
                     Stillness Waits at the Seaspace Spa
                 </h1>
 
