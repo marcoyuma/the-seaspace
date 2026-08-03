@@ -86,7 +86,10 @@ export default function ServiceAndAmenitiesPreview({
                 for screen readers, instead of relying on a generic <div>. */}
             <section
                 aria-labelledby="services-preview-heading"
-                className="flex flex-col gap-6.5"
+                // The cross-sell row on interior pages reads as a centred
+                // outro; the landing page's full trio stays left-aligned with
+                // the sections above it.
+                className={`flex flex-col gap-6.5 ${!isFullSet ? "items-center text-center" : ""}`}
             >
                 <OverlineText>{overline}</OverlineText>
                 <Heading id="services-preview-heading">{heading}</Heading>
@@ -94,13 +97,15 @@ export default function ServiceAndAmenitiesPreview({
 
                 {/* CSS Grid (not flex justify-between) keeps the gap fixed
                     regardless of item count, matching the spacing used in
-                    StaysPreviewSection for visual consistency. */}
+                    StaysPreviewSection for visual consistency.
+                    `w-full` is load-bearing: the parent's `items-center` makes
+                    children shrink-to-fit, and fluid ServiceCards are entirely
+                    absolutely positioned (0 max-content), so the row would
+                    collapse to zero width without an explicit width. */}
                 <div
-                    className={
-                        isFullSet
-                            ? "grid grid-cols-3 gap-6"
-                            : "grid grid-cols-2 gap-6"
-                    }
+                    className={`grid w-full gap-6 ${
+                        isFullSet ? "grid-cols-3" : "grid-cols-2"
+                    }`}
                 >
                     {shownServices.map((service) => (
                         // `id` used as key, not the array index — `excludeId`
