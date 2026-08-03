@@ -1,7 +1,7 @@
-import Container from "@/app/ui/container";
-import ServiceAndAmenitiesPreview from "@/app/ui/service-and-amenities-preview";
-import SpaHero from "@/app/ui/spa-hero";
-import SpaRelaxationSection from "@/app/ui/spa-relaxation-section";
+import Container from "@/components/ui/container";
+import ServiceAndAmenitiesPreview from "@/features/services/components/service-and-amenities-preview";
+import SpaHero from "@/features/spa/components/spa-hero";
+import SpaRelaxationSection from "@/features/spa/components/spa-relaxation-section";
 
 export const metadata = {
     title: "Spa",

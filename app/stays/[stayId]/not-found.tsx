@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import Container from "@/app/ui/container";
+import Container from "@/components/ui/container";
 
 export default function NotFound() {
     return (

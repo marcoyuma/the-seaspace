@@ -1,16 +1,16 @@
 import bg from "@/public/bg.jpg";
 
-import ScrollRunningText from "@/app/ui/scroll-running-text";
-import FamilyHistorySection from "@/app/ui/family-history-section";
-import StaysPreviewSection from "@/app/ui/stays-preview-section";
-import ServiceAndAmenitiesPreview from "@/app/ui/service-and-amenities-preview";
-import MoreServiceAndAmenities from "@/app/ui/more-service-and-amenities";
-import Gallery from "@/app/ui/gallery";
-import Reviews from "@/app/ui/reviews";
-import FaqSection from "@/app/ui/faq-section";
-import ParallaxImageSection from "@/app/ui/parallax-image-section";
-import Footer from "@/app/ui/footer";
-import Hero from "@/app/ui/hero";
+import ScrollRunningText from "@/features/home/components/scroll-running-text";
+import FamilyHistorySection from "@/features/home/components/family-history-section";
+import StaysPreviewSection from "@/features/stays/components/stays-preview-section";
+import ServiceAndAmenitiesPreview from "@/features/services/components/service-and-amenities-preview";
+import MoreServiceAndAmenities from "@/features/services/components/more-service-and-amenities";
+import Gallery from "@/features/home/components/gallery";
+import Reviews from "@/features/home/components/reviews";
+import FaqSection from "@/features/home/components/faq-section";
+import ParallaxImageSection from "@/components/layout/parallax-image-section";
+import Footer from "@/components/layout/footer";
+import Hero from "@/features/home/components/hero";
 
 // TODO: `bg` is not defined/imported anywhere — this will throw a ReferenceError at runtime.
 // Remove this line or properly import/define `bg` before using it.

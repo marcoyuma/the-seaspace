@@ -1,12 +1,12 @@
 import { josefin, manrope } from "@/app/_styles/fonts";
 
 import "@/app/_styles/globals.css";
-import Header from "@/app/ui/header";
+import Header from "@/components/layout/header";
 import { ReactNode } from "react";
 import { Metadata } from "next";
 import seaspaceIcon from "@/public/icons/seaspace-logo-final.png";
-import Footer from "@/app/ui/footer";
-import ParallaxImageSection from "@/app/ui/parallax-image-section";
+import Footer from "@/components/layout/footer";
+import ParallaxImageSection from "@/components/layout/parallax-image-section";
 
 export const metadata: Metadata = {
     title: {
