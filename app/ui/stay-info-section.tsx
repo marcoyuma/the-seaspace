@@ -57,7 +57,7 @@ export default function StayInfoSection({ stay }: { stay: Stay }) {
                     <span className="text-black/50">{stay.name}</span>
                 </nav>
 
-                <h1 className="font-display mt-4 text-[56px] leading-[1.1] text-black">
+                <h1 className="font-semibold mt-4 text-[48px] leading-none text-black">
                     {stay.name}
                 </h1>
 

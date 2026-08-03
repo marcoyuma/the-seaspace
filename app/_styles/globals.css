@@ -8,15 +8,14 @@
 
 /* `inline` wajib, bukan sekadar gaya penulisan. Variabel --font-* didefinisikan
    next/font pada elemen yang membawa class `.variable` (yaitu <body>), bukan di
-   :root. Dengan @theme biasa Tailwind meng-emit `:root { --font-display:
-   var(--font-playfair) }`, dan var() di dalam custom property diresolusi di
-   tempat property itu dideklarasikan — di :root --font-playfair belum ada,
+   :root. Dengan @theme biasa Tailwind meng-emit `:root { --font-logo:
+   var(--font-josefin) }`, dan var() di dalam custom property diresolusi di
+   tempat property itu dideklarasikan — di :root --font-josefin belum ada,
    sehingga nilainya jadi invalid dan fontnya diam-diam tidak pernah terpakai.
    `inline` menyubstitusi nilainya langsung ke utility-nya, sehingga var() baru
    diresolusi di elemen pemakai yang memang mewarisinya dari <body>. */
 @theme inline {
     --font-sans: var(--font-manrope);
-    --font-display: var(--font-playfair);
     --font-logo: var(--font-josefin);
 }
 

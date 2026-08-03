@@ -1,4 +1,4 @@
-import { josefin, manrope, playfair } from "@/app/_styles/fonts";
+import { josefin, manrope } from "@/app/_styles/fonts";
 
 import "@/app/_styles/globals.css";
 import Header from "@/app/ui/header";
@@ -29,11 +29,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             lang="en"
             style={{ overscrollBehavior: "none", overflowX: "hidden" }}
         >
-            {/* Ketiga `.variable` hanya mendefinisikan CSS variable-nya dan
+            {/* Kedua `.variable` hanya mendefinisikan CSS variable-nya dan
                 tidak menerapkan font-family apa pun — karena itu `font-sans`
                 ditulis eksplisit agar Manrope tetap jadi font default situs. */}
             <body
-                className={`${manrope.variable} ${playfair.variable} ${josefin.variable} font-sans relative antialiased min-h-screen flex flex-col`}
+                className={`${manrope.variable} ${josefin.variable} font-sans relative antialiased min-h-screen flex flex-col`}
             >
                 <Header />
 

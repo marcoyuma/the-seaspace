@@ -25,7 +25,7 @@ export default function SpaHero() {
         <section className="grid grid-cols-2 gap-6 pt-16">
             <div className="flex flex-col">
                 <OverlineText>Spa & wellness</OverlineText>
-                <h1 className="font-display text-[54px] mt-6 leading-[1.05] text-black">
+                <h1 className="font-semibold text-[48px] mt-6 leading-none text-black">
                     Stillness Waits at the Seaspace Spa
                 </h1>
 
