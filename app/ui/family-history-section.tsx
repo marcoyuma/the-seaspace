@@ -334,7 +334,7 @@ export default function FamilyHistorySection() {
                 <h2
                     aria-label={HEADING_TEXT}
                     ref={textRef}
-                    className="max-w-133 text-black font-semibold text-[48px] text-center relative z-20"
+                    className="max-w-133 text-black font-display font-semibold text-[48px] text-center relative z-20"
                 >
                     {HEADING_TEXT.split(" ").map((word, wi, arr) => (
                         <React.Fragment key={wi}>

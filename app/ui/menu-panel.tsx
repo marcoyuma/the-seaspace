@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/ssr";
 
 import { isActiveLink } from "@/app/_lib/nav";
-import { playfair } from "@/app/_styles/fonts";
 import HamburgerIcon from "@/app/ui/hamburger-icon";
 
 type NavLink = { label: string; href: string };
@@ -25,7 +24,8 @@ const ACTIVE_TINT = "text-black/70";
 
 // `overflow-hidden` clips the roll, so the line box has to be tall enough to
 // contain descenders ("y" in Stays) or they'd be shaved off at rest.
-const NAV_LINK_BASE = `${playfair.className} block text-[28px] font-light leading-[1.35] tracking-tight`;
+const NAV_LINK_BASE =
+    "font-display block text-[28px] font-light leading-[1.35] tracking-tight";
 
 /**
  * One of the large serif nav links.
