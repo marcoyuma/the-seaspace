@@ -1,6 +1,5 @@
 import Image from "next/image";
 
-import { playfair } from "@/app/_styles/fonts";
 import puttingGreenImg from "@/public/leisure/golf-course/golf-course2.jpg";
 
 /**
@@ -21,21 +20,6 @@ export default function GolfCourseSection() {
                     sizes="100vw"
                     className="object-cover"
                 />
-            </div>
-
-            <div className="mt-16 grid grid-cols-2 gap-12">
-                <h2
-                    className={`${playfair.className} text-[56px] leading-[1.1] text-black`}
-                >
-                    The Round
-                </h2>
-
-                <p className="text-[18px] leading-relaxed font-medium text-black/50">
-                    The layout follows the cliff edge from the first tee to the
-                    last green, and prevailing breezes mean no two rounds play
-                    alike. Clubs, carts and caddies are arranged at the pro
-                    shop.
-                </p>
             </div>
         </section>
     );

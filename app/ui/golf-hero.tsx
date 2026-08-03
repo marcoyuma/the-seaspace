@@ -1,9 +1,9 @@
 import Image from "next/image";
 
-import { playfair } from "@/app/_styles/fonts";
 import PillLink from "@/app/ui/pill-link";
 import cliffFairwayImg from "@/public/leisure/golf-course/golf-course3.jpg";
 import aerialGreenImg from "@/public/leisure/golf-course/golf-course.jpg";
+import OverlineText from "@/app/ui/overline-text";
 
 /** Where the primary CTA sends guests until a dedicated tee-time booking flow exists. */
 const BOOKING_PATH = "/stays";
@@ -24,19 +24,18 @@ export default function GolfHero() {
     // the Container's edges.
     return (
         <section className="grid grid-cols-2 gap-6 pt-16">
-            <div className="flex flex-col">
-                <h1
-                    className={`${playfair.className} text-[54px] leading-[1.05] text-black`}
-                >
+            <div className="flex flex-col gap-6">
+                <OverlineText>Try a swing now</OverlineText>
+                <h1 className="font-display text-[54px] leading-[1.05] text-black">
                     A Round Between the Cliffs and the Sea
                 </h1>
 
-                <p className="mt-6 max-w-140 text-[18px] leading-relaxed font-medium text-black/50">
+                <p className="max-w-140 text-[18px] leading-relaxed font-medium text-black/50">
                     Eighteen holes that trace the coastline hole for hole, where
                     the sea breeze decides how the round plays.
                 </p>
 
-                <div className="mt-8 flex gap-4">
+                <div className="flex gap-4">
                     <PillLink href={BOOKING_PATH} variant="gradient">
                         Book a tee time
                     </PillLink>
