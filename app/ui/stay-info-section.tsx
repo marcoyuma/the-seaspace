@@ -2,7 +2,6 @@ import Link from "next/link";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { Stay } from "@/app/_lib/stays";
-import { playfair } from "@/app/_styles/fonts";
 import AmenitiesPanel from "@/app/ui/amenities-panel";
 import HorizontalLine from "@/app/ui/horizontal-line";
 import PillLink from "@/app/ui/pill-link";
@@ -58,9 +57,7 @@ export default function StayInfoSection({ stay }: { stay: Stay }) {
                     <span className="text-black/50">{stay.name}</span>
                 </nav>
 
-                <h1
-                    className={`${playfair.className} mt-4 text-[56px] leading-[1.1] text-black`}
-                >
+                <h1 className="font-display mt-4 text-[56px] leading-[1.1] text-black">
                     {stay.name}
                 </h1>
 
