@@ -26,7 +26,7 @@ export default function GolfHero() {
         <section className="grid grid-cols-2 gap-6 pt-16">
             <div className="flex flex-col gap-6">
                 <OverlineText>Try a swing now</OverlineText>
-                <h1 className="font-display text-[54px] leading-[1.05] text-black">
+                <h1 className="font-semibold text-[48px] leading-none text-black">
                     A Round Between the Cliffs and the Sea
                 </h1>
 

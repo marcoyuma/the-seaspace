@@ -57,7 +57,7 @@ function MarqueeLine({
         <motion.h2
             style={{ x: prefersReducedMotion ? initialOffset : x }}
             // max-w-dvw to prevent the width takes more than screen wide
-            className="text-black/10 font-display font-bold text-[48px] leading-14 whitespace-nowrap max-w-dvw will-change-transform"
+            className="text-black/10 font-bold text-[48px] leading-14 whitespace-nowrap max-w-dvw will-change-transform"
         >
             {text}
         </motion.h2>

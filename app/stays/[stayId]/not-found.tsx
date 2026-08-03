@@ -6,7 +6,7 @@ export default function NotFound() {
     return (
         <Container>
             <div className="py-24 text-center">
-                <h1 className="font-display text-[56px] leading-[1.1] text-black">
+                <h1 className="font-semibold text-[48px] leading-none text-black">
                     We couldn&apos;t find that stay
                 </h1>
 

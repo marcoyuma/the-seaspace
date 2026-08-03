@@ -25,7 +25,7 @@ const ACTIVE_TINT = "text-black/70";
 // `overflow-hidden` clips the roll, so the line box has to be tall enough to
 // contain descenders ("y" in Stays) or they'd be shaved off at rest.
 const NAV_LINK_BASE =
-    "font-display block text-[28px] font-light leading-[1.35] tracking-tight";
+    "block text-[28px] font-light leading-[1.35] tracking-tight";
 
 /**
  * One of the large serif nav links.

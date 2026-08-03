@@ -63,10 +63,10 @@ export default function ParallaxImageSection() {
                 <div className="relative z-10 flex flex-col h-full px-8 pb-16 pt-8">
                     {/* Split headline — vertically centered */}
                     <div className="flex items-center justify-between flex-1">
-                        <h1 className="text-white font-display font-semibold text-[96px] leading-none select-none">
+                        <h1 className="text-white font-semibold text-[96px] leading-none select-none">
                             Here
                         </h1>
-                        <h1 className="text-white font-display font-semibold text-[96px] leading-none select-none">
+                        <h1 className="text-white font-semibold text-[96px] leading-none select-none">
                             unfold
                         </h1>
                     </div>
