@@ -1,7 +1,7 @@
-import Container from "@/app/ui/container";
-import GolfCourseSection from "@/app/ui/golf-course-section";
-import GolfHero from "@/app/ui/golf-hero";
-import ServiceAndAmenitiesPreview from "@/app/ui/service-and-amenities-preview";
+import Container from "@/components/ui/container";
+import GolfCourseSection from "@/features/golf-course/components/golf-course-section";
+import GolfHero from "@/features/golf-course/components/golf-hero";
+import ServiceAndAmenitiesPreview from "@/features/services/components/service-and-amenities-preview";
 
 export const metadata = {
     title: "Golf Course",

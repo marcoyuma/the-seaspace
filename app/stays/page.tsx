@@ -1,9 +1,9 @@
 import Link from "next/link";
 
-import { getStays } from "@/app/_lib/stays";
-import Container from "@/app/ui/container";
-import SectionHeading from "@/app/ui/section-heading";
-import StayCard from "@/app/ui/stay-card";
+import { getStays } from "@/features/stays/data";
+import Container from "@/components/ui/container";
+import SectionHeading from "@/components/ui/section-heading";
+import StayCard from "@/features/stays/components/stay-card";
 
 export const metadata = {
     title: "Stays",

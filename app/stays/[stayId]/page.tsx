@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
-import { getStay, getStays } from "@/app/_lib/stays";
-import Container from "@/app/ui/container";
-import StayImageCarousel from "@/app/ui/stay-image-carousel";
-import StayInfoSection from "@/app/ui/stay-info-section";
-import StayLocationSection from "@/app/ui/stay-location-section";
+import { getStay, getStays } from "@/features/stays/data";
+import Container from "@/components/ui/container";
+import StayImageCarousel from "@/features/stays/components/stay-image-carousel";
+import StayInfoSection from "@/features/stays/components/stay-info-section";
+import StayLocationSection from "@/features/stays/components/stay-location-section";
 
 // Prerenders every stay at build time. Reads the same source as the page, so
 // swapping the dummy catalog for a fetch keeps both in step automatically.
