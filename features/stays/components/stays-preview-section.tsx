@@ -1,9 +1,9 @@
-import Container from "@/components/ui/container";
-import Heading from "@/components/ui/heading";
-import OverlineText from "@/components/ui/overline-text";
-import PillLink from "@/components/ui/pill-link";
+import Container from "@/ui/container";
+import Heading from "@/ui/heading";
+import OverlineText from "@/ui/overline-text";
+import PillLink from "@/ui/pill-link";
 import StayCardPreview from "@/features/stays/components/stay-card-preview";
-import Text from "@/components/ui/text";
+import Text from "@/ui/text";
 import stay1 from "@/public/villas/villa1/stay1.jpg";
 import stay4 from "@/public/villas/villa4/luxury-holiday-home-2.jpg";
 import { StaticImageData } from "next/image";

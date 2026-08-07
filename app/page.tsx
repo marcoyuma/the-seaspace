@@ -8,8 +8,6 @@ import MoreServiceAndAmenities from "@/features/services/components/more-service
 import Gallery from "@/features/home/components/gallery";
 import Reviews from "@/features/home/components/reviews";
 import FaqSection from "@/features/home/components/faq-section";
-import ParallaxImageSection from "@/components/layout/parallax-image-section";
-import Footer from "@/components/layout/footer";
 import Hero from "@/features/home/components/hero";
 
 // TODO: `bg` is not defined/imported anywhere — this will throw a ReferenceError at runtime.

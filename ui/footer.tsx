@@ -1,5 +1,5 @@
-import Heading from "@/components/ui/heading";
-import ParallaxImageSection from "@/components/layout/parallax-image-section";
+import Heading from "@/ui/heading";
+import ParallaxImageSection from "@/ui/parallax-image-section";
 import Link from "next/link";
 
 // Sitemap navigation — paths derived from label via `.toLowerCase()`,

@@ -1,10 +1,10 @@
 "use client";
 
-import Heading from "@/components/ui/heading";
-import OverlineText from "@/components/ui/overline-text";
+import Heading from "@/ui/heading";
+import OverlineText from "@/ui/overline-text";
 import Image, { type StaticImageData } from "next/image";
 import React, { useEffect, useLayoutEffect, useRef } from "react";
-import Text from "@/components/ui/text";
+import Text from "@/ui/text";
 import gsap from "gsap";
 import gallery1 from "@/public/gallery/g1.jpg";
 import gallery2 from "@/public/gallery/g2.jpg";

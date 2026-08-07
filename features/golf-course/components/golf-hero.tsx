@@ -1,9 +1,9 @@
 import Image from "next/image";
 
-import PillLink from "@/components/ui/pill-link";
+import PillLink from "@/ui/pill-link";
 import cliffFairwayImg from "@/public/leisure/golf-course/golf-course3.jpg";
 import aerialGreenImg from "@/public/leisure/golf-course/golf-course.jpg";
-import OverlineText from "@/components/ui/overline-text";
+import OverlineText from "@/ui/overline-text";
 
 /** Where the primary CTA sends guests until a dedicated tee-time booking flow exists. */
 const BOOKING_PATH = "/stays";
