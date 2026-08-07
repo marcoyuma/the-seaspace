@@ -1,4 +1,4 @@
-import Container from "@/components/ui/container";
+import Container from "@/ui/container";
 import ServiceAndAmenitiesPreview from "@/features/services/components/service-and-amenities-preview";
 import SpaHero from "@/features/spa/components/spa-hero";
 import SpaRelaxationSection from "@/features/spa/components/spa-relaxation-section";

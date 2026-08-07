@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { getStay, getStays } from "@/features/stays/data";
-import Container from "@/components/ui/container";
+import Container from "@/ui/container";
 import StayImageCarousel from "@/features/stays/components/stay-image-carousel";
 import StayInfoSection from "@/features/stays/components/stay-info-section";
 import StayLocationSection from "@/features/stays/components/stay-location-section";
