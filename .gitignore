@@ -42,3 +42,31 @@ next-env.d.ts
 
 # editor
 .vscode/
+
+# dokumen analisis internal (rujukan pribadi, tidak untuk repo)
+analisis-codebase-and-asset-management.md
+unused-and-duplicate-assets-report.md
+
+# internal reference docs — not for the repo
+ARCHITECTURE.md
+DATA-LAYER.md
+
+# image lokal yang nanti kemungkinan dipake
+
+# event-venue digunakan untuk nikah jawa
+wmremove-transformed-4.png
+# digunakan nikah umum
+object-remover-result-1780793424254.png
+# digunakan tedxtalk
+object-remover-result-1780793381353.png
+
+# bg yang tadinya dijadikan opsi kedua
+bg-1.jpg
+
+# image villa sebelum ada villanya
+Gemini_Generated_Image_gnpkjvgnpkjvgnpk.png
+
+# private beach slim 
+private-beach.jpeg
+# private beach wide
+private-beach2.jpeg
