@@ -1,5 +1,5 @@
-import Container from "@/components/ui/container";
-import SectionHeading from "@/components/ui/section-heading";
+import Container from "@/ui/container";
+import SectionHeading from "@/ui/section-heading";
 
 export const metadata = {
     title: "Event Venue",

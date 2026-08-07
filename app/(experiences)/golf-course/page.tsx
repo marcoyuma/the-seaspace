@@ -1,4 +1,4 @@
-import Container from "@/components/ui/container";
+import Container from "@/ui/container";
 import GolfCourseSection from "@/features/golf-course/components/golf-course-section";
 import GolfHero from "@/features/golf-course/components/golf-hero";
 import ServiceAndAmenitiesPreview from "@/features/services/components/service-and-amenities-preview";
