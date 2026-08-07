@@ -4,9 +4,9 @@ import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isActiveLink } from "@/lib/nav";
-import Logo from "@/components/layout/logo";
-import ProfileIcon from "@/components/layout/profile-icon";
-import MenuPanel from "@/components/layout/menu-panel";
+import Logo from "@/ui/logo";
+import ProfileIcon from "@/ui/profile-icon";
+import MenuPanel from "@/ui/menu-panel";
 
 // Centralized nav targets — one place to change routes if they move.
 // Homepage only: the last two are anchors into this page's sections.

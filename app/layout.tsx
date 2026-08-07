@@ -1,12 +1,12 @@
 import { josefin, manrope } from "@/app/_styles/fonts";
 
 import "@/app/_styles/globals.css";
-import Header from "@/components/layout/header";
+import Header from "@/ui/header";
 import { ReactNode } from "react";
 import { Metadata } from "next";
 import seaspaceIcon from "@/public/icons/seaspace-logo-final.png";
-import Footer from "@/components/layout/footer";
-import ParallaxImageSection from "@/components/layout/parallax-image-section";
+import Footer from "@/ui/footer";
+import ParallaxImageSection from "@/ui/parallax-image-section";
 
 export const metadata: Metadata = {
     title: {
@@ -29,14 +29,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             lang="en"
             style={{ overscrollBehavior: "none", overflowX: "hidden" }}
         >
-            {/* Kedua `.variable` hanya mendefinisikan CSS variable-nya dan
-                tidak menerapkan font-family apa pun — karena itu `font-sans`
-                ditulis eksplisit agar Manrope tetap jadi font default situs. */}
+            {/* both `.variable` just defining its css variable 
+                and not implement any font-family, so that `font-sans`
+                written explicitly so manrope can still be the app default font  */}
             <body
                 className={`${manrope.variable} ${josefin.variable} font-sans relative antialiased min-h-screen flex flex-col`}
             >
                 <Header />
-
                 <div className="flex-1 grid">
                     <main>{children}</main>
                 </div>

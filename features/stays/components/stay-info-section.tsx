@@ -3,8 +3,8 @@ import { CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { Stay } from "@/features/stays/data";
 import AmenitiesPanel from "@/features/stays/components/amenities-panel";
-import HorizontalLine from "@/components/ui/horizontal-line";
-import PillLink from "@/components/ui/pill-link";
+import HorizontalLine from "@/ui/horizontal-line";
+import PillLink from "@/ui/pill-link";
 
 /** Uppercase field label sitting above a hairline, e.g. "BED TYPE". */
 function SpecField({

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/ssr";
 
 import { isActiveLink } from "@/lib/nav";
-import HamburgerIcon from "@/components/layout/hamburger-icon";
+import HamburgerIcon from "@/ui/hamburger-icon";
 
 type NavLink = { label: string; href: string };
 

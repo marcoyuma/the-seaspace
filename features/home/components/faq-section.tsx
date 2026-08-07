@@ -1,8 +1,8 @@
 "use client";
 
-import Heading from "@/components/ui/heading";
-import OverlineText from "@/components/ui/overline-text";
-import Text from "@/components/ui/text";
+import Heading from "@/ui/heading";
+import OverlineText from "@/ui/overline-text";
+import Text from "@/ui/text";
 import { PlusIcon } from "@phosphor-icons/react/dist/ssr";
 import { useState } from "react";
 

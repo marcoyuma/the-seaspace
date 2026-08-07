@@ -1,5 +1,5 @@
-import Heading from "@/components/ui/heading";
-import OverlineText from "@/components/ui/overline-text";
+import Heading from "@/ui/heading";
+import OverlineText from "@/ui/overline-text";
 import {
     ArrowDownIcon,
     ArrowUpIcon,

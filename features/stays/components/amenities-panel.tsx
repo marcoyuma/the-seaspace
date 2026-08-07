@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CaretDownIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { Amenity } from "@/features/stays/data";
-import HorizontalLine from "@/components/ui/horizontal-line";
+import HorizontalLine from "@/ui/horizontal-line";
 
 /**
  * The AMENITIES panel on the stay detail page: a list of expandable rows.
@@ -14,7 +14,11 @@ import HorizontalLine from "@/components/ui/horizontal-line";
  * question at a time. The reveal itself uses the same grid-rows 0fr→1fr trick,
  * which animates to auto height without measuring anything.
  */
-export default function AmenitiesPanel({ amenities }: { amenities: Amenity[] }) {
+export default function AmenitiesPanel({
+    amenities,
+}: {
+    amenities: Amenity[];
+}) {
     const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
     const toggle = (id: string) =>
@@ -61,7 +65,9 @@ export default function AmenitiesPanel({ amenities }: { amenities: Amenity[] }) 
 
                             <div
                                 className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${
-                                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                                    isOpen
+                                        ? "grid-rows-[1fr]"
+                                        : "grid-rows-[0fr]"
                                 }`}
                             >
                                 <div className="overflow-hidden">

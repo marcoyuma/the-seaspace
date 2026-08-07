@@ -4,7 +4,7 @@ import Image from "next/image";
 // import bg from "@/public/bg.jpg";
 import bg from "@/public/bg.jpg";
 import { MapTrifoldIcon } from "@phosphor-icons/react/dist/ssr";
-import PillLink from "@/components/ui/pill-link";
+import PillLink from "@/ui/pill-link";
 
 export default function Hero() {
     return (

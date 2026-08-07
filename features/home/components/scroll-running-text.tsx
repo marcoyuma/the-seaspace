@@ -8,7 +8,7 @@ import {
     useReducedMotion,
     type MotionValue,
 } from "motion/react";
-import HorizontalLine from "@/components/ui/horizontal-line";
+import HorizontalLine from "@/ui/horizontal-line";
 
 // How far each line drifts (px) across the section's full pass through the
 // viewport. Both lines travel this same distance, in opposite directions.
