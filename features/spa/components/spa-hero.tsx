@@ -1,9 +1,9 @@
 import Image from "next/image";
 
-import PillLink from "@/components/ui/pill-link";
-import balconyImg from "@/public/scenery/balcony-with-view-santorini-greece.jpg";
+import PillLink from "@/ui/pill-link";
+import spaTools from "@/public/leisure/spa/spa-tools.jpg";
 import treatmentBedImg from "@/public/leisure/spa/bed-with-sea-view.jpg";
-import OverlineText from "@/components/ui/overline-text";
+import OverlineText from "@/ui/overline-text";
 
 /** Where the primary CTA sends guests until a dedicated spa booking flow exists. */
 const BOOKING_PATH = "/stays";
@@ -49,7 +49,7 @@ export default function SpaHero() {
                     many lines the headline wraps to. */}
                 <div className="relative mt-12 min-h-80 flex-1 overflow-hidden rounded-[20px]">
                     <Image
-                        src={balconyImg}
+                        src={spaTools}
                         alt="Striped linen drying over a whitewashed balcony above the sea"
                         fill
                         placeholder="blur"
