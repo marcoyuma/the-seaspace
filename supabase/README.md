@@ -1,13 +1,13 @@
 # Supabase — runbook
 
 Database + storage for the **stays** feature. The schema here mirrors the
-`Stay` / `StayImage` / `Amenity` types in [`features/stays/data.ts`](../features/stays/data.ts),
+`Stay` / `StayImage` / `Amenity` types in [`features/stays/types.ts`](../features/stays/types.ts),
 minus `ferryUrl` (dropped) and with nested objects flattened into columns.
 
-> **Scope of this phase:** get the database ready and verified, **without**
-> touching application code. Once every step below is green, the site still
-> runs off the dummy array in `data.ts` — exactly as before. Swapping the data
-> source is the next piece of work (see [What's next](#whats-next)).
+> **Status: this is now the live data source.** The dummy catalogue that used
+> to sit in `features/stays/data.ts` is gone; [`features/stays/api.ts`](../features/stays/api.ts)
+> queries these tables directly. Steps 4–5 below are kept as a historical record
+> of how the photos got into Storage — they are not re-runnable.
 
 ## Contents
 
@@ -17,9 +17,9 @@ minus `ferryUrl` (dropped) and with nested objects flattened into columns.
 | `migrations/0002_storage_bucket.sql` | `stays` bucket (public) + policy |
 | `seed/0001_stays_seed.sql` | 4 villas, 17 amenities, 35 relation rows |
 | `migrations/0003_drop_cabins.sql` | ⚠️ Destructive — run last |
-| `../scripts/upload-stays-images.mts` | Compress → blur → upload → fill `stay_images` |
+| `migrations/0004_stays_featured.sql` | `is_featured` column driving the landing-page preview |
 
-All four SQL files are **idempotent** — safe to re-run.
+All five SQL files are **idempotent** — safe to re-run.
 
 ---
 
@@ -48,30 +48,22 @@ Open **Dashboard → SQL Editor → New query**, paste the file's contents,
 > block. A `public` bucket is already enough to read images; that policy only
 > widens `list` access.
 
-### 4. Compress photos (dry run)
+### 4–5. Photo upload — historical, already done
 
-```bash
-pnpm stays:images -- --dry-run
-```
+The 21 villa photos were compressed and uploaded once by a throwaway script
+(`scripts/upload-stays-images.mts`), which has since been deleted along with its
+source images in `public/villas/`. It read the originals from the repo, so it
+cannot run again — and there is no reason to: the bucket is populated.
 
-Doesn't touch the network. Writes the WebP output to a temp directory and
-prints a size comparison. Expected result:
+Recorded for reference, the pipeline was: resize longest edge ≤ 2560px → WebP
+q80 → 16px blur thumbnail as base64 → upload with `cacheControl: 31536000`.
+Result: **75286 KB → 6089 KB (92% smaller)** across 21 files.
 
-```
-21 images: 75286 KB → 6089 KB (92% smaller)
-```
-
-Open a few of the output files and check the quality still holds up. If it's
-too soft, raise `WEBP_QUALITY` in the script.
-
-### 5. Upload
-
-```bash
-pnpm stays:images
-```
-
-Uploads 21 images to the `stays` bucket and fills in `stay_images`, including
-`width`, `height`, and `blur_data_url`.
+Anything that adds photos from now on — the admin panel in particular — must
+reproduce that pipeline exactly, because `blur_data_url`, `width` and `height`
+are not optional: `<Image placeholder="blur">` throws at runtime without them.
+The full contract, with a self-contained `sharp` example, is in
+[`../ADMIN-PANEL-CONTEXT.md`](../ADMIN-PANEL-CONTEXT.md).
 
 ### 6. Verify
 
@@ -115,7 +107,7 @@ from stays s
 where s.slug = 'tuscan-twilight-villa';
 ```
 
-Should match `data.ts`: `3500000`, `6`, `3`, `220`, `true`, `Superking`,
+Should match what the site renders: `3500000`, `6`, `3`, `220`, `true`, `Superking`,
 `Crib on request`, `4 adults and 2 children`, `-8.506900`, `115.262500`, `DPS`,
 `Denpasar`, `image_count = 5`, and amenities in this order:
 `{infinity-pool, yoga-deck, housekeeping, wifi, kitchen, air-conditioning, safe, airport-transfer}`
@@ -256,12 +248,19 @@ caching, since the URL changes on every request.
 
 ## What's next
 
-Not part of this phase. The sequence after this, just for context:
+Everything that was listed here as "next" is **done**: the `AppImage` seam, the
+`types.ts` / `api.ts` split, the Supabase queries, `images.remotePatterns`, the
+"by boat" card removal, and deleting `public/villas/`. See
+[`../DATA-LAYER.md`](../DATA-LAYER.md) for how that migration was carried out.
 
-1. `lib/image.ts` seam — the `AppImage` type + `imageProps()` helper
-2. Split `features/stays/data.ts` → `types.ts` / `data.ts` / `api.ts`
-3. `api.ts` queries Supabase (no render component needs to change)
-4. `images.remotePatterns` in `next.config.ts` — **not** a custom `loader`,
-   which is global and would hijack `public/` assets that are still Tier 1 & 2
-5. Remove the "by boat" card in `stay-location-section.tsx` (a consequence of dropping `ferryUrl`)
-6. Remove `public/villas/` — except for the spa file above
+What genuinely remains:
+
+1. **On-demand revalidation.** The catalogue is cached with a 1-hour floor and
+   tagged `stays`, but nothing invalidates that tag yet — so an edit takes up to
+   an hour to reach visitors. Closing that gap means a Route Handler calling
+   `revalidateTag("stays", "max")`, triggered by a Supabase Database Webhook.
+   Rationale and the security contract are in
+   [`../ADMIN-PANEL-CONTEXT.md`](../ADMIN-PANEL-CONTEXT.md).
+2. **`_legacy/` still breaks `next build`.** Nine TypeScript errors there fail
+   the build after it compiles cleanly, which means the app cannot deploy as-is.
+   Nothing imports `_legacy/` any more, so deleting it turns the build green.
