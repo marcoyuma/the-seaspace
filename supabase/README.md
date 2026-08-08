@@ -208,8 +208,10 @@ pnpm dev              # /stays and /stays/[stayId] look identical, still backed 
 git status            # zero changes under features/ app/ ui/ lib/ next.config.ts
 ```
 
-The 11 errors in `_legacy/` are a pre-existing red baseline from before this
-work — see `ARCHITECTURE.md`. Judge this differentially, not absolutely.
+Expect **zero** errors. There used to be a red baseline of nine, all inside the
+quarantined `_legacy/` folder, which failed `next build` after it had already
+compiled cleanly. That folder has since been deleted, so the check is now
+absolute rather than differential.
 
 ---
 
@@ -250,8 +252,12 @@ caching, since the URL changes on every request.
 
 Everything that was listed here as "next" is **done**: the `AppImage` seam, the
 `types.ts` / `api.ts` split, the Supabase queries, `images.remotePatterns`, the
-"by boat" card removal, and deleting `public/villas/`. See
-[`../DATA-LAYER.md`](../DATA-LAYER.md) for how that migration was carried out.
+"by boat" card removal, and deleting `public/villas/`.
+
+> The blow-by-blow of that migration lives in `DATA-LAYER.md`, which is a local
+> working document and deliberately gitignored — so it is not in a fresh clone.
+> `ADMIN-PANEL-CONTEXT.md`, next to this file's parent, **is** committed and
+> carries everything an external consumer of this database needs.
 
 What genuinely remains:
 
