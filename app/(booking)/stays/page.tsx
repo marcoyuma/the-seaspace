@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { getStays } from "@/features/stays/data";
+import { getStays } from "@/features/stays/api";
 import Container from "@/ui/container";
 import SectionHeading from "@/ui/section-heading";
 import StayCard from "@/features/stays/components/stay-card";

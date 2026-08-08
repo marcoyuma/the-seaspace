@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CaretDownIcon } from "@phosphor-icons/react/dist/ssr";
 
-import type { Amenity } from "@/features/stays/data";
+import type { Amenity } from "@/features/stays/types";
 import HorizontalLine from "@/ui/horizontal-line";
 
 /**

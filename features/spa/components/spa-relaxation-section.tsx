@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import loungeImg from "@/public/villas/villa4/minimalist-coastal-interior-with-arched-window-built-seating.jpg";
+import jacuzziImg from "@/public/leisure/spa/jacuzzi.jpg";
 
 /**
  * Wide image band followed by a two-column heading/paragraph split.
@@ -12,8 +12,8 @@ export default function SpaRelaxationSection() {
         <section id="treatments" className="scroll-mt-14 pt-6">
             <div className="relative h-155 w-full overflow-hidden rounded-[20px]">
                 <Image
-                    src={loungeImg}
-                    alt="A whitewashed relaxation lounge with built-in seating beneath an arched sea-facing window"
+                    src={jacuzziImg}
+                    alt="A whitewashed relaxation lounge with built-in seating beneath an semi indoor tropical vibes"
                     fill
                     placeholder="blur"
                     quality={100}

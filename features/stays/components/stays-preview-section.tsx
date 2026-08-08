@@ -1,55 +1,31 @@
+import Link from "next/link";
+
 import Container from "@/ui/container";
 import Heading from "@/ui/heading";
 import OverlineText from "@/ui/overline-text";
 import PillLink from "@/ui/pill-link";
 import StayCardPreview from "@/features/stays/components/stay-card-preview";
 import Text from "@/ui/text";
-import stay1 from "@/public/villas/villa1/stay1.jpg";
-import stay4 from "@/public/villas/villa4/luxury-holiday-home-2.jpg";
-import { StaticImageData } from "next/image";
-
-/**
- * Represents a single stay/villa entry shown in the homepage preview.
- * Mirrors the subset of fields required by `StayCard`, decoupled from
- * the card's prop names so this data can later be swapped for an API
- * response without touching the render layer.
- */
-interface StayPreview {
-    id: string;
-    imageSrc: StaticImageData;
-    villaName: string;
-    location: string;
-}
-
-/**
- * Curated subset of stays shown on the landing page.
- *
- * This is intentionally NOT the full stays catalog — only a hand-picked
- * preview is shown here to drive users toward the "Explore stays" CTA,
- * where the complete (and access-gated) listing lives.
- *
- * TODO: move to CMS / API once stay management is handed off to non-dev users.
- */
-const FEATURED_STAYS: StayPreview[] = [
-    {
-        id: "tuscan-twilight-villa-1",
-        imageSrc: stay1,
-        villaName: "Tuscan Twilight Villa",
-        location: "Ubud, Bali",
-    },
-    {
-        id: "tuscan-twilight-villa-2",
-        imageSrc: stay4,
-        villaName: "Tuscan Twilight Villa",
-        location: "Ubud, Bali",
-    },
-];
+import { getFeaturedStays } from "@/features/stays/api";
 
 // Centralized route reference — avoids magic strings scattered across
 // components and keeps navigation targets in one place if routes change.
 const STAYS_PAGE_PATH = "/stays";
 
-export default function StaysPreviewSection() {
+/**
+ * Curated subset of stays on the landing page, driving users toward the "Explore stays" CTA.
+ *
+ * The selection lives in the database (`stays.is_featured`), not in this file. It used to be
+ * a hardcoded array that had drifted out of sync with the catalogue — both entries were
+ * labelled "Tuscan Twilight Villa" while showing photos of two different villas. Reading
+ * from the same source as /stays removes that failure mode entirely.
+ *
+ * Async Server Component: the query is cached and revalidated by the shared policy in
+ * lib/supabase.ts, so this costs the landing page nothing per request.
+ */
+export default async function StaysPreviewSection() {
+    const featuredStays = await getFeaturedStays();
+
     return (
         <Container>
             {/* `aria-labelledby` ties this landmark to its visible heading
@@ -84,16 +60,17 @@ export default function StaysPreviewSection() {
                     regardless of item count, matching the spacing used in
                     ServiceAndAmenitiesPreview for visual consistency. */}
                 <div className="grid grid-cols-2 gap-6">
-                    {FEATURED_STAYS.map((stay) => (
-                        // `id` is used as key (not array index or villaName)
-                        // since two entries currently share the same name —
-                        // index/name keys would risk incorrect reconciliation.
-                        <StayCardPreview
-                            key={stay.id}
-                            imageSrc={stay.imageSrc}
-                            villaNameText={stay.villaName}
-                            locationText={stay.location}
-                        />
+                    {featuredStays.map((stay) => (
+                        // The card looked clickable (cursor-pointer, zoom on hover) but went
+                        // nowhere while the catalogue was hardcoded. Now that each entry is a
+                        // real stay, the slug gives it somewhere to go.
+                        <Link key={stay.id} href={`${STAYS_PAGE_PATH}/${stay.id}`}>
+                            <StayCardPreview
+                                imageSrc={stay.imageSrc}
+                                villaNameText={stay.name}
+                                locationText={stay.location}
+                            />
+                        </Link>
                     ))}
                 </div>
             </section>
