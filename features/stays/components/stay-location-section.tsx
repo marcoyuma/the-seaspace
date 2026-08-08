@@ -1,10 +1,9 @@
 import {
     AirplaneTiltIcon,
     CarProfileIcon,
-    SailboatIcon,
 } from "@phosphor-icons/react/dist/ssr";
 
-import type { Stay } from "@/features/stays/data";
+import type { Stay } from "@/features/stays/types";
 import StayMap from "@/features/stays/components/stay-map";
 import TravelOptionCard from "@/features/stays/components/travel-option-card";
 
@@ -35,7 +34,7 @@ export default function StayLocationSection({ stay }: { stay: Stay }) {
                 />
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                 <TravelOptionCard
                     icon={
                         <CarProfileIcon size={26} weight="light" aria-hidden />
@@ -44,14 +43,6 @@ export default function StayLocationSection({ stay }: { stay: Stay }) {
                     description={`Follow the coastal road toward ${stay.location.split(",")[0]}, then take the private lane that leads directly to the villa gate.`}
                     ctaLabel="Navigate"
                     href={driveUrl}
-                />
-
-                <TravelOptionCard
-                    icon={<SailboatIcon size={26} weight="light" aria-hidden />}
-                    title="by boat"
-                    description="Cross on the daily ferry service, followed by a short, easy drive to the property."
-                    ctaLabel="Ferry schedule"
-                    href={stay.ferryUrl}
                 />
 
                 <TravelOptionCard

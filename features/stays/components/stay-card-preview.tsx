@@ -1,7 +1,9 @@
-import Image, { StaticImageData } from "next/image";
+import Image from "next/image";
+
+import type { AppImage } from "@/features/stays/types";
 
 interface StayCardPreviewProps {
-    imageSrc: StaticImageData;
+    imageSrc: AppImage;
     villaNameText: string;
     locationText: string;
 }
@@ -24,10 +26,14 @@ export default function StayCardPreview({
         >
             <Image
                 className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                src={imageSrc}
+                src={imageSrc.src}
                 placeholder="blur"
-                quality={100}
-                priority
+                // Remote sources have no auto-generated blur — it comes from the database.
+                blurDataURL={imageSrc.blurDataURL}
+                // Source is WebP q80; requesting more only inflates bytes. See stay-card.tsx.
+                quality={80}
+                // `priority` is deprecated as of Next 16; `preload` is the replacement.
+                preload
                 fill
                 // `villaNameText` already conveys the subject visually adjacent
                 // to this image; alt text is kept descriptive for screen readers

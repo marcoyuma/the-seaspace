@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 
-import type { Stay } from "@/features/stays/data";
+import type { Stay } from "@/features/stays/types";
 import AmenitiesPanel from "@/features/stays/components/amenities-panel";
 import HorizontalLine from "@/ui/horizontal-line";
 import PillLink from "@/ui/pill-link";

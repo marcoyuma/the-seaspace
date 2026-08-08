@@ -14,7 +14,7 @@ import Image from "next/image";
 import gsap from "gsap";
 import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 
-import type { StayImage } from "@/features/stays/data";
+import type { StayImage } from "@/features/stays/types";
 
 // FRAME_WIDTH and GAP mirror the `w-131.5` / `gap-6` classes below. They only seed
 // the copy count — the wrap maths measures the real geometry off the DOM.
@@ -371,6 +371,9 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
                         className="pointer-events-none object-cover"
                         src={images[i % count].src}
                         alt={images[i % count].alt}
+                        // Supabase-hosted frames carry their blur from the database;
+                        // without it `placeholder="blur"` below throws at runtime.
+                        blurDataURL={images[i % count].blurDataURL}
                         fill
                         // The `100vw` token is load-bearing: it makes Next prune the
                         // srcset to deviceSizes, dropping candidates this box never uses.
