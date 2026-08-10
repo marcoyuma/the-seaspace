@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
-import { getStay, getStays } from "@/features/stays/api";
+import { getStay, getStays } from "@/features/stays/actions";
 import Container from "@/ui/container";
 import StayImageCarousel from "@/features/stays/components/stay-image-carousel";
 import StayInfoSection from "@/features/stays/components/stay-info-section";
@@ -48,9 +48,7 @@ export default async function Page({
             <Container>
                 <StayInfoSection stay={stay} />
 
-                <div className="mt-24">
-                    <StayLocationSection stay={stay} />
-                </div>
+                <StayLocationSection stay={stay} />
             </Container>
         </>
     );

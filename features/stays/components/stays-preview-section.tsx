@@ -6,7 +6,7 @@ import OverlineText from "@/ui/overline-text";
 import PillLink from "@/ui/pill-link";
 import StayCardPreview from "@/features/stays/components/stay-card-preview";
 import Text from "@/ui/text";
-import { getFeaturedStays } from "@/features/stays/api";
+import { getFeaturedStays } from "@/features/stays/actions";
 
 // Centralized route reference — avoids magic strings scattered across
 // components and keeps navigation targets in one place if routes change.
@@ -64,7 +64,10 @@ export default async function StaysPreviewSection() {
                         // The card looked clickable (cursor-pointer, zoom on hover) but went
                         // nowhere while the catalogue was hardcoded. Now that each entry is a
                         // real stay, the slug gives it somewhere to go.
-                        <Link key={stay.id} href={`${STAYS_PAGE_PATH}/${stay.id}`}>
+                        <Link
+                            key={stay.id}
+                            href={`${STAYS_PAGE_PATH}/${stay.id}`}
+                        >
                             <StayCardPreview
                                 imageSrc={stay.imageSrc}
                                 villaNameText={stay.name}
