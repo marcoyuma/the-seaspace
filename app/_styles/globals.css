@@ -30,6 +30,40 @@
         #1c5c94,
         #184d7c
     );
+
+    /* Carousel review vertikal (features/home/components/reviews.tsx).
+       Keyframe, bukan transition antar class: kartu masuk selalu di-mount
+       ulang, jadi animasinya main dari awal dan arahnya tidak pernah salah
+       saat indeks membungkus dari item terakhir ke pertama.
+       Delay pada -enter menyamai durasi -exit agar keduanya berurutan, tidak
+       saling tumpuk di posisi yang sama. */
+    --animate-review-enter: review-enter 320ms ease-out 180ms both;
+    --animate-review-exit: review-exit 180ms ease-in both;
+}
+
+/* Tanda --review-slide (di-set inline per arah) menentukan dari sisi mana
+   kartu masuk dan ke sisi mana kartu lama keluar, sehingga satu pasang
+   keyframe melayani tombol atas maupun bawah. */
+@keyframes review-enter {
+    from {
+        opacity: 0;
+        transform: translateY(var(--review-slide));
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes review-exit {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(calc(var(--review-slide) * -1));
+    }
 }
 
 @utility text-blue-gradient {
