@@ -24,7 +24,7 @@ export default function StayLocationSection({ stay }: { stay: Stay }) {
     )}`;
 
     return (
-        <div className="rounded-[20px] bg-[#F7F8F9] p-3">
+        <div className="rounded-[20px] bg-[#F7F8F9] p-3 mt-24">
             <div className="h-105 w-full overflow-hidden rounded-2xl">
                 <StayMap
                     lat={lat}
