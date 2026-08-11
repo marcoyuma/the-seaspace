@@ -18,24 +18,34 @@ minus `ferryUrl` (dropped) and with nested objects flattened into columns.
 | `seed/0001_stays_seed.sql` | 4 villas, 17 amenities, 35 relation rows |
 | `migrations/0003_drop_cabins.sql` | ⚠️ Destructive — run last |
 | `migrations/0004_stays_featured.sql` | `is_featured` column driving the landing-page preview |
+| `migrations/0005_reviews.sql` | `reviews` table + RLS, behind the landing-page review carousel |
+| `seed/0002_reviews_seed.sql` | 100 placeholder reviews by 62 guests across the 4 villas |
+| `migrations/0006_guests.sql` | `guests` (1:1 with `auth.users`) + signup trigger + RLS |
+| `migrations/0007_reviews_guest_id.sql` | `reviews.guest_id` FK, backfill, drops `guest_ref` |
 
-All five SQL files are **idempotent** — safe to re-run.
+All nine SQL files are **idempotent** — safe to re-run.
 
 ---
 
 ## Setup
 
 1. Create a project at [supabase.com](https://supabase.com) (nearest region: Singapore).
-2. Fill in `.env.local` at the repo root. Three variables; where to find each
+2. Fill in `.env.local` at the repo root. Four variables; where to find each
    value is explained in that file's own comments. This file is gitignored —
    **never** commit it.
-3. Make sure dependencies are installed: `pnpm install`.
+3. **Dashboard → Authentication → Providers → Email: switch "Confirm email"
+   OFF.** Development-only. The signup trigger in `0006` keys on
+   `email_confirmed_at`; with confirmation off Supabase stamps it immediately,
+   so the seeded `@example.com` accounts link straight away without any real
+   mailbox. Leave it on and step 7 below creates 62 accounts and **zero**
+   `guests` rows.
+4. Make sure dependencies are installed: `pnpm install`.
 
 ---
 
 ## Execution order
 
-### 1–3. SQL
+### 1–5. SQL
 
 Open **Dashboard → SQL Editor → New query**, paste the file's contents,
 **Run**. One file per run, in order:
@@ -43,12 +53,44 @@ Open **Dashboard → SQL Editor → New query**, paste the file's contents,
 1. `migrations/0001_stays_schema.sql`
 2. `migrations/0002_storage_bucket.sql`
 3. `seed/0001_stays_seed.sql` → its last line should print `4 | 17 | 6 | 35`
+4. `migrations/0005_reviews.sql`
+5. `seed/0002_reviews_seed.sql` → prints `100 | 62 | 4.66`, then `32`
+
+> Steps 4–5 must come after step 3: the review seed joins `public.stays` by
+> slug, so an unseeded catalogue silently inserts **zero** reviews (the join
+> matches nothing) and the landing page then hides the section entirely.
+>
+> `npm run build` fails with `PGRST205 · Could not find the table
+> 'public.reviews'` until step 4 has run — the landing page queries the table
+> at build time.
 
 > If step 2 fails with `must be owner of table objects`, just skip the policy
 > block. A `public` bucket is already enough to read images; that policy only
 > widens `list` access.
 
-### 4–5. Photo upload — historical, already done
+### 6–8. Guest identity and accounts
+
+**The script in the middle is not optional, and the order is not negotiable.**
+`0007` backfills `reviews.guest_id` from accounts that only exist after step 7,
+and it raises `Backfill incomplete` rather than half-migrating if you skip it.
+
+6. `migrations/0006_guests.sql` → prints `0` (no accounts yet)
+7. `node --env-file=.env.local scripts/create-seed-accounts.mjs`
+   → `created: 62   skipped: 0   failed: 0`, then
+   `public.guests now holds 62 rows`.
+   Re-running prints `created: 0   skipped: 62`.
+8. `migrations/0007_reviews_guest_id.sql` → prints `100 | 0 | 62`
+
+> `public.guests` filling up during step 7 without the script ever writing to it
+> **is** the proof that the trigger works — the script only touches
+> `auth.admin`.
+
+> Step 7 needs `SUPABASE_SERVICE_ROLE_KEY` and `SEED_ACCOUNT_PASSWORD` in
+> `.env.local`. It reads the 62 authors out of `public.reviews` rather than from
+> a retyped list, so it must run while `reviews.guest_ref` still exists — that
+> is, before step 8, which drops it.
+
+### 9–10. Photo upload — historical, already done
 
 The 21 villa photos were compressed and uploaded once by a throwaway script
 (`scripts/upload-stays-images.mts`), which has since been deleted along with its
@@ -65,11 +107,11 @@ are not optional: `<Image placeholder="blur">` throws at runtime without them.
 The full contract, with a self-contained `sharp` example, is in
 [`../ADMIN-PANEL-CONTEXT.md`](../ADMIN-PANEL-CONTEXT.md).
 
-### 6. Verify
+### 11. Verify
 
-Run **every** block below. All of them must pass before step 7.
+Run **every** block below. All of them must pass before step 12.
 
-### 7. Drop the old table
+### 12. Drop the old table
 
 Only after verification passes:
 
@@ -212,6 +254,110 @@ Expect **zero** errors. There used to be a red baseline of nine, all inside the
 quarantined `_legacy/` folder, which failed `next build` after it had already
 compiled cleanly. That folder has since been deleted, so the check is now
 absolute rather than differential.
+
+### H. Reviews land correctly and aggregate to the numbers on the page
+
+```sql
+-- 100 | 62 | 4.66  — must match the stats row rendered on /
+select count(*), count(distinct guest_ref), round(avg(rating), 2) from reviews;
+
+-- 25 per villa, 0 orphans
+select s.slug, count(r.id) from stays s
+  left join reviews r on r.stay_id = s.id group by s.slug order by s.slug;
+select count(*) as orphans from reviews where stay_id is null;   -- 0
+
+-- 32: 26 guests with two reviews, 6 with three. Proves one guest can review
+-- more than once, across different villas.
+select count(*) from (
+  select guest_ref from reviews group by guest_ref having count(*) > 1
+) t;
+
+-- 94 — the "Recommend" figure in the stats row.
+select round(100.0 * count(*) filter (where rating >= 4) / count(*)) from reviews;
+```
+
+The anon key must be able to read them (the section is hidden when the query
+returns nothing, so a broken policy looks like "no reviews yet"):
+
+```bash
+node --env-file=.env.local --input-type=module -e '
+import { createClient } from "@supabase/supabase-js";
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const read  = await db.from("reviews").select("id, stays ( slug )").limit(3);
+console.log("read :", read.error?.message ?? `${read.data.length} rows, embed ok: ${"stays" in read.data[0]}`);
+const write = await db.from("reviews").insert({
+  author_display_name: "Probe", author_nationality: "Probe",
+  rating: 5, quote: "This row should never be inserted by the anon key.",
+});
+console.log("write:", write.error ? "blocked OK — " + write.error.message
+                                  : "SUCCEEDED — RLS is NOT protecting this table");
+'
+```
+
+Expected: `read : 3 rows, embed ok: true` and `write: blocked OK`. The embed
+check matters — `features/reviews/actions.ts` selects `stays ( slug )`, which
+only resolves while the `reviews.stay_id → stays.id` foreign key exists.
+
+### I. Guests exist, link to accounts, and leak nothing
+
+Row counts and the review↔guest join (steps 6–8 of the execution order):
+
+```sql
+select count(*) from auth.users;                                   -- 62
+select count(*) from public.guests;                                -- 62
+select count(*) from public.reviews where guest_id is null;        --  0
+select count(distinct guest_id) from public.reviews;               -- 62
+
+-- The 6 guests who wrote three reviews each. Proves one account owns
+-- several reviews across different villas.
+select g.display_name, count(*)
+  from public.guests g join public.reviews r on r.guest_id = g.id
+ group by g.display_name having count(*) = 3;
+
+-- guest_ref really is gone: 0 rows.
+select column_name from information_schema.columns
+ where table_schema = 'public' and table_name = 'reviews'
+   and column_name = 'guest_ref';
+```
+
+**The RLS probe — the one that actually matters.** `guests` holds phone numbers
+and has *no* anon policy at all, unlike every other table here:
+
+```bash
+node --env-file=.env.local --input-type=module -e '
+import { createClient } from "@supabase/supabase-js";
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+const anon = await db.from("guests").select("id, phone");
+console.log("anon  :", anon.error || anon.data.length === 0
+  ? "blocked OK" : `LEAKED ${anon.data.length} rows`);
+
+const s = await db.auth.signInWithPassword({
+  email: "amara.lindqvist@example.com",
+  password: process.env.SEED_ACCOUNT_PASSWORD,
+});
+console.log("signin:", s.error?.message ?? "ok");
+
+const mine = await db.from("guests").select("id, display_name");
+console.log("as me :", mine.error?.message ?? `${mine.data.length} row(s) — must be exactly 1`);
+'
+```
+
+Expected: `blocked OK`, `ok`, and **exactly 1 row**. One row proves
+`auth.uid() = id` is really filtering; 62 rows means the policy is wrong and
+every guest phone number is readable.
+
+Finally, the end-to-end scenario — an account that already has review history:
+
+```sql
+select s.name, r.rating, left(r.quote, 40) || '…'
+  from public.reviews r
+  join public.stays s on s.id = r.stay_id
+ where r.guest_id = (select id from auth.users
+                      where email = 'amara.lindqvist@example.com');
+```
+
+Three rows, three different villas.
 
 ---
 
