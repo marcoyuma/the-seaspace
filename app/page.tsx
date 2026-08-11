@@ -6,7 +6,7 @@ import StaysPreviewSection from "@/features/stays/components/stays-preview-secti
 import ServiceAndAmenitiesPreview from "@/features/services/components/service-and-amenities-preview";
 import MoreServiceAndAmenities from "@/features/services/components/more-service-and-amenities";
 import Gallery from "@/features/home/components/gallery";
-import Reviews from "@/features/home/components/reviews";
+import ReviewsSection from "@/features/reviews/components/reviews-section";
 import FaqSection from "@/features/home/components/faq-section";
 import Hero from "@/features/home/components/hero";
 
@@ -48,7 +48,7 @@ export default function Page() {
                 */}
                 <Gallery />
 
-                <Reviews />
+                <ReviewsSection />
 
                 <FaqSection />
 
