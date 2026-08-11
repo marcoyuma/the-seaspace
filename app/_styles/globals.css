@@ -31,7 +31,8 @@
         #184d7c
     );
 
-    /* Carousel review vertikal (features/home/components/reviews.tsx).
+    /* Carousel review vertikal
+       (features/reviews/components/review-viewport.tsx).
        Keyframe, bukan transition antar class: kartu masuk selalu di-mount
        ulang, jadi animasinya main dari awal dan arahnya tidak pernah salah
        saat indeks membungkus dari item terakhir ke pertama.
