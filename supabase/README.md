@@ -22,8 +22,10 @@ minus `ferryUrl` (dropped) and with nested objects flattened into columns.
 | `seed/0002_reviews_seed.sql` | 100 placeholder reviews by 62 guests across the 4 villas |
 | `migrations/0006_guests.sql` | `guests` (1:1 with `auth.users`) + signup trigger + RLS |
 | `migrations/0007_reviews_guest_id.sql` | `reviews.guest_id` FK, backfill, drops `guest_ref` |
+| `seed/0003_guests_full_name.sql` | Full names for the 62 seeded guests |
+| `migrations/0008_guest_avatars.sql` | `avatar_path` columns + `guests` bucket + storage policies |
 
-All nine SQL files are **idempotent** — safe to re-run.
+All eleven SQL files are **idempotent** — safe to re-run.
 
 ---
 
@@ -68,7 +70,7 @@ Open **Dashboard → SQL Editor → New query**, paste the file's contents,
 > block. A `public` bucket is already enough to read images; that policy only
 > widens `list` access.
 
-### 6–8. Guest identity and accounts
+### 6–10. Guest identity, accounts, and avatars
 
 **The script in the middle is not optional, and the order is not negotiable.**
 `0007` backfills `reviews.guest_id` from accounts that only exist after step 7,
@@ -80,17 +82,26 @@ and it raises `Backfill incomplete` rather than half-migrating if you skip it.
    `public.guests now holds 62 rows`.
    Re-running prints `created: 0   skipped: 62`.
 8. `migrations/0007_reviews_guest_id.sql` → prints `100 | 0 | 62`
+9. `seed/0003_guests_full_name.sql` → prints `62 | 62 | 0`
+10. `migrations/0008_guest_avatars.sql` → prints `62 | 0 | 100 | 0`
 
 > `public.guests` filling up during step 7 without the script ever writing to it
 > **is** the proof that the trigger works — the script only touches
 > `auth.admin`.
+
+> Step 9 is a separate file rather than part of the script because the trigger
+> fills a row **once, at creation** (`on conflict (id) do nothing`). Re-running
+> the script with richer metadata changes nothing, and editing
+> `raw_user_meta_data` does not flow through either — so the only way to give
+> the existing rows a `full_name` is an explicit `UPDATE`.
+> `phone` deliberately stays NULL; see `GUEST_PLANNING_TABLE.md` §5.5.
 
 > Step 7 needs `SUPABASE_SERVICE_ROLE_KEY` and `SEED_ACCOUNT_PASSWORD` in
 > `.env.local`. It reads the 62 authors out of `public.reviews` rather than from
 > a retyped list, so it must run while `reviews.guest_ref` still exists — that
 > is, before step 8, which drops it.
 
-### 9–10. Photo upload — historical, already done
+### 11–12. Villa photo upload — historical, already done
 
 The 21 villa photos were compressed and uploaded once by a throwaway script
 (`scripts/upload-stays-images.mts`), which has since been deleted along with its
@@ -107,11 +118,11 @@ are not optional: `<Image placeholder="blur">` throws at runtime without them.
 The full contract, with a self-contained `sharp` example, is in
 [`../ADMIN-PANEL-CONTEXT.md`](../ADMIN-PANEL-CONTEXT.md).
 
-### 11. Verify
+### 13. Verify
 
-Run **every** block below. All of them must pass before step 12.
+Run **every** block below. All of them must pass before step 14.
 
-### 12. Drop the old table
+### 14. Drop the old table
 
 Only after verification passes:
 
@@ -308,6 +319,15 @@ select count(*) from public.guests;                                -- 62
 select count(*) from public.reviews where guest_id is null;        --  0
 select count(distinct guest_id) from public.reviews;               -- 62
 
+-- Step 9 landed: every guest named, no phone invented.
+select count(*) filter (where full_name is null) as unnamed,       --  0
+       count(phone)                              as with_phone     --  0
+  from public.guests;
+
+-- The row that proves the names are data, not initcap() output.
+select full_name from public.guests
+ where display_name = 'Sean M.';                    -- Sean McAllister
+
 -- The 6 guests who wrote three reviews each. Proves one account owns
 -- several reviews across different villas.
 select g.display_name, count(*)
@@ -358,6 +378,67 @@ select s.name, r.rating, left(r.quote, 40) || '…'
 ```
 
 Three rows, three different villas.
+
+### J. Avatar seam exists and nobody can overwrite anybody
+
+Columns and bucket:
+
+```sql
+select table_name, column_name from information_schema.columns
+ where (table_name, column_name)
+    in (('guests','avatar_path'), ('reviews','author_avatar_path'));   -- 2 rows
+
+select id, public, file_size_limit from storage.buckets
+ where id = 'guests';                                    -- guests | true | 524288
+```
+
+The strengthened constraint must bite — this has to be **rejected**:
+
+```sql
+begin;
+update public.reviews
+   set author_avatar_path = 'probe/x.webp'
+ where id = (select id from public.reviews limit 1);
+update public.reviews
+   set guest_id = null, author_display_name = 'Former guest'
+ where id = (select id from public.reviews limit 1);
+-- expected: violates check constraint "reviews_orphan_is_anonymised"
+rollback;
+```
+
+**The storage probe — the one that matters.** Use a real 1×1 WebP, not random bytes: the
+bucket's MIME filter rejects garbage before RLS is ever reached, which makes a broken
+policy look safe (same trap as block E).
+
+```bash
+node --env-file=.env.local --input-type=module -e '
+import { createClient } from "@supabase/supabase-js";
+import sharp from "sharp";
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const webp = await sharp({ create: { width: 1, height: 1, channels: 3, background: "#000" } }).webp().toBuffer();
+
+const s = await db.auth.signInWithPassword({
+  email: "amara.lindqvist@example.com", password: process.env.SEED_ACCOUNT_PASSWORD });
+console.log("signin :", s.error?.message ?? "ok");
+const me = s.data.user.id;
+
+const mine = await db.storage.from("guests").upload(`${me}/probe.webp`, webp, { contentType: "image/webp", upsert: true });
+console.log("own    :", mine.error ? "BLOCKED — policy too strict: " + mine.error.message : "uploaded OK");
+
+const theirs = await db.storage.from("guests").upload(`00000000-0000-0000-0000-000000000000/probe.webp`, webp, { contentType: "image/webp" });
+console.log("others :", theirs.error ? "blocked OK" : "SUCCEEDED — ANYONE CAN OVERWRITE ANYONE");
+
+await db.auth.signOut();
+const read = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/guests/${me}/probe.webp`);
+console.log("anon   :", read.ok ? "readable OK" : `NOT readable (${read.status})`);
+
+await db.auth.signInWithPassword({ email: "amara.lindqvist@example.com", password: process.env.SEED_ACCOUNT_PASSWORD });
+await db.storage.from("guests").remove([`${me}/probe.webp`]);
+'
+```
+
+Expected: `ok`, `uploaded OK`, `blocked OK`, `readable OK`. The third line is the whole point —
+if it succeeds, any signed-in guest can replace any other guest's photo.
 
 ---
 

@@ -79,6 +79,38 @@ Two revisions from the original draft **did** survive and remain the reasoning o
 international numbers overflow the range), and `full_name` is stored but never rendered — the
 public string is `display_name` (`'Amara L.'`).
 
+### This model was challenged, tested against industry practice, and kept
+
+Worth recording so it is not re-litigated. The coupling was questioned because the original
+instinct for this table came from a different pattern: an internal admin site that registers
+guests and books on their behalf. Under that pattern the coupling is genuinely wrong.
+
+The research agreed, for that pattern:
+
+- A hotel guest profile is built as the guest interacts with the property and
+  **"they don't require guest logins or accounts"**; systems must also deduplicate so one person
+  booking via OTA, direct, and an agent does not become three records.
+  ([Cloudbeds](https://www.cloudbeds.com/articles/guest-profiles/))
+- Domain models should not be keyed by the identity provider — reference the identity id from a
+  plain column instead, so the auth provider can be swapped without rebuilding the domain.
+  ([CleanArchitecture #415](https://github.com/jasontaylordev/CleanArchitecture/discussions/415),
+  [Symfony](https://ngandu.hashnode.dev/decoupling-your-applications-user-model-from-symfonys-security-system))
+  In e-commerce the same idea appears as authentication living in a separate subschema from the
+  customer entity. ([Red Gate](https://www.red-gate.com/blog/er-diagram-for-online-shop/))
+
+**Both are correct, and neither applies here.** The admin panel does not create accounts, does not
+create guests, and does not create bookings — an account is entirely the responsibility of the
+person who wants to book. There is therefore no route by which a guest can exist before their own
+account, which is the single condition that makes the coupling right rather than merely convenient.
+
+**What would overturn this:** the day an admin, an OTA, a travel agent, or a phone booking may
+produce a guest, this decision is wrong and `guests` must gain its own primary key with a nullable
+`auth_user_id`. That migration is cheap — `guests.id` is already a uuid, so it stops being a
+foreign key and its value is copied into the new column — but the RLS policies must move from
+`auth.uid() = id` to `auth.uid() = auth_user_id` at the same time. **Watch for a false pass there:**
+existing rows would still have `id = auth_user_id`, so the old policy keeps working for them and
+hides the bug until the first admin-created guest appears.
+
 ### The consequence worth stating plainly: account claiming is not a feature
 
 Because a `guests` row is created **by** an account, a guest can never pre-exist their own
@@ -177,7 +209,9 @@ Recorded because the reasoning still matters, not because anything remains to ru
 
 ## 5. The columns that are still empty, and how they get filled
 
-All 62 rows currently have `full_name`, `phone_country_code` and `phone` set to `NULL`.
+`full_name` for the 62 seeded rows is now filled by
+`supabase/seed/0003_guests_full_name.sql` (§5.6). What remains empty is
+`phone_country_code` and `phone`, and that is deliberate — see §5.5.
 
 **Why `nationality` is filled and `full_name` is not** is worth understanding, because it
 answers the whole question: `scripts/create-seed-accounts.mjs` sent `nationality` through
@@ -192,6 +226,7 @@ have that data. The mechanism already works — what is missing is a form to fee
 | `phone_country_code` + `phone` | Booking checkout | The guest, typed explicitly |
 | all three | any time afterwards | The guest, via a profile page |
 | `nationality` | signup (`user_metadata`) or profile | The guest |
+| `avatar_path` | any time, via a profile page | The guest, by uploading — see §6 |
 
 Precedent: the minimum needed to **book** on Airbnb is a full name, an email address, a
 confirmed phone number and payment details — none of which is required merely to *register*.
@@ -226,8 +261,12 @@ populates a row **once, at creation**, and never again:
   already exist, and so do the rows.
 - Editing `raw_user_meta_data` in the dashboard does **not** flow through to `public.guests`.
 
-Filling `full_name` for the 62 seeded rows therefore needs an explicit `update public.guests`
-in a migration. Treat it as its own step; do not assume the trigger covers it.
+Filling `full_name` for the 62 seeded rows therefore needs an explicit `update public.guests`.
+That update now exists as **`supabase/seed/0003_guests_full_name.sql`** (step 9 of the runbook),
+and it is a separate file for exactly this reason — not because splitting it was tidier.
+
+The same constraint applies to anything else that ever needs backfilling into existing rows:
+the trigger will not do it.
 
 The rule that follows, and it must be stated plainly: **after signup, `public.guests` is the
 single source of truth.** `raw_user_meta_data` is only the initial seed. A profile page writes
@@ -247,7 +286,16 @@ straight to `public.guests` — the RLS `update` policy for `auth.uid() = id` al
 
 ### 5.6 The 62 full names
 
-Agreed data, recorded here so the migration that writes them transcribes rather than reinvents.
+**Applied.** These are written into the database by
+`supabase/seed/0003_guests_full_name.sql`, which pairs each name with an explicit email address
+rather than computing anything. That file is the operational source; this table is the record of
+what was agreed and why.
+
+> **Never derive these from the email in SQL.** `initcap()` capitalises the first letter of each
+> word and lowercases the rest, so `sean.mcallister` becomes `Sean Mcallister` — not
+> `McAllister`. The same breakage awaits `van Dijk`, `de Boer`, `O'Brien` and `Al-Farsi` the day
+> a real guest signs up. Using the email as a *join key* is fine; deriving a *name* from it is
+> the thing §5.2 forbids.
 
 **Three constraints bind these names, not two.** The first two were expected: each must
 reproduce the live `display_name` (`'Amara L.'` demands first name *Amara* and a surname
@@ -344,7 +392,82 @@ Changing it now would break both. Left as-is on purpose; fix it only if the acco
 - **Where `nationality` comes from for real signups** — a field on the signup form, or left
   empty until booking.
 
-## 6. Still ahead
+## 6. Avatar — complete context for whoever builds the upload
+
+**Schema is done** (`0008_guest_avatars.sql`). **The upload feature is not built**, and will be
+built in a separate session. This section is written to stand on its own: everything needed is
+here, with no need to reconstruct the reasoning from elsewhere.
+
+### What exists after `0008`
+
+| Object | What it holds |
+|---|---|
+| `guests.avatar_path` | Bucket-relative path, e.g. `a1b2…/f7c9.webp`. **Not a URL.** `NULL` = no photo |
+| `reviews.author_avatar_path` | A copy of that path, taken when the review is written |
+| bucket `guests` | Public, 512 KB limit, `image/webp\|jpeg\|png\|avif` |
+| 4 policies on `storage.objects` | Read: anyone. Insert/update/delete: only into `auth.uid()`'s own folder |
+
+### Why there are two columns and not one
+
+`public.guests` has **no `anon` policy at all** — it holds phone numbers. A visitor who has not
+logged in cannot read `avatar_path` from it, and the join returns nothing **without raising an
+error**: the avatar would just be blank forever and look like an unfinished feature.
+
+So the path is copied onto the review row, exactly as `author_display_name` and
+`author_nationality` already are, for exactly the same reason. **Do not normalise it away.**
+
+Accepted consequence: **changing your photo does not update older review cards.** A review is a
+record of a moment, so this is defensible — but it is a choice, and if it ever becomes
+unacceptable the fix is to update the guest's review rows at upload time, not to add a join.
+
+### Path convention
+
+```
+<guest_uuid>/<random>.webp
+```
+
+- The **first folder is the owner**. The storage policies compare it to `auth.uid()`, so this is
+  not cosmetic — get it wrong and either nobody can upload or everybody can overwrite everybody.
+- The **filename must change on every upload**. A stable name means the CDN keeps serving the old
+  photo after a replacement, and the guest concludes the upload failed. Delete the previous object
+  after the new path is committed to the column.
+
+### Reading it
+
+`publicStorageUrl("guests", avatar_path)` from [lib/supabase.ts](lib/supabase.ts) — already exists,
+nothing to write. Rendered in two places, both of which keep `UserCircleIcon` as the fallback when
+the path is `NULL`; the icon is not deleted, it changes role:
+
+- [features/reviews/components/review-card.tsx](features/reviews/components/review-card.tsx) — 54px
+- [ui/profile-icon.tsx](ui/profile-icon.tsx) — 38px
+
+### ⚠️ Upload contract — the part that is actually dangerous
+
+A publicly readable avatar URL is **not** a security problem; public buckets are designed for it.
+The risk lives entirely in the upload pipeline, and it is not theoretical:
+
+- **Strip EXIF.** Photos carry GPS coordinates. John McAfee was located in 2012 from metadata in a
+  photo that had been published.
+  ([EDUCAUSE](https://er.educause.edu/articles/2021/6/privacy-implications-of-exif-data))
+- **Validate the real MIME type, not the extension**, and **re-encode the image** rather than
+  storing the uploaded bytes. A real advisory: a profile-photo feature exposed EXIF metadata, the
+  app rendered HTML found inside it, and the result was a working phishing form leading to account
+  takeover. ([GHSA-q68h-xwq5-mm7x](https://github.com/HumanSignal/label-studio/security/advisories/GHSA-q68h-xwq5-mm7x))
+- Enforce the size limit client-side too; the bucket's 512 KB ceiling is the backstop, not the UX.
+
+### ⚠️ Landmine for that session
+
+[lib/supabase.ts](lib/supabase.ts) forces `next: { revalidate: 3600, tags: ["stays"] }` onto
+**every** request passing through it. Uploads and any authenticated query **must not** use that
+client — a cached authenticated response gets served to the next visitor. Auth needs its own,
+uncached client.
+
+### Prerequisite
+
+Uploading requires an authenticated session. This app has no auth yet: no `@supabase/ssr`, no
+`middleware.ts`, no login page. That comes first.
+
+## 7. Still ahead
 
 - **`bookings`** — the table itself, `reviews.booking_id`, the composite FK above, and only
   then does "verified" finally stand up.
