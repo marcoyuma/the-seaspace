@@ -4,11 +4,19 @@
 > Pembacanya (developer maupun AI agent) tidak punya akses ke repo situs customer, jadi
 > semua yang perlu diketahui ada di sini — tidak ada rujukan ke file yang tidak bisa Anda buka.
 >
-> Terakhir diverifikasi terhadap database live: **2026-08-08**.
+> Terakhir diverifikasi terhadap database live: **2026-08-12**.
+>
+> **⚠️ Database sudah bertambah sejak dokumen ini pertama ditulis.** Bagian
+> "Kontrak data" di bawah masih menjelaskan **empat tabel katalog** saja. Sejak
+> itu ada dua tabel lagi — `public.reviews` dan `public.guests` — plus bucket
+> `guests`. Keduanya **di luar wewenang admin panel**; baca
+> [Batas wewenang admin panel](#batas-wewenang-admin-panel) sebelum menulis apa
+> pun, karena bekerja dari kontrak yang usang berarti menulis ke skema yang salah.
 
 ## Daftar Isi
 
 - [Peta sistem](#peta-sistem)
+- [Batas wewenang admin panel](#batas-wewenang-admin-panel)
 - [Kenapa perubahan Anda tidak langsung terlihat customer](#kenapa-perubahan-anda-tidak-langsung-terlihat-customer)
 - [Kontrak data — skema tabel](#kontrak-data--skema-tabel)
 - [⚠️ Kontrak upload gambar](#-kontrak-upload-gambar)
@@ -44,6 +52,48 @@ memakai **service role key**, yang mem-bypass RLS.
 > **Service role key tidak boleh menyentuh browser.** Ia setara akses penuh ke database.
 > Semua tulisan harus lewat sisi server admin panel (route handler / server action /
 > backend), bukan dari kode yang dikirim ke klien.
+
+---
+
+## Batas wewenang admin panel
+
+Ditetapkan pemilik proyek, dan ini **keputusan produk**, bukan sekadar keadaan sementara:
+
+> **Admin panel tidak membuat akun. Tidak membuat guest. Tidak membuat booking.**
+> Akun sepenuhnya tanggung jawab user yang ingin memesan.
+>
+> Admin panel akan disesuaikan dengan aplikasi customer belakangan, dan penyesuaian itu didahului
+> riset tersendiri. Sampai riset itu selesai, jangan mengasumsikan wewenang apa pun di luar
+> katalog villa.
+
+### Wewenang admin panel
+
+| Boleh ditulis | Tidak boleh disentuh |
+|---|---|
+| `stays`, `stay_images`, `amenities`, `stay_amenities` | `auth.users` |
+| bucket `stays` | `public.guests`, bucket `guests` |
+| | `public.reviews` |
+
+### Kenapa, dan apa yang rusak kalau dilanggar
+
+**`public.guests` hanya lahir dari trigger signup.** Primary key-nya **adalah** `auth.users.id` —
+satu identitas, bukan dua yang bisa melenceng. Baris `guests` dibuat oleh trigger
+`on_auth_guest_confirmed` saat `email_confirmed_at` terisi, dan tidak oleh jalur lain mana pun.
+
+Menyisipkan baris `guests` secara manual dari admin panel **mustahil tanpa membuat akun lebih
+dulu**, karena foreign key-nya menolak uuid yang tidak ada di `auth.users`. Kalaupun akunnya ikut
+dibuat lewat admin API, hasilnya adalah akun yang tidak pernah dimiliki siapa pun — dan seluruh
+alasan desainnya (tamu tidak pernah ada sebelum akunnya) runtuh.
+
+**`public.reviews` ditulis tamu, bukan admin.** Setiap baris menunjuk `guests.id`, dan sebuah
+review yang tidak berasal dari tamu sungguhan menghilangkan seluruh maknanya. Moderasi (menyembunyikan
+atau menolak review) belum dirancang; kalau nanti dibutuhkan, itu kolom status baru — **bukan**
+izin menulis baris.
+
+**Kalau arah ini berubah** — misalnya admin suatu hari boleh mendaftarkan tamu untuk booking
+telepon — maka `guests` harus dirombak lebih dulu: primary key sendiri plus `auth_user_id` yang
+nullable. Itu perubahan skema, bukan perubahan izin, dan harus dikerjakan di repo situs customer
+sebelum admin panel menulis apa pun ke sana.
 
 ---
 
@@ -285,6 +335,8 @@ senyap. Inilah persis skenario yang membuat timer 1 jam tetap dipertahankan.
 | `updateTag()` | Hanya bisa dipanggil dari Server Action di aplikasi yang sama |
 | Menulis dengan anon key | RLS hanya mengizinkan `SELECT`. Wajib service role |
 | Mengandalkan `id` numerik di URL | Situs merutekan berdasarkan `slug` |
+| Membuat akun, guest, atau booking | Keputusan produk — lihat [Batas wewenang admin panel](#batas-wewenang-admin-panel). Akun adalah tanggung jawab user yang memesan |
+| Menulis ke `public.guests` / `public.reviews` / bucket `guests` | Di luar wewenang. `guests` hanya lahir dari trigger signup; `reviews` ditulis tamu |
 
 Satu-satunya jalur komunikasi antar kedua aplikasi adalah **database** dan (nanti) **satu
 HTTP endpoint**.
