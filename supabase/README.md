@@ -611,8 +611,15 @@ Everything that was listed here as "next" is **done**: the `AppImage` seam, the
 
 > The blow-by-blow of that migration lives in `DATA-LAYER.md`, which is a local
 > working document and deliberately gitignored — so it is not in a fresh clone.
-> `ADMIN-PANEL-CONTEXT.md`, next to this file's parent, **is** committed and
-> carries everything an external consumer of this database needs.
+> **`ADMIN-PANEL-CONTEXT.md` is no longer in this repo either.** It was written
+> for the admin panel's codebase, whose readers are explicitly assumed to have no
+> access to this one, so keeping a copy here worked against its own purpose — it
+> was untracked and now lives in that repository. The references that remain —
+> here, in `GUEST_PLANNING_TABLE.md`, in `0009_bookings.sql` and in
+> `stay-card.tsx` — name it as the source of a decision, not as a link you can
+> open from a fresh clone.
+> Its last version here is recoverable with
+> `git show <the untracking commit>~1:ADMIN-PANEL-CONTEXT.md`.
 
 What genuinely remains:
 
