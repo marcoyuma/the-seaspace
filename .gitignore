@@ -51,6 +51,11 @@ unused-and-duplicate-assets-report.md
 ARCHITECTURE.md
 DATA-LAYER.md
 ACCOUNT-DELETION-POLICY.md
+# Ditulis untuk repo admin panel, yang pembacanya justru dinyatakan tidak punya
+# akses ke repo ini — jadi menyimpannya di sini melawan tujuannya sendiri.
+# Isinya sekarang milik repo itu. Versi terakhir di sini masih bisa diambil
+# dengan `git show <commit pencabutan>~1:ADMIN-PANEL-CONTEXT.md`.
+ADMIN-PANEL-CONTEXT.md
 
 # image lokal yang nanti kemungkinan dipake
 #
