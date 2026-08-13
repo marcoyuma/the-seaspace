@@ -1,8 +1,9 @@
 # Guests — what was built, and what is still planned
 
 **Status: `public.guests` is built** (migration `0006_guests.sql`), and `reviews.guest_id`
-replaced `reviews.guest_ref` (migration `0007_reviews_guest_id.sql`). `bookings` is still a
-plan, and so is anything that depends on it.
+replaced `reviews.guest_ref` (migration `0007_reviews_guest_id.sql`). **`bookings` is now built
+too** (`0009_bookings.sql`, seeded by `seed/0004_bookings_seed.sql`) — see §8 — but
+`reviews.booking_id` is not, so a verified review still does not exist.
 
 This file used to be a plan for a table that did not exist. It is now the record of what was
 actually built, why it differs from that plan, and what is still ahead.
@@ -29,9 +30,10 @@ property, not a flag:
 - Once `bookings` exists, a review carries `booking_id`, and verified means
   `booking_id is not null` — derived from a foreign key, which cannot disagree with reality.
 
-`reviews` will gain a `booking_id` column, never an `is_verified` one. **Bookings still do not
-exist, so there is still no verification mechanism.** What changed in this phase is only that
-every review now has a real, authenticated owner.
+`reviews` will gain a `booking_id` column, never an `is_verified` one. **Bookings now exist
+(§8), but `reviews.booking_id` does not — so there is still no verification mechanism.** The
+table was the harder half; what remains is one nullable column and the composite foreign key
+below.
 
 ## 2. What was built
 
@@ -138,8 +140,9 @@ permanently.
 | Relation | Column | Cardinality |
 |---|---|---|
 | guest → reviews | `reviews.guest_id` (FK, **not** unique, **nullable**) | `1 ─ N` |
-| guest → bookings | `bookings.guest_id` — **planned** | `1 ─ N` |
-| booking → review | `reviews.booking_id` (unique, nullable) — **planned** | `1 ─ 0..1` |
+| guest → bookings | `bookings.guest_id` (FK, nullable, `on delete set null`) — **built** | `1 ─ N` |
+| stay → bookings | `bookings.stay_id` (FK, NOT NULL, `on delete restrict`) — **built** | `1 ─ N` |
+| booking → review | `reviews.booking_id` (unique, nullable) — **still planned** | `1 ─ 0..1` |
 | stay → reviews | `reviews.stay_id` (nullable) | `1 ─ N` |
 
 One guest has many bookings; each booking yields at most one review; therefore one guest can
@@ -170,16 +173,19 @@ Consequence: `count(reviews) ≠ count(guests) ≠ count(bookings)`. The gap is 
 metric — **reviews collected ÷ bookings already checked out** — and a better third stat than the
 current `Recommend` figure in `features/reviews/components/reviews-panel.tsx`.
 
-### Keeping derived columns honest, once `bookings` exists
+### Keeping derived columns honest — half applied
 
 `reviews.guest_id` and `reviews.stay_id` will both be derivable from the booking. Duplicated
 values can drift apart and quietly corrupt every per-guest figure. Enforce it with a composite
 foreign key, not a trigger:
 
 ```sql
+-- ✅ Applied in 0009_bookings.sql. Redundant on its own (`id` is already unique);
+--    it exists only to be the target of the foreign key below.
 alter table public.bookings add constraint bookings_id_guest_stay_key
     unique (id, guest_id, stay_id);
 
+-- ❌ Not applied. Needs reviews.booking_id, which does not exist yet.
 alter table public.reviews add constraint reviews_matches_booking_fkey
     foreign key (booking_id, guest_id, stay_id)
     references public.bookings (id, guest_id, stay_id);
@@ -469,12 +475,14 @@ Uploading requires an authenticated session. This app has no auth yet: no `@supa
 
 ## 7. Still ahead
 
-- **`bookings`** — the table itself, `reviews.booking_id`, the composite FK above, and only
-  then does "verified" finally stand up.
-  **Decide before creating it:** `bookings.guest_id` needs `on delete set null`, **not**
-  `cascade`. Booking and invoice records generally must be retained for tax purposes, and that
-  legal obligation outranks an erasure request — a cascade would delete financial records that
-  are not allowed to be deleted. See `ACCOUNT-DELETION-POLICY.md` §6.
+- ✅ **`bookings`** — built by `0009_bookings.sql`, seeded with 140 rows by
+  `seed/0004_bookings_seed.sql`. `guest_id` got its `on delete set null` as required above.
+  Details and the decisions behind the columns are in §8.
+- **`reviews.booking_id` + the composite FK — still missing, so "verified" still does not
+  stand up.** This is now the *only* thing between the schema and a verified review, and
+  `0009` already created its target (`bookings_id_guest_stay_key`). What remains is one
+  nullable column, the FK from §3, and a backfill matching each seeded review to the booking
+  that shares its guest and villa.
 - **Auth in the application** — `@supabase/ssr`, `middleware.ts`, login/signup. None of it
   exists; this phase touched no application code.
   ⚠️ `lib/supabase.ts` forces `next: { revalidate: 3600, tags: ["stays"] }` onto **every**
@@ -484,3 +492,66 @@ Uploading requires an authenticated session. This app has no auth yet: no `@supa
   expressible once auth can prove who is writing.
 - **Account deletion UI** — specified in `ACCOUNT-DELETION-POLICY.md`, not built.
 - **Moderation** — who approves a review, and whether that needs a state column.
+
+## 8. `bookings` — what was built, and the decisions that are not visible in the DDL
+
+Built by `0009_bookings.sql`, seeded by `seed/0004_bookings_seed.sql`. The column list started
+from the Wild Oasis course schema and was translated rather than copied; the divergences below
+are decisions, and re-litigating them without new information is wasted work.
+
+| Course column | Built as | Why |
+|---|---|---|
+| `camelCase` | `snake_case` | Every other table here |
+| `cabinId` | `stay_id` | `cabins` was dropped in `0003` |
+| `startDate` / `endDate` `timestamp` | `date` | Check-in 15:00 / check-out 11:00 is a property-wide policy (`faq-section.tsx`), not a per-row fact. Storing it 140 times stores the same constant while inviting timezone ambiguity |
+| `numNights` plain column | generated | A nights count that can disagree with its own dates is the same second-source-of-truth mistake refused in §2 and `0005` |
+| `cabinPrice` (a total) | `unit_price_per_night` + `discount_per_night`, `total_price` generated | A total cannot reconstruct the rate that produced it. `stays.price_per_night` may change at any time |
+| `hasBreakfast`, `extrasPrice` | **dropped** | The site advertises breakfast as *included* (`more-service-and-amenities.tsx`). A paid add-on column would have the database contradicting its own marketing copy |
+| `isPaid boolean` | `paid_at timestamptz` | Records *when*; the boolean is `paid_at is not null`, and the reverse cannot be recovered |
+| `observations` (a staff note) | `guest_notes` | `ADMIN-PANEL-CONTEXT.md` rules out an admin touching bookings, so a staff-note column had no possible author |
+| no RLS | RLS on the `guests` pattern | The anon key ships to the browser, and these rows carry prices, notes, and every villa's occupancy calendar |
+
+### `status` is a column, and that is not a contradiction
+
+This project has now refused a boolean three times (`is_verified`, `guest_ref`, `is_paid`), so
+keeping `status` needs justifying. **Check-in and check-out are real-world events that nothing
+else in the database records.** They cannot be derived: a stay whose `end_date` has passed may
+have been a no-show, and a cancellation says nothing about the calendar. The values are
+`confirmed`, `checked_in`, `checked_out`, `cancelled`; the course's `unconfirmed` is absent
+because there it means "booked but not yet checked in", which `confirmed` already covers.
+
+Two things `status` genuinely cannot promise, both asserted by verification block K instead of
+by a constraint: it cannot be checked against the calendar (`CHECK` requires IMMUTABLE and
+`now()` is not), and **it goes stale on its own** — the seeded `checked_in` rows drift out of
+their window within about a week, because nothing advances a status column without a job to do
+it. That will be just as true of real bookings.
+
+### ⚠️ Overlapping bookings are NOT prevented by the database
+
+Decided deliberately: two bookings for the same villa on the same dates are prevented at the
+**input path**, where the date picker only offers free dates. An `exclude using gist` constraint
+over `daterange` was considered and declined.
+
+**The consequence, recorded so nobody is surprised by it:** a read-time check is not a lock, so
+two guests submitting the same dates simultaneously are both accepted. If that ever matters, the
+fix is `btree_gist` plus an exclusion constraint on `bookings` — **not** more validation in the
+form, which cannot close a race by construction. Until then `bookings_stay_dates_idx` exists to
+keep the availability lookup off a sequential scan, the seed data is genuinely overlap-free, and
+block K in `supabase/README.md` is the only thing that will catch a violation.
+
+### Why the seed derives 100 rows from `reviews`, and why that is not a precedent
+
+Real causality is booking → review. `seed/0004` reconstructs the arrow backwards because reviews
+were seeded a phase earlier and already hold the guest, the villa, and the date each review was
+written; retyping those 100 triples would be a second copy that can drift.
+
+That is a **one-off reconstruction**, the same species as the backfill in `0007` and valid for
+the same reason. It does not soften the rule in §4: `reviews` is not a source of guests, and now
+not a source of bookings either. The 40 rows in Part B are an explicit list precisely so the file
+cannot be read as "bookings are a function of reviews".
+
+One detail worth knowing before editing that file: **stay lengths are pinned to 2–4 nights by
+the review seed.** `0002_reviews_seed.sql` spaces `days_ago` exactly 4 days apart within each
+villa, and with check-out one day before the review, any stay longer than 4 nights collides with
+the previous one. Widen it and the seed silently double-books villas — with no constraint to
+stop it.

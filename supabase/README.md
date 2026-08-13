@@ -24,8 +24,10 @@ minus `ferryUrl` (dropped) and with nested objects flattened into columns.
 | `migrations/0007_reviews_guest_id.sql` | `reviews.guest_id` FK, backfill, drops `guest_ref` |
 | `seed/0003_guests_full_name.sql` | Full names for the 62 seeded guests |
 | `migrations/0008_guest_avatars.sql` | `avatar_path` columns + `guests` bucket + storage policies |
+| `migrations/0009_bookings.sql` | `bookings` table + RLS. The half of "verified review" that exists |
+| `seed/0004_bookings_seed.sql` | 140 bookings: 100 behind the seeded reviews, 40 with no review |
 
-All eleven SQL files are **idempotent** — safe to re-run.
+All thirteen SQL files are **idempotent** — safe to re-run.
 
 ---
 
@@ -120,13 +122,37 @@ The full contract, with a self-contained `sharp` example, is in
 
 ### 13. Verify
 
-Run **every** block below. All of them must pass before step 14.
+Run **every** block below. Blocks A–J must pass before step 14; block K covers steps 15–16
+and only applies once those have run.
 
 ### 14. Drop the old table
 
 Only after verification passes:
 
 - `migrations/0003_drop_cabins.sql` — **export a CSV of `cabins` first**, there's no undo.
+
+### 15–16. Bookings
+
+Numbered last because this is the newest phase, not because it depends on the ones before it.
+Its real prerequisites are only **step 3** (villas seeded — the seed joins `stays` by slug) and
+**step 8** (`reviews.guest_id` filled). Steps 9–14 are irrelevant to it.
+
+15. `migrations/0009_bookings.sql` → prints `0` (nothing seeded yet)
+16. `seed/0004_bookings_seed.sql` → prints `140 | 116 | 4 | 16 | 4 | 128`, then **0 rows**
+    three times, then `100`
+
+> Run out of order and step 16 stops with
+> `Expected 100 reviews with both a guest_id and a stay_id, found 0`. That guard exists because
+> the insert joins `public.reviews`: without it an early run would write **zero** bookings and
+> report no error at all, and nothing in the UI reads this table yet to make the miss visible.
+
+> **This does not make reviews verified.** `reviews.booking_id` and the composite foreign key
+> from `GUEST_PLANNING_TABLE.md` §3 are a separate migration that has not been written. The
+> table exists; the link does not.
+
+> Dates in the seed are relative — the 100 review-backed stays are anchored to each review's
+> own timestamp, and the 40 extras to either the oldest review or `current_date`. Nothing goes
+> stale, and the two seeds may run days apart without colliding.
 
 ---
 
@@ -440,6 +466,108 @@ await db.storage.from("guests").remove([`${me}/probe.webp`]);
 Expected: `ok`, `uploaded OK`, `blocked OK`, `readable OK`. The third line is the whole point —
 if it succeeds, any signed-in guest can replace any other guest's photo.
 
+### K. Bookings are consistent, and invisible to strangers
+
+Only applies after steps 15–16. Shape and spread:
+
+```sql
+-- 140 | 116 | 4 | 16 | 4 | 128
+select count(*)                                       as bookings,
+       count(*) filter (where status = 'checked_out') as checked_out,
+       count(*) filter (where status = 'checked_in')  as checked_in,
+       count(*) filter (where status = 'confirmed')   as confirmed,
+       count(*) filter (where status = 'cancelled')   as cancelled,
+       count(paid_at)                                 as paid
+from public.bookings;
+```
+
+**The one that matters most.** No constraint prevents a double-booking — `0009` explains
+why — so this query is the only thing that will catch one. Cancellations release their dates
+and are excluded, exactly as a constraint's `WHERE` clause would have been. Must be **0 rows**:
+
+```sql
+select a.id as booking_a, b.id as booking_b, a.stay_id
+from public.bookings a
+join public.bookings b
+  on  b.stay_id = a.stay_id and b.id > a.id
+  and daterange(a.start_date, a.end_date, '[)') && daterange(b.start_date, b.end_date, '[)')
+where a.status <> 'cancelled' and b.status <> 'cancelled';
+```
+
+Three more that CHECK constraints cannot express — all must be **0 rows**:
+
+```sql
+-- Party larger than the villa sleeps. Spans two tables, so it cannot be a CHECK.
+select b.id, b.num_guests, s.capacity, s.slug
+from public.bookings b join public.stays s on s.id = b.stay_id
+where b.num_guests > s.capacity;
+
+-- Status contradicting the calendar. CHECK constraints must be IMMUTABLE and
+-- now() is not, so this can only ever be asserted here.
+select id, status, start_date, end_date from public.bookings
+where (status = 'checked_out' and end_date   > current_date)
+   or (status = 'confirmed'   and start_date < current_date)
+   or (status = 'checked_in'  and (start_date > current_date or end_date < current_date));
+
+-- Paid or stayed before the booking was even made.
+select id from public.bookings
+where created_at::date > start_date or paid_at::date > start_date;
+```
+
+> ⚠️ **The status query is exact only in the days right after seeding.** `status` is a stored
+> value while `current_date` moves, so the four `checked_in` rows drift out of their window
+> within about a week, and `confirmed` rows go stale as their dates arrive. That is not a bug in
+> the data — it is what a status column means without a job to advance it. Re-seed on a clean
+> table if you need the block to come back clean, and expect the same drift once real bookings
+> exist and nothing moves them along.
+
+Every review has a stay that could plausibly precede it — expect **100**:
+
+```sql
+select count(*) from public.reviews r
+where exists (
+    select 1 from public.bookings b
+     where b.guest_id = r.guest_id and b.stay_id = r.stay_id
+       and b.end_date <= r.created_at::date
+);
+```
+
+**RLS.** Unlike `stays`, a stranger must read **nothing** here — and get an empty list rather
+than an error, which is what a missing `anon` policy looks like from outside:
+
+```bash
+node --env-file=.env.local --input-type=module -e '
+import { createClient } from "@supabase/supabase-js";
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+const anon = await db.from("bookings").select("id, start_date, total_price");
+console.log("anon  :", anon.error ? "error — " + anon.error.message
+  : anon.data.length === 0 ? "0 rows — blocked OK"
+  : `${anon.data.length} ROWS LEAKED — occupancy and prices are public`);
+
+const s = await db.auth.signInWithPassword({
+  email: "amara.lindqvist@example.com", password: process.env.SEED_ACCOUNT_PASSWORD });
+const mine = await db.from("bookings").select("id, guest_id");
+const foreign = mine.data?.filter((r) => r.guest_id !== s.data.user.id).length ?? 0;
+console.log("guest :", mine.error ? "error — " + mine.error.message
+  : `${mine.data.length} rows, ${foreign} belonging to someone else`);
+await db.auth.signOut();
+'
+```
+
+Expected: `anon  : 0 rows — blocked OK` and `guest : 4 rows, 0 belonging to someone else`
+(Amara has three seeded reviews plus one upcoming stay). **Any non-zero on the second number
+means one guest can read another's reservations.**
+
+**`stay_id` restrict actually bites.** This must be **rejected**:
+
+```sql
+begin;
+delete from public.stays where slug = 'riverside-stone-lodge';
+-- expected: violates foreign key constraint "bookings_stay_id_fkey" on table "bookings"
+rollback;
+```
+
 ---
 
 ## Notes
@@ -497,3 +625,13 @@ What genuinely remains:
 2. **`_legacy/` still breaks `next build`.** Nine TypeScript errors there fail
    the build after it compiles cleanly, which means the app cannot deploy as-is.
    Nothing imports `_legacy/` any more, so deleting it turns the build green.
+3. **`reviews.booking_id`, and only then "verified".** `bookings` exists as of step 15, but
+   nothing links a review to the stay behind it, so there is still no way to tell a review by
+   someone who actually stayed from one that was simply typed. The migration is small — one
+   nullable column plus the composite foreign key in `GUEST_PLANNING_TABLE.md` §3, whose target
+   (`bookings_id_guest_stay_key`) `0009` already created.
+4. **Nothing reads `bookings` yet.** No auth, no `/stays/{slug}/book` route — the "Book room"
+   link in `stay-info-section.tsx` still 404s — and no write path, so the 140 rows are
+   reachable only from the SQL editor. Note that a booking query **must not** go through
+   `lib/supabase.ts`: it forces `revalidate: 3600, tags: ["stays"]` onto every request, which
+   would cache one guest's reservations and serve them to the next visitor.
