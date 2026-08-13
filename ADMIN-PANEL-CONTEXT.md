@@ -8,15 +8,21 @@
 >
 > **⚠️ Database sudah bertambah sejak dokumen ini pertama ditulis.** Bagian
 > "Kontrak data" di bawah masih menjelaskan **empat tabel katalog** saja. Sejak
-> itu ada dua tabel lagi — `public.reviews` dan `public.guests` — plus bucket
-> `guests`. Keduanya **di luar wewenang admin panel**; baca
-> [Batas wewenang admin panel](#batas-wewenang-admin-panel) sebelum menulis apa
-> pun, karena bekerja dari kontrak yang usang berarti menulis ke skema yang salah.
+> itu ada tiga tabel lagi — `public.reviews`, `public.guests`, dan
+> `public.bookings` — plus bucket `guests`. Ketiganya **di luar wewenang admin
+> panel**; baca [Batas wewenang admin panel](#batas-wewenang-admin-panel) sebelum
+> menulis apa pun, karena bekerja dari kontrak yang usang berarti menulis ke
+> skema yang salah.
+>
+> **`bookings` juga mengubah apa yang boleh Anda hapus.** Villa yang pernah
+> dipesan tidak bisa lagi di-DELETE — lihat
+> [Villa yang punya booking tidak bisa dihapus](#villa-yang-punya-booking-tidak-bisa-dihapus).
 
 ## Daftar Isi
 
 - [Peta sistem](#peta-sistem)
 - [Batas wewenang admin panel](#batas-wewenang-admin-panel)
+- [Villa yang punya booking tidak bisa dihapus](#villa-yang-punya-booking-tidak-bisa-dihapus)
 - [Kenapa perubahan Anda tidak langsung terlihat customer](#kenapa-perubahan-anda-tidak-langsung-terlihat-customer)
 - [Kontrak data — skema tabel](#kontrak-data--skema-tabel)
 - [⚠️ Kontrak upload gambar](#-kontrak-upload-gambar)
@@ -73,6 +79,7 @@ Ditetapkan pemilik proyek, dan ini **keputusan produk**, bukan sekadar keadaan s
 | `stays`, `stay_images`, `amenities`, `stay_amenities` | `auth.users` |
 | bucket `stays` | `public.guests`, bucket `guests` |
 | | `public.reviews` |
+| | `public.bookings` |
 
 ### Kenapa, dan apa yang rusak kalau dilanggar
 
@@ -90,10 +97,44 @@ review yang tidak berasal dari tamu sungguhan menghilangkan seluruh maknanya. Mo
 atau menolak review) belum dirancang; kalau nanti dibutuhkan, itu kolom status baru — **bukan**
 izin menulis baris.
 
+**`public.bookings` ditulis tamu lewat checkout, bukan admin.** Jalur checkout itu sendiri belum
+dibangun; sampai ada, satu-satunya isi tabel adalah data seed. Tabelnya juga tidak punya policy
+INSERT/UPDATE/DELETE sama sekali, jadi setiap tulisan hanya mungkin lewat service role — bukan
+izin, melainkan ketiadaan penghalang. Jangan memakainya.
+
 **Kalau arah ini berubah** — misalnya admin suatu hari boleh mendaftarkan tamu untuk booking
 telepon — maka `guests` harus dirombak lebih dulu: primary key sendiri plus `auth_user_id` yang
 nullable. Itu perubahan skema, bukan perubahan izin, dan harus dikerjakan di repo situs customer
 sebelum admin panel menulis apa pun ke sana.
+
+### Villa yang punya booking tidak bisa dihapus
+
+**Ini akan muncul sebagai error di admin panel, jadi tangani sebagai aturan bisnis, bukan bug.**
+
+`bookings.stay_id` memakai `on delete restrict`. Artinya:
+
+```sql
+delete from stays where slug = 'riverside-stone-lodge';
+-- ERROR: update or delete on table "stays" violates foreign key constraint
+--        "bookings_stay_id_fkey" on table "bookings"
+```
+
+Villa yang **belum pernah** dipesan tetap bisa dihapus persis seperti sekarang. Yang diblokir
+hanya villa yang punya minimal satu baris booking.
+
+**Kenapa bukan cascade.** Booking adalah catatan keuangan yang umumnya wajib disimpan untuk
+keperluan pajak. Cascade akan menghapusnya bersama villanya — persis alasan yang sama yang
+membuat `bookings.guest_id` memakai `on delete set null` alih-alih cascade. Dan `set null` juga
+ditolak di sini: catatan keuangan yang tidak bisa menjawab "menginap di mana" tidak ada gunanya
+sebagai catatan.
+
+**Konsekuensi yang belum terselesaikan, dan ini pekerjaan repo situs customer, bukan Anda.**
+`stays` tidak punya kolom yang berarti "tidak lagi bisa dipesan" — hanya `is_new` dan
+`is_featured`. Jadi hari ini tidak ada cara melepas villa yang sudah pernah dipesan dari situs
+tanpa menghapusnya, dan menghapusnya diblokir. Kalau admin panel membutuhkan itu, mintalah
+kolom `is_listed`/`archived_at` ditambahkan di sisi situs customer; jangan mengakalinya dengan
+menghapus baris `bookings` lebih dulu, karena itu justru menghancurkan hal yang dilindungi
+constraint ini.
 
 ---
 
@@ -336,7 +377,8 @@ senyap. Inilah persis skenario yang membuat timer 1 jam tetap dipertahankan.
 | Menulis dengan anon key | RLS hanya mengizinkan `SELECT`. Wajib service role |
 | Mengandalkan `id` numerik di URL | Situs merutekan berdasarkan `slug` |
 | Membuat akun, guest, atau booking | Keputusan produk — lihat [Batas wewenang admin panel](#batas-wewenang-admin-panel). Akun adalah tanggung jawab user yang memesan |
-| Menulis ke `public.guests` / `public.reviews` / bucket `guests` | Di luar wewenang. `guests` hanya lahir dari trigger signup; `reviews` ditulis tamu |
+| Menulis ke `public.guests` / `public.reviews` / `public.bookings` / bucket `guests` | Di luar wewenang. `guests` hanya lahir dari trigger signup; `reviews` dan `bookings` ditulis tamu |
+| Menghapus villa yang punya booking | `bookings.stay_id` memakai `on delete restrict` — [penjelasan lengkap](#villa-yang-punya-booking-tidak-bisa-dihapus) |
 
 Satu-satunya jalur komunikasi antar kedua aplikasi adalah **database** dan (nanti) **satu
 HTTP endpoint**.
