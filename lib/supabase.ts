@@ -34,31 +34,47 @@ const SUPABASE_ORIGIN = new URL(SUPABASE_URL).origin;
 export const STAYS_CACHE_TAG = "stays";
 
 /**
- * Time-based floor for catalogue freshness.
+ * Cache profile for the catalogue: the built-in `hours` profile revalidates every hour.
  *
  * The tag above is not invalidated by anything yet — on-demand revalidation from a Supabase
  * Database Webhook is a separate phase. Until then this interval is the only refresh
  * mechanism, and it stays as the safety net afterwards: pg_net is fire-and-forget, so a
  * webhook that never arrives would otherwise leave the catalogue stale forever.
  */
-export const STAYS_REVALIDATE_SECONDS = 3600;
+export const STAYS_CACHE_PROFILE = "hours";
 
+/** Cache tag for availability. Callers add a per-slug tag alongside it. */
+export const BOOKINGS_CACHE_TAG = "bookings";
+
+/**
+ * Cache profile for availability: minutes, not hours.
+ *
+ * The catalogue can be an hour stale with no consequence — a villa's photos do not
+ * change. Availability can: a stale calendar offers dates that were taken while the
+ * page sat in the cache, and the guest finds out only at checkout. Minutes is the
+ * shortest interval that still spares the database a query per render.
+ *
+ * This never caches anything guest-specific. Only booked date ranges pass through it,
+ * via the get_stay_booked_ranges RPC (supabase/migrations/0010_stay_availability.sql) —
+ * never the bookings rows themselves, which are per-guest and must not be shared.
+ */
+export const BOOKINGS_CACHE_PROFILE = "minutes";
+
+/**
+ * Anonymous, session-free client for the public catalogue.
+ *
+ * Caching is NOT attached here. It used to be, via a `global.fetch` override that forced
+ * `next: { revalidate, tags }` onto every request — which meant any authenticated query
+ * borrowing this client would have its response cached and served to the next visitor.
+ * Under Cache Components the policy lives at the function level instead (`use cache` +
+ * `cacheTag` + `cacheLife` in each feature's actions.ts), so that hazard is gone by
+ * construction rather than by remembering to avoid it.
+ *
+ * Auth uses its own clients — see lib/supabase-server.ts and lib/supabase-browser.ts.
+ */
 export const supabase = createClient(SUPABASE_ORIGIN, SUPABASE_ANON_KEY, {
     // Server-side only; there is no browser session to persist and no user to refresh.
     auth: { persistSession: false },
-    global: {
-        // supabase-js has no cache options of its own, so the caching policy is attached
-        // here where every query passes through. Only GET requests are cached by Next —
-        // PostgREST selects are GET, but an .rpc() call would be POST and opt out.
-        fetch: (input, init) =>
-            fetch(input, {
-                ...init,
-                next: {
-                    revalidate: STAYS_REVALIDATE_SECONDS,
-                    tags: [STAYS_CACHE_TAG],
-                },
-            }),
-    },
 });
 
 /**
