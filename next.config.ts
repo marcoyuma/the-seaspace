@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+    // Data fetching is excluded from prerenders unless explicitly cached with `use cache`.
+    // Enabled so the header can read the session in a Server Component: without this flag a
+    // `cookies()` call anywhere in the tree makes the WHOLE route dynamic, which would kill
+    // generateStaticParams() on /stays/[stayId]. With it, <Suspense> is a real boundary —
+    // the fallback ships in the static shell and only the session streams at request time.
+    // Top-level, not `experimental`: the experimental variants (ppr, dynamicIO,
+    // experimental.cacheComponents) are deprecated in favour of this single flag.
+    cacheComponents: true,
+
     /* config options here */
     images: {
         qualities: [75, 80, 100],

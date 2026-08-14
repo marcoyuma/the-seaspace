@@ -1,9 +1,16 @@
 import Image from "next/image";
 // SSR entry point — required in Server Components / any non-Context environment.
-// Bare `Bed` is deprecated by the package; use the `*Icon` export.
-import { BedIcon } from "@phosphor-icons/react/ssr";
+// Bare `Bed`/`Users` are deprecated by the package; use the `*Icon` exports.
+// ArrowsOutSimple stands in for floor area — the four-corner "expand" glyph is
+// the closest thing Phosphor has to the m² icon used on listing sites.
+import {
+    ArrowsOutSimpleIcon,
+    BedIcon,
+    UsersIcon,
+} from "@phosphor-icons/react/ssr";
 
 import type { AppImage } from "@/features/stays/types";
+import { idr } from "@/lib/format";
 
 interface StayCardProps {
     /** Cover image. `AppImage` rather than `StaticImageData` so the source can be a
@@ -21,14 +28,6 @@ interface StayCardProps {
     /** Renders the "New" badge on the image when true. */
     isNew?: boolean;
 }
-
-// Indonesian rupiah, no decimals (e.g. "Rp2.500.000"). Built once at module
-// scope so we don't allocate a formatter per render.
-const idr = new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-});
 
 /**
  * Real-estate–style listing card: a text block (title, specs, price) stacked
@@ -68,31 +67,40 @@ export default function StayCard({
                 />
 
                 {isNew && (
-                    <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-[14px] bg-white px-4 py-2 text-[15px] font-medium text-black">
+                    <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-[14px] bg-white px-4 py-2 text-[15px] font-semibold text-black">
                         New
                         <span className="h-2 w-2 rounded-full bg-[#2c8de2]" />
                     </div>
                 )}
             </div>
 
-            {/* Info block below the image (title → specs → price). */}
-            <h3 className="mt-4 text-black font-semibold text-[20px] tracking-[-1%]">
+            {/* Info block below the image (price → title → specs). Price and title
+                sit tight together as one unit; the specs row is the separated tail. */}
+
+            <h3 className="mt-4 text-black font-semibold text-[16px] tracking-[-1%]">
                 {name}, {location}
             </h3>
+            <p className="mt-0.5 text-[16px] text-black/50 font-semibold">
+                {idr.format(pricePerNight)} / night
+            </p>
 
-            <p className="mt-1 flex items-center gap-1.5 text-[16px] text-black/50 font-medium">
-                <span>{capacity} Guests</span>
-                <span aria-hidden>·</span>
-                <span className="flex items-center gap-1">
+            <p className="mt-4 flex items-center gap-x-6.5 text-[16px] text-black/50 font-medium">
+                <span className="flex items-center gap-2">
+                    <UsersIcon size={18} weight="regular" aria-hidden />
+                    {capacity} Guests
+                </span>
+                <span className="flex items-center gap-2">
                     <BedIcon size={18} weight="regular" aria-hidden />
                     {beds} Beds
                 </span>
-                <span aria-hidden>·</span>
-                <span>{area} m²</span>
-            </p>
-
-            <p className="mt-1 text-[16px] text-black/50 font-medium">
-                {idr.format(pricePerNight)} / night
+                <span className="flex items-center gap-2">
+                    <ArrowsOutSimpleIcon
+                        size={18}
+                        weight="regular"
+                        aria-hidden
+                    />
+                    {area} m²
+                </span>
             </p>
         </div>
     );

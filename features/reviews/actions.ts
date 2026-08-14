@@ -1,4 +1,10 @@
-import { supabase } from "@/lib/supabase";
+import { cacheLife, cacheTag } from "next/cache";
+
+import {
+    supabase,
+    STAYS_CACHE_TAG,
+    STAYS_CACHE_PROFILE,
+} from "@/lib/supabase";
 import type { Review, ReviewStats } from "@/features/reviews/types";
 
 /**
@@ -82,10 +88,10 @@ function queryFailed(
  * name twice in a loop that holds eight cards reads as a bug. So the query overfetches and the
  * duplicates are dropped here.
  *
- * Deduping in JS rather than in the database for the same reason `getReviewStats` aggregates
- * here: PostgREST has no `distinct on`, and an `.rpc()` is a POST, which the caching policy in
- * lib/supabase.ts does not attach `next: { revalidate, tags }` to. A view would be the
- * database-side answer if this ever outgrows the overfetch.
+ * Deduping in JS rather than in the database because PostgREST has no `distinct on`. A view
+ * would be the database-side answer if this ever outgrows the overfetch — an `.rpc()` would
+ * work too now that caching is function-level rather than fetch-level, but a view keeps the
+ * shape readable from the dashboard.
  *
  * `limit` is a ceiling, not a promise — if the candidate pool runs dry the result is short, and
  * ReviewsSection already handles that.
@@ -93,6 +99,10 @@ function queryFailed(
 export async function getLatestReviews(
     limit = CAROUSEL_SIZE,
 ): Promise<Review[]> {
+    "use cache";
+    cacheTag(STAYS_CACHE_TAG);
+    cacheLife(STAYS_CACHE_PROFILE);
+
     const { data, error } = await supabase
         .from("reviews")
         .select(REVIEW_SELECT)
@@ -124,16 +134,18 @@ export async function getLatestReviews(
  * Aggregates over *every* review, not just the carousel slice — the stats row describes the
  * property, not what happens to be on screen.
  *
- * Aggregated in JS on purpose. `.rpc()` is a POST, and the caching policy in lib/supabase.ts
- * only attaches `next: { revalidate, tags }` to fetches, so a stored function would silently
- * opt this query out of the hourly cache. PostgREST's own aggregates (`rating.avg()`) depend
- * on a server flag that is not guaranteed to be on. Pulling a hundred smallints through one
- * cached GET is far cheaper than losing the cache.
+ * Aggregated in JS on purpose: PostgREST's own aggregates (`rating.avg()`) depend on a server
+ * flag that is not guaranteed to be on, and pulling a hundred smallints costs almost nothing
+ * inside a cached scope.
  *
- * If reviews ever reach thousands of rows, the replacement is a database *view* — still a
- * GET, still cached — not an RPC.
+ * If reviews ever reach thousands of rows, the replacement is a database *view* rather than
+ * a wider select here.
  */
 export async function getReviewStats(): Promise<ReviewStats> {
+    "use cache";
+    cacheTag(STAYS_CACHE_TAG);
+    cacheLife(STAYS_CACHE_PROFILE);
+
     const { data, error } = await supabase.from("reviews").select("rating");
 
     if (error) throw queryFailed("review stats", error);

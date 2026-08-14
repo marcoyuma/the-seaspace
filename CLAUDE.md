@@ -1,5 +1,18 @@
 @AGENTS.md
 
+## Planning & Language
+
+- When presenting a plan, summary, or explanation in chat, use everyday, common Indonesian language
+  words. Avoid stiff, overly technical, or academic terms when a simpler word says the same
+  thing.
+- Don't make something that's already complex sound more complicated — break it into small,
+  easy-to-follow steps instead of dense paragraphs.
+- Write explanations clearly enough that someone else could follow them, or that I could
+  re-read them later without losing context. Don't assume I'll remember the reasoning behind
+  a decision.
+- This only applies to conversational replies (plans, summaries, explanations in chat).
+  Code comments, docs, and markdown files always stay in English — see "Code Comments" below.
+
 ## Code Comments
 
 - Comment on _why_, not _what_ — don't restate what the code already makes obvious.

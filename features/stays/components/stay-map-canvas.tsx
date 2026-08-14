@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 
@@ -22,7 +22,7 @@ const TILE_URL =
 const TILE_ATTRIBUTION =
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
-const DEFAULT_ZOOM = 13;
+const DEFAULT_ZOOM = 18;
 
 /**
  * The actual Leaflet map. Never import this directly — Leaflet touches the DOM
@@ -62,6 +62,15 @@ export default function StayMapCanvas({
         [],
     );
 
+    // The popup is bound by the <Popup> child, which mounts *after* the marker
+    // itself, so opening it needs the instance in state (a plain ref callback
+    // would fire too early and find nothing bound).
+    const [marker, setMarker] = useState<L.Marker | null>(null);
+
+    useEffect(() => {
+        marker?.openPopup();
+    }, [marker]);
+
     return (
         <MapContainer
             // Remounts the map when navigating between stays, and neutralises
@@ -91,8 +100,15 @@ export default function StayMapCanvas({
                 detectRetina
             />
 
-            <Marker position={[lat, lng]} icon={icon} title={label}>
-                <Popup>
+            <Marker
+                ref={setMarker}
+                position={[lat, lng]}
+                icon={icon}
+                title={label}
+            >
+                {/* Stays open once the user pans or clicks elsewhere on the map;
+                    only the × button closes it. */}
+                <Popup autoClose={false} closeOnClick={false}>
                     <span className="block text-[14px] font-medium text-black">
                         {label}
                     </span>
