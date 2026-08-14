@@ -398,80 +398,15 @@ Changing it now would break both. Left as-is on purpose; fix it only if the acco
 - **Where `nationality` comes from for real signups** — a field on the signup form, or left
   empty until booking.
 
-## 6. Avatar — complete context for whoever builds the upload
+## 6. Avatar — moved
 
-**Schema is done** (`0008_guest_avatars.sql`). **The upload feature is not built**, and will be
-built in a separate session. This section is written to stand on its own: everything needed is
-here, with no need to reconstruct the reasoning from elsewhere.
+The avatar contract now lives with the page that will own the feature:
+**[features/account/README.md](features/account/README.md)**.
 
-### What exists after `0008`
-
-| Object | What it holds |
-|---|---|
-| `guests.avatar_path` | Bucket-relative path, e.g. `a1b2…/f7c9.webp`. **Not a URL.** `NULL` = no photo |
-| `reviews.author_avatar_path` | A copy of that path, taken when the review is written |
-| bucket `guests` | Public, 512 KB limit, `image/webp\|jpeg\|png\|avif` |
-| 4 policies on `storage.objects` | Read: anyone. Insert/update/delete: only into `auth.uid()`'s own folder |
-
-### Why there are two columns and not one
-
-`public.guests` has **no `anon` policy at all** — it holds phone numbers. A visitor who has not
-logged in cannot read `avatar_path` from it, and the join returns nothing **without raising an
-error**: the avatar would just be blank forever and look like an unfinished feature.
-
-So the path is copied onto the review row, exactly as `author_display_name` and
-`author_nationality` already are, for exactly the same reason. **Do not normalise it away.**
-
-Accepted consequence: **changing your photo does not update older review cards.** A review is a
-record of a moment, so this is defensible — but it is a choice, and if it ever becomes
-unacceptable the fix is to update the guest's review rows at upload time, not to add a join.
-
-### Path convention
-
-```
-<guest_uuid>/<random>.webp
-```
-
-- The **first folder is the owner**. The storage policies compare it to `auth.uid()`, so this is
-  not cosmetic — get it wrong and either nobody can upload or everybody can overwrite everybody.
-- The **filename must change on every upload**. A stable name means the CDN keeps serving the old
-  photo after a replacement, and the guest concludes the upload failed. Delete the previous object
-  after the new path is committed to the column.
-
-### Reading it
-
-`publicStorageUrl("guests", avatar_path)` from [lib/supabase.ts](lib/supabase.ts) — already exists,
-nothing to write. Rendered in two places, both of which keep `UserCircleIcon` as the fallback when
-the path is `NULL`; the icon is not deleted, it changes role:
-
-- [features/reviews/components/review-card.tsx](features/reviews/components/review-card.tsx) — 54px
-- [ui/profile-icon.tsx](ui/profile-icon.tsx) — 38px
-
-### ⚠️ Upload contract — the part that is actually dangerous
-
-A publicly readable avatar URL is **not** a security problem; public buckets are designed for it.
-The risk lives entirely in the upload pipeline, and it is not theoretical:
-
-- **Strip EXIF.** Photos carry GPS coordinates. John McAfee was located in 2012 from metadata in a
-  photo that had been published.
-  ([EDUCAUSE](https://er.educause.edu/articles/2021/6/privacy-implications-of-exif-data))
-- **Validate the real MIME type, not the extension**, and **re-encode the image** rather than
-  storing the uploaded bytes. A real advisory: a profile-photo feature exposed EXIF metadata, the
-  app rendered HTML found inside it, and the result was a working phishing form leading to account
-  takeover. ([GHSA-q68h-xwq5-mm7x](https://github.com/HumanSignal/label-studio/security/advisories/GHSA-q68h-xwq5-mm7x))
-- Enforce the size limit client-side too; the bucket's 512 KB ceiling is the backstop, not the UX.
-
-### ⚠️ Landmine for that session
-
-[lib/supabase.ts](lib/supabase.ts) forces `next: { revalidate: 3600, tags: ["stays"] }` onto
-**every** request passing through it. Uploads and any authenticated query **must not** use that
-client — a cached authenticated response gets served to the next visitor. Auth needs its own,
-uncached client.
-
-### Prerequisite
-
-Uploading requires an authenticated session. This app has no auth yet: no `@supabase/ssr`, no
-`middleware.ts`, no login page. That comes first.
+That file carries what used to be here in full — the two-column rationale, the
+`<guest_uuid>/<random>.webp` path convention, the EXIF-stripping and re-encoding
+requirements, and how the deletion flow has to remove the file itself. The schema half is
+still `0008_guest_avatars.sql`, unchanged.
 
 ## 7. Still ahead
 
@@ -483,13 +418,16 @@ Uploading requires an authenticated session. This app has no auth yet: no `@supa
   `0009` already created its target (`bookings_id_guest_stay_key`). What remains is one
   nullable column, the FK from §3, and a backfill matching each seeded review to the booking
   that shares its guest and villa.
-- **Auth in the application** — `@supabase/ssr`, `middleware.ts`, login/signup. None of it
-  exists; this phase touched no application code.
-  ⚠️ `lib/supabase.ts` forces `next: { revalidate: 3600, tags: ["stays"] }` onto **every**
-  request. An authenticated query through that client would be cached and served to the next
-  visitor. Auth needs its own uncached client.
-- **Review write path** — a form plus an RLS `insert` policy on `reviews`, which only becomes
-  expressible once auth can prove who is writing.
+- ✅ **Auth in the application** — built. `@supabase/ssr`, `proxy.ts` (Next 16's name for
+  `middleware.ts`), `/login` and `/account`. Documented in
+  [features/auth/README.md](features/auth/README.md), the single auth
+  document.
+  The caching hazard noted here previously is gone: `lib/supabase.ts` no longer forces
+  `next: { revalidate, tags }` onto every request. Caching moved to `use cache` at the
+  function level when the data layer migrated to Cache Components, so the shared client can
+  no longer cache an authenticated response.
+- **Review write path** — a form plus an RLS `insert` policy on `reviews`. Now expressible:
+  auth can prove who is writing.
 - **Account deletion UI** — specified in `ACCOUNT-DELETION-POLICY.md`, not built.
 - **Moderation** — who approves a review, and whether that needs a state column.
 

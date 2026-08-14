@@ -1,6 +1,8 @@
 import { StarIcon, UserCircleIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { Review } from "@/features/reviews/types";
+import RatingStars from "@/features/reviews/components/rating-stars";
+import ReviewContent from "@/features/reviews/components/review-content";
 
 /**
  * One review card.
@@ -45,30 +47,14 @@ export default function ReviewCard({
             aria-hidden={isLeaving}
             className={`flex flex-col gap-2.5 motion-reduce:animate-none ${phaseClasses}`}
         >
-            <div className="flex gap-1">
-                <UserCircleIcon size={54} color="black" weight="fill" />
-                <div className="flex flex-col gap-0 inset-0 justify-center">
-                    <h3 className="text-[16px] font-semibold text-black">
-                        {review.displayName}
-                    </h3>
-                    <p className="text-[16px] font-semibold text-black/30">
-                        {review.nationality}
-                    </p>
-                </div>
-            </div>
-            <div
-                className="flex flex-row"
-                aria-label={`${review.rating} out of 5 stars`}
-            >
-                {Array.from({ length: review.rating }, (_, star) => (
-                    <StarIcon
-                        key={star}
-                        weight="fill"
-                        fill="#FFC533"
-                        size={24}
-                    />
-                ))}
-            </div>
+            {/* review content */}
+            <ReviewContent
+                displayName={review.displayName}
+                nationality={review.nationality}
+            />
+
+            {/* stars */}
+            <RatingStars rating={review.rating} />
 
             <p className="text-[16px] text-black/50 font-medium w-97.5">
                 “{review.quote}”

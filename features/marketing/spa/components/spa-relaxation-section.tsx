@@ -9,7 +9,7 @@ import jacuzziImg from "@/public/leisure/spa/jacuzzi.jpg";
  */
 export default function SpaRelaxationSection() {
     return (
-        <section id="treatments" className="scroll-mt-14 pt-6">
+        <div id="treatments" className="scroll-mt-14 pt-6">
             <div className="relative h-155 w-full overflow-hidden rounded-[20px]">
                 <Image
                     src={jacuzziImg}
@@ -21,6 +21,6 @@ export default function SpaRelaxationSection() {
                     className="object-cover"
                 />
             </div>
-        </section>
+        </div>
     );
 }

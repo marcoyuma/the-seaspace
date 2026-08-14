@@ -148,7 +148,6 @@ export default function MenuPanel({
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
-    console.log(pathname);
 
     // Close whenever the route changes — clicking a link navigates, and the
     // panel should retract as the new page comes in.

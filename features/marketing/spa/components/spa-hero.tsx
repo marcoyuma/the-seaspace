@@ -22,7 +22,7 @@ export default function SpaHero() {
     // widens the images rather than insetting them — the columns still reach
     // the Container's edges.
     return (
-        <section className="grid grid-cols-2 gap-6 pt-16">
+        <div className="grid grid-cols-2 gap-6 pt-16">
             <div className="flex flex-col">
                 <OverlineText>Spa & wellness</OverlineText>
                 <h1 className="font-semibold text-[48px] mt-6 leading-none text-black">
@@ -74,6 +74,6 @@ export default function SpaHero() {
                     className="object-cover"
                 />
             </div>
-        </section>
+        </div>
     );
 }
