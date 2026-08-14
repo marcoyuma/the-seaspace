@@ -26,8 +26,12 @@ minus `ferryUrl` (dropped) and with nested objects flattened into columns.
 | `migrations/0008_guest_avatars.sql` | `avatar_path` columns + `guests` bucket + storage policies |
 | `migrations/0009_bookings.sql` | `bookings` table + RLS. The half of "verified review" that exists |
 | `seed/0004_bookings_seed.sql` | 140 bookings: 100 behind the seeded reviews, 40 with no review |
+| `migrations/0010_stay_availability.sql` | `get_stay_booked_ranges()` — the only public read into `bookings` |
+| `seed/0005_bookings_current_seed.sql` | ♻️ Re-runnable — re-anchors the 24 near-term bookings to today |
 
-All thirteen SQL files are **idempotent** — safe to re-run.
+All fifteen SQL files are **idempotent**, but not all in the same sense. Fourteen are no-ops on
+a second run. `seed/0005_bookings_current_seed.sql` is **refresh-on-rerun**: it deletes the rows
+it owns and writes them again against today's date. That is deliberate — see step 18.
 
 ---
 
@@ -37,12 +41,19 @@ All thirteen SQL files are **idempotent** — safe to re-run.
 2. Fill in `.env.local` at the repo root. Four variables; where to find each
    value is explained in that file's own comments. This file is gitignored —
    **never** commit it.
-3. **Dashboard → Authentication → Providers → Email: switch "Confirm email"
-   OFF.** Development-only. The signup trigger in `0006` keys on
-   `email_confirmed_at`; with confirmation off Supabase stamps it immediately,
-   so the seeded `@example.com` accounts link straight away without any real
-   mailbox. Leave it on and step 7 below creates 62 accounts and **zero**
-   `guests` rows.
+3. **Switch "Confirm email" OFF** (Dashboard → Authentication → Providers →
+   Email). The signup trigger in `0006` keys on `email_confirmed_at`; with
+   confirmation off Supabase stamps it immediately, so registration completes
+   without any mail being sent. This project has no working mail sender — the
+   full account of what was tried is in
+   [features/auth/README.md](../features/auth/README.md),
+   which is also where the steps to turn confirmation back on live.
+
+   The **seeded** accounts are unaffected either way: step 7 creates them with
+   `auth.admin.createUser({ email_confirm: true })`, which stamps the column
+   directly and never reads this setting. That is exactly why seed accounts
+   cannot be used to check it — verify with `mailer_autoconfirm` instead
+   (`true` means confirmation is off).
 4. Make sure dependencies are installed: `pnpm install`.
 
 ---
@@ -153,6 +164,32 @@ Its real prerequisites are only **step 3** (villas seeded — the seed joins `st
 > Dates in the seed are relative — the 100 review-backed stays are anchored to each review's
 > own timestamp, and the 40 extras to either the oldest review or `current_date`. Nothing goes
 > stale, and the two seeds may run days apart without colliding.
+
+> ⚠️ That last claim is half true, and step 18 exists because of it. "Anchored to
+> `current_date`" means *the date step 16 ran on*. Weeks later those 24 rows are all in the
+> past, and the availability calendar on the stay page renders with nothing marked.
+
+### 17–18. Availability
+
+What turns `bookings` from a table nobody reads into the date picker on the stay detail page.
+Prerequisites: **step 15** for 17, and **step 16** for 18.
+
+17. `migrations/0010_stay_availability.sql` → the forward calendar per villa, then **0 rows**
+    (no overlaps)
+18. `seed/0005_bookings_current_seed.sql` → prints `140 | 116 | 4 | 16 | 4 | 128`, then **0 rows**
+    twice, then 5 rows per villa
+
+> **Step 18 is the one to re-run.** Whenever the calendar looks empty — which it will, a few
+> weeks after any run — run this file again and the whole near-term block moves forward to
+> today. The counts above stay identical, because it replaces its own rows rather than adding
+> to them.
+>
+> What "its own rows" means: every booking that is **not** `checked_out`. All 116 historical
+> rows from step 16 are `checked_out` and are never touched; all 24 near-term rows are not.
+> ⚠️ A later seed that adds a non-`checked_out` row it does not own would be eaten by this.
+
+> Run 18 before 17 and it works, but 17's verification queries have nothing to show. Run 18
+> before 16 and it stops with `Expected at least 116 checked_out bookings from seed/0004`.
 
 ---
 
@@ -567,6 +604,70 @@ delete from public.stays where slug = 'riverside-stone-lodge';
 -- expected: violates foreign key constraint "bookings_stay_id_fkey" on table "bookings"
 rollback;
 ```
+
+### L. Availability is public, and nothing else is
+
+Run after step 17. This is the block that proves `0010` opened exactly one door and no more.
+
+**The function returns something, and it agrees with the table.** Every villa should have
+five forward ranges after step 18 — the cancelled booking is excluded, which is the point.
+
+```sql
+select s.slug, count(*) as forward_ranges
+from public.stays s
+cross join lateral public.get_stay_booked_ranges(s.slug) r
+group by s.slug order by s.slug;
+-- 4 rows, forward_ranges = 5 each
+```
+
+**No range it hands back overlaps another.** A picker asked to grey out the same day twice
+means the seed has a real bug.
+
+```sql
+select s.slug, a.start_date, a.end_date, b.start_date, b.end_date
+from public.stays s
+cross join lateral public.get_stay_booked_ranges(s.slug) a
+cross join lateral public.get_stay_booked_ranges(s.slug) b
+where a.start_date < b.start_date
+  and daterange(a.start_date, a.end_date, '[)')
+   && daterange(b.start_date, b.end_date, '[)');
+-- 0 rows
+```
+
+**Cancellations really are released.** The cancelled booking's dates must NOT come back:
+
+```sql
+select b.id, b.start_date, b.end_date
+from public.bookings b
+join public.stays s on s.id = b.stay_id
+where b.status = 'cancelled'
+  and s.slug = 'tuscan-twilight-villa'
+  and exists (
+    select 1 from public.get_stay_booked_ranges('tuscan-twilight-villa') r
+     where r.start_date = b.start_date
+  );
+-- 0 rows
+```
+
+**The table is still shut.** Same anon probe as block K, plus the function beside it:
+
+```bash
+node --env-file=.env.local -e '
+const { createClient } = require("@supabase/supabase-js");
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+const rows = await db.from("bookings").select("id, total_price, guest_notes");
+console.log("table :", rows.data?.length === 0 ? "0 rows — blocked OK" : "LEAKED");
+
+const rpc = await db.rpc("get_stay_booked_ranges", { p_slug: "coastal-arch-retreat" });
+console.log("rpc   :", rpc.error ? "error — " + rpc.error.message : `${rpc.data.length} ranges`);
+console.log("keys  :", Object.keys(rpc.data?.[0] ?? {}).join(", "));
+'
+```
+
+Expected: `table : 0 rows — blocked OK`, `rpc : 5 ranges`, and
+`keys : start_date, end_date`. **Any other key means the function's return type was widened
+and something private is now public.**
 
 ---
 

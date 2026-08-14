@@ -56,6 +56,13 @@ export interface Stay {
     name: string;
     location: string;
     pricePerNight: number; // IDR
+    /**
+     * Per-night reduction, in IDR. `0` for every villa today, which is why the price
+     * lines still print `pricePerNight` directly — the booking summary is the only
+     * reader that subtracts it. Kept because `stays.discount` is a real column and
+     * `bookings.total_price` is defined in terms of it.
+     */
+    discountPerNight: number;
     capacity: number; // guests
     beds: number;
     area: number; // m²

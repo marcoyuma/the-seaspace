@@ -1,4 +1,11 @@
-import { supabase, publicStorageUrl } from "@/lib/supabase";
+import { cacheLife, cacheTag } from "next/cache";
+
+import {
+    supabase,
+    publicStorageUrl,
+    STAYS_CACHE_TAG,
+    STAYS_CACHE_PROFILE,
+} from "@/lib/supabase";
 import type { Amenity, Stay, StayImage } from "@/features/stays/types";
 
 const STAYS_BUCKET = "stays";
@@ -9,7 +16,7 @@ const STAYS_BUCKET = "stays";
  * needs the same shape — a stay missing its gallery is not a useful stay.
  */
 const STAY_SELECT = `
-    slug, name, location, price_per_night, capacity, beds, area, is_new,
+    slug, name, location, price_per_night, discount, capacity, beds, area, is_new,
     description, bed_type_label, bed_type_note, capacity_label,
     lat, lng, airport_code, airport_city,
     stay_images ( storage_path, alt, blur_data_url, width, height, sort_order ),
@@ -40,6 +47,7 @@ interface StayRow {
     name: string;
     location: string;
     price_per_night: number;
+    discount: number;
     capacity: number;
     beds: number;
     area: number;
@@ -94,6 +102,7 @@ function toStay(row: StayRow): Stay {
         name: row.name,
         location: row.location,
         pricePerNight: row.price_per_night,
+        discountPerNight: row.discount,
         capacity: row.capacity,
         beds: row.beds,
         area: row.area,
@@ -113,7 +122,7 @@ function toStay(row: StayRow): Stay {
  *
  * Thrown, not swallowed into an empty array: an empty catalogue renders as a legitimate
  * page while the database is down, hiding the outage from both the user and the logs.
- * The error boundary at app/(booking)/stays/error.tsx catches these.
+ * The error boundary at app/(stay-list)/stays/error.tsx catches these.
  */
 function queryFailed(what: string, error: { message: string; code?: string }): Error {
     return new Error(`Failed to load ${what} from Supabase: ${error.message}`, {
@@ -123,6 +132,10 @@ function queryFailed(what: string, error: { message: string; code?: string }): E
 
 /** Whole catalogue, in the order the /stays grid renders. */
 export async function getStays(): Promise<Stay[]> {
+    "use cache";
+    cacheTag(STAYS_CACHE_TAG);
+    cacheLife(STAYS_CACHE_PROFILE);
+
     const { data, error } = await supabase
         .from("stays")
         .select(STAY_SELECT)
@@ -134,6 +147,10 @@ export async function getStays(): Promise<Stay[]> {
 
 /** A single stay by slug. `undefined` means "no such stay" — the caller renders notFound(). */
 export async function getStay(slug: string): Promise<Stay | undefined> {
+    "use cache";
+    cacheTag(STAYS_CACHE_TAG);
+    cacheLife(STAYS_CACHE_PROFILE);
+
     const { data, error } = await supabase
         .from("stays")
         .select(STAY_SELECT)
@@ -156,6 +173,10 @@ export async function getStay(slug: string): Promise<Stay | undefined> {
  * misconfiguration.
  */
 export async function getFeaturedStays(): Promise<Stay[]> {
+    "use cache";
+    cacheTag(STAYS_CACHE_TAG);
+    cacheLife(STAYS_CACHE_PROFILE);
+
     const { data, error } = await supabase
         .from("stays")
         .select(STAY_SELECT)

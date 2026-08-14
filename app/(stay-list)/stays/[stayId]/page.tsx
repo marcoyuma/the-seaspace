@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { getStay, getStays } from "@/features/stays/actions";
+import { getStayBookedRanges } from "@/features/booking/actions";
 import Container from "@/ui/container";
 import StayImageCarousel from "@/features/stays/components/stay-image-carousel";
 import StayInfoSection from "@/features/stays/components/stay-info-section";
@@ -36,8 +37,17 @@ export default async function Page({
 }) {
     // `params` is a Promise in Next 16 — synchronous access was removed.
     const { stayId } = await params;
-    const stay = await getStay(stayId);
 
+    // In parallel: the two reads are independent, and availability is cached on a much
+    // shorter profile than the catalogue (minutes vs hours), so it is its own entry
+    // rather than something that could be folded into getStay().
+    const [stay, bookedRanges] = await Promise.all([
+        getStay(stayId),
+        getStayBookedRanges(stayId),
+    ]);
+
+    // A slug with no stay also has no bookings, so the wasted RPC call above costs one
+    // round-trip on a 404 — cheaper than serialising the two reads on every real page.
     if (!stay) notFound();
 
     return (
@@ -46,7 +56,7 @@ export default async function Page({
             <StayImageCarousel images={stay.gallery} />
 
             <Container>
-                <StayInfoSection stay={stay} />
+                <StayInfoSection stay={stay} bookedRanges={bookedRanges} />
 
                 <StayLocationSection stay={stay} />
             </Container>
