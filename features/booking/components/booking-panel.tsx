@@ -6,6 +6,7 @@ import BookingModal, {
     type ActiveLeg,
 } from "@/features/booking/components/booking-modal";
 import BookingSummary from "@/features/booking/components/booking-summary";
+import { buildCheckoutUrl } from "@/features/booking/lib/checkout-params";
 import {
     expandBlockedDays,
     firstBlockedAfter,
@@ -18,6 +19,7 @@ import type {
     GuestCounts,
 } from "@/features/booking/types";
 import PillButton from "@/ui/pill-button";
+import PillLink from "@/ui/pill-link";
 
 const NO_DATES: DateSelection = { checkIn: null, checkOut: null };
 const ONE_ADULT: GuestCounts = { adults: 1, children: 0, infants: 0, pets: 0 };
@@ -48,11 +50,14 @@ function useToday(): string | null {
  * Component and only has to render this. All the state lives here rather than in the
  * modal so a selection survives closing it.
  *
- * ⚠️ Nothing is written. `Reserve` is deliberately inert — see the note beside it.
+ * `Reserve` hands the selection to /stays/{slug}/book through the URL. Nothing is written
+ * from here — the booking is made by a Server Action on that page.
  *
+ * @param staySlug - `stays.slug`, which is also the `/stays/[stayId]` segment.
  * @param bookedRanges - From `getStayBookedRanges()`. `end` is exclusive.
  */
 export default function BookingPanel({
+    staySlug,
     stayName,
     location,
     capacity,
@@ -61,6 +66,7 @@ export default function BookingPanel({
     bookedRanges,
     className = "",
 }: {
+    staySlug: string;
     stayName: string;
     location: string;
     capacity: number;
@@ -155,16 +161,24 @@ export default function BookingPanel({
             <div className="mt-10">
                 {hasRange ? (
                     <>
-                        {/* Disabled on purpose. There is no INSERT policy on `bookings`
-                            and no checkout flow, so an enabled Reserve would be a button
-                            that silently does nothing — worse than one that says so.
-                            Enable it the moment the write path lands. */}
-                        <PillButton variant="gradient" disabled>
+                        {/* A link, not a button: the selection travels in the URL, so a
+                            checkout page can be opened in a new tab, bookmarked or
+                            reloaded and still mean the same thing. See
+                            lib/checkout-params.ts — and note that nothing in that URL is
+                            trusted on the other side. */}
+                        <PillLink
+                            href={buildCheckoutUrl(
+                                staySlug,
+                                checkIn,
+                                checkOut,
+                                guests,
+                            )}
+                            variant="gradient"
+                        >
                             Reserve
-                        </PillButton>
+                        </PillLink>
                         <p className="mt-3 text-[15px] text-black/40">
-                            Reservations aren&apos;t live yet — this is a preview of the
-                            booking flow.
+                            You won&apos;t be charged — checkout is simulated.
                         </p>
                     </>
                 ) : (
