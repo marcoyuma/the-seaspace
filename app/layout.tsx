@@ -2,11 +2,12 @@ import { josefin, manrope } from "@/app/_styles/fonts";
 
 import "@/app/_styles/globals.css";
 import Header from "@/ui/header";
-import { ReactNode } from "react";
+import { ReactNode, Suspense } from "react";
 import { Metadata } from "next";
 import seaspaceIcon from "@/public/icons/seaspace-logo-final.png";
 import Footer from "@/ui/footer";
-import ParallaxImageSection from "@/ui/parallax-image-section";
+import ProfileIcon, { ProfileIconFallback } from "@/ui/profile-icon";
+import ChromeGate from "@/ui/chrome-gate";
 
 export const metadata: Metadata = {
     title: {
@@ -35,11 +36,43 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <body
                 className={`${manrope.variable} ${josefin.variable} font-sans relative antialiased min-h-screen flex flex-col`}
             >
-                <Header />
+                {/* ChromeGate hides both on the routes listed in ui/chrome-gate.tsx —
+                    /login owns its whole viewport. It has to be a Client Component because
+                    only the client knows the current path; a layout never re-renders on
+                    navigation and cannot read one. */}
+                {/* The outer boundary is about ChromeGate, not the session: it reads
+                    usePathname(), and on a route whose dynamic segment has no
+                    generateStaticParams (/account/trips/[bookingId], /stays/[slug]/book)
+                    the path is not known until the request. Without a boundary here that
+                    read sits in the layout, ABOVE app/loading.tsx, and blocks the whole
+                    document — the "Uncached data was accessed outside of <Suspense>"
+                    build error. `null` as the fallback because the header has no sensible
+                    skeleton; on prerendered routes it resolves at build time as before. */}
+                <Suspense fallback={null}>
+                    <ChromeGate>
+                        {/* ProfileIcon reads cookies, which is request-time data. This
+                            inner boundary is what keeps that from dragging every route out
+                            of the static shell: the fallback is prerendered and only the
+                            session streams in. Passed as a prop because Header is a Client
+                            Component and cannot import an async Server Component itself. */}
+                        <Header
+                            profileSlot={
+                                <Suspense fallback={<ProfileIconFallback />}>
+                                    <ProfileIcon />
+                                </Suspense>
+                            }
+                        />
+                    </ChromeGate>
+                </Suspense>
                 <div className="flex-1 grid">
                     <main>{children}</main>
                 </div>
-                <Footer />
+                {/* Same reason as the header's boundary above. */}
+                <Suspense fallback={null}>
+                    <ChromeGate>
+                        <Footer />
+                    </ChromeGate>
+                </Suspense>
             </body>
         </html>
     );

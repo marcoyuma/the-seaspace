@@ -27,11 +27,15 @@ minus `ferryUrl` (dropped) and with nested objects flattened into columns.
 | `migrations/0009_bookings.sql` | `bookings` table + RLS. The half of "verified review" that exists |
 | `seed/0004_bookings_seed.sql` | 140 bookings: 100 behind the seeded reviews, 40 with no review |
 | `migrations/0010_stay_availability.sql` | `get_stay_booked_ranges()` — the only public read into `bookings` |
-| `seed/0005_bookings_current_seed.sql` | ♻️ Re-runnable — re-anchors the 24 near-term bookings to today |
+| `seed/0005_bookings_current_seed.sql` | ⚠️♻️ Re-runnable and now destructive — re-anchors the 24 near-term bookings to today, and eats real ones |
+| `migrations/0011_booking_writes.sql` | `create_booking()` / `settle_booking_payment()` + the overlap constraint. The write path |
+| `migrations/0012_booking_arrival_and_payment.sql` | Door codes, arrival method, the payment record, `no_show`, the two check-in functions |
+| `migrations/0013_booking_lifecycle_cron.sql` | The hourly `pg_cron` job that advances `status`. Needs `pg_cron` enabled first |
 
-All fifteen SQL files are **idempotent**, but not all in the same sense. Fourteen are no-ops on
-a second run. `seed/0005_bookings_current_seed.sql` is **refresh-on-rerun**: it deletes the rows
-it owns and writes them again against today's date. That is deliberate — see step 18.
+All eighteen SQL files are **idempotent**, but not all in the same sense. Seventeen are no-ops
+on a second run. `seed/0005_bookings_current_seed.sql` is **refresh-on-rerun**: it deletes the
+rows it owns and writes them again against today's date. That was harmless while nothing wrote
+to `bookings` — ⚠️ since step 19 it also deletes real reservations. See steps 18 and 19.
 
 ---
 
@@ -190,6 +194,30 @@ Prerequisites: **step 15** for 17, and **step 16** for 18.
 
 > Run 18 before 17 and it works, but 17's verification queries have nothing to show. Run 18
 > before 16 and it stops with `Expected at least 116 checked_out bookings from seed/0004`.
+
+### 19–21. The write path, the door, and the lifecycle
+
+What turns the date picker into an actual reservation. Prerequisites: **step 17**.
+
+19. `migrations/0011_booking_writes.sql` → the `bookings_no_overlap` constraint, one SELECT
+    policy and nothing else, then two `security definer` functions
+20. `migrations/0012_booking_arrival_and_payment.sql` → four new columns, five statuses, and
+    four functions with `prosecdef = true`
+21. **Enable `pg_cron` first** (Dashboard → Database → Extensions), then
+    `migrations/0013_booking_lifecycle_cron.sql` → one scheduled job, and a first run
+    reporting the seeded `checked_in` rows it closed
+
+> ⚠️ **Step 19 fails if the existing rows overlap.** That is the point — block K asserts the
+> seed is overlap-free, so a failure means real data needs looking at, not that the
+> constraint needs relaxing.
+
+> ⚠️ **Once step 19 has run, seed 0005 (step 18) is destructive.** It deletes every booking
+> that is not `checked_out`, and a real reservation made through the app is `confirmed`,
+> `checked_in` or `no_show`. Re-run it only on a database with no real bookings in it.
+
+> **Step 21 is optional and reversible.** Skip it and everything still works — `status`
+> simply stops advancing, exactly as it did before the job existed. `select
+> cron.unschedule('advance-booking-lifecycle');` puts it back that way.
 
 ---
 
@@ -669,6 +697,93 @@ Expected: `table : 0 rows — blocked OK`, `rpc : 5 ranges`, and
 `keys : start_date, end_date`. **Any other key means the function's return type was widened
 and something private is now public.**
 
+### M. The write path is closed, and the door only opens a door
+
+Run after steps 19–21. Everything here is about what is *not* possible.
+
+**The table has exactly one policy, and it is a SELECT.** An INSERT or UPDATE policy
+appearing in this list means someone reintroduced the hole `0011` §1 explains — RLS
+authorises rows, not values, so a policy here would let a guest write their own price.
+
+```sql
+select policyname, cmd, roles
+from pg_policies
+where schemaname = 'public' and tablename = 'bookings';
+-- 1 row: "guests read their own bookings" | SELECT | {authenticated}
+```
+
+**Every booking function is a definer with an empty search_path**, and each has exactly one
+signature. Two signatures for one name means an old overload survived a migration and
+PostgREST is now choosing between them at random.
+
+```sql
+select proname, prosecdef, proconfig, count(*) over (partition by proname) as signatures
+from pg_proc
+where pronamespace = 'public'::regnamespace
+  and proname in ('create_booking', 'settle_booking_payment', 'get_check_in_invite',
+                  'check_in_booking', 'advance_booking_lifecycle', 'get_stay_booked_ranges')
+order by proname;
+-- 6 rows, all prosecdef = t, all proconfig = {search_path=}, all signatures = 1
+```
+
+**Overlap is impossible, not merely unlikely.** Run this twice as a signed-in guest; the
+second must fail with `23P01`.
+
+```sql
+select public.create_booking('coastal-arch-retreat',
+    current_date + 400, current_date + 402, 2::smallint, null, 'gopay', 'smart-lock');
+-- clean up afterwards with the service role:
+-- delete from public.bookings where start_date > current_date + 300;
+```
+
+**What a door code reaches.** The two check-in functions are granted to `anon` on purpose
+(see `features/booking/README.md` §8), so what they return is the whole security boundary:
+
+```bash
+node --env-file=.env.local -e '
+const { createClient } = require("@supabase/supabase-js");
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+const code = process.argv[1];   // an access_code from a real booking
+const invite = await db.rpc("get_check_in_invite", { p_code: code });
+console.log("keys  :", Object.keys(invite.data?.[0] ?? {}).join(", "));
+
+const rows = await db.from("bookings").select("access_code, total_price");
+console.log("table :", rows.data?.length === 0 ? "0 rows — blocked OK" : "LEAKED");
+' A3F72C9B
+```
+
+Expected: `keys : stay_name, stay_location, start_date, end_date, already_checked_in`, and
+`table : 0 rows — blocked OK`. **Any additional key — a price, a guest id, a booking id —
+means the allow-list was widened and an anonymous scanner now sees more than a door needs
+to.**
+
+**The lifecycle job is honest.** ⚠️ The second query must always return 0 rows: a
+`checked_in` booking whose departure day has passed means the job is not running.
+
+```sql
+select * from public.advance_booking_lifecycle();
+
+select id, start_date, end_date, status
+from public.bookings
+where status = 'checked_in'
+  and end_date <= (now() at time zone 'Asia/Makassar')::date;
+-- 0 rows
+```
+
+**Nothing but a guest can write `checked_in`.** This is the invariant that keeps `status`
+a record rather than a derivation — the job in `0013` is forbidden from inferring an
+arrival from the calendar. Confirm by reading its source; if `advance_booking_lifecycle`
+ever contains the string `'checked_in'` on the *right* of a `set`, that rule has been
+broken:
+
+```sql
+select prosrc ~ 'set status = ''checked_in''' as job_fakes_arrivals
+from pg_proc
+where proname = 'advance_booking_lifecycle';
+-- job_fakes_arrivals = f
+```
+
 ---
 
 ## Notes
@@ -733,13 +848,22 @@ What genuinely remains:
 2. **`_legacy/` still breaks `next build`.** Nine TypeScript errors there fail
    the build after it compiles cleanly, which means the app cannot deploy as-is.
    Nothing imports `_legacy/` any more, so deleting it turns the build green.
-3. **`reviews.booking_id`, and only then "verified".** `bookings` exists as of step 15, but
-   nothing links a review to the stay behind it, so there is still no way to tell a review by
-   someone who actually stayed from one that was simply typed. The migration is small — one
-   nullable column plus the composite foreign key in `GUEST_PLANNING_TABLE.md` §3, whose target
-   (`bookings_id_guest_stay_key`) `0009` already created.
-4. **Nothing reads `bookings` yet.** No auth, no `/stays/{slug}/book` route — the "Book room"
-   link in `stay-info-section.tsx` still 404s — and no write path, so the 140 rows are
-   reachable only from the SQL editor. Note that a booking query **must not** go through
-   `lib/supabase.ts`: it forces `revalidate: 3600, tags: ["stays"]` onto every request, which
-   would cache one guest's reservations and serve them to the next visitor.
+3. **`reviews.booking_id`, and only then "verified".** Nothing links a review to the stay
+   behind it, so there is still no way to tell a review by someone who actually stayed from
+   one that was simply typed. The migration is small — one nullable column plus the composite
+   foreign key in `GUEST_PLANNING_TABLE.md` §3, whose target (`bookings_id_guest_stay_key`)
+   `0009` already created. As of step 21 a `checked_out` booking is a fact somebody's arrival
+   produced rather than a value nothing maintains, so "did this person actually stay" finally
+   has an answer worth joining to.
+4. **Cancelling a booking.** The refund policy is written down
+   (`features/booking/README.md` §11) and the `cancelled` status has existed since `0009`,
+   but a guest cannot trigger it. It is its own phase: a refund rule is a decision, not a
+   button.
+
+> **Steps 15–21 closed the two items that used to sit here.** Bookings are read and written
+> by the application now — see `features/booking/README.md` for the whole path. One rule from
+> that era still holds and is easy to break by accident: a query for somebody's own bookings
+> **must not** go through `lib/supabase.ts`. That client is for the public catalogue; a
+> per-guest query cached under a shared tag is one visitor's reservations served to the next.
+> `features/booking/actions.ts` uses the session-bound client with no `use cache` for exactly
+> that reason.

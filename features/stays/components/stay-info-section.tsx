@@ -97,6 +97,8 @@ export default function StayInfoSection({
                     route. Picking dates happens here, in a modal, rather than on a
                     second page. */}
                 <BookingPanel
+                    // `Stay.id` IS the slug column — see features/stays/types.ts.
+                    staySlug={stay.id}
                     stayName={stay.name}
                     location={stay.location}
                     capacity={stay.capacity}

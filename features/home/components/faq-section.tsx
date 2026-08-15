@@ -24,8 +24,11 @@ const questions = [
         answer: "Absolutely. From snorkeling and paddleboarding to sunset sailing trips, our concierge can arrange a range of water activities tailored to your group.",
     },
     {
-        question: "Is the beach safe for swimming?",
-        answer: "Yes, our private beach has calm, shallow waters that are regularly monitored. Flags indicate current conditions, and lifeguards are on duty during daytime hours.",
+        // Replaced a verbatim duplicate of the beach question above. The arrival flow is
+        // the thing guests actually ask about that this list never answered — see
+        // features/booking/README.md.
+        question: "How do we get into the villa when we arrive?",
+        answer: "You choose when you book. Self check-in gives you a code to scan at the door, so there is nobody to meet and no arrival time to agree on. The lock box is the same code on a mechanical keypad, which keeps working with a flat phone and no signal. Either way the code reaches you the moment the booking is made, and it works at both doors.",
     },
     {
         question: "What activities are suitable for families with children?",

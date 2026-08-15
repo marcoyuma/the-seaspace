@@ -61,6 +61,25 @@ export function todayISO(): string {
     return toISO(new Date());
 }
 
+/**
+ * Today at the villas, regardless of where the server or the visitor is.
+ *
+ * The counterpart to `todayISO()`, and the one to use on the SERVER. Vercel's clock is
+ * UTC, so a guest in Jakarta booking at 07:00 on the 3rd would otherwise be told the 3rd
+ * had already started — or, worse, be offered a night that Bali has already begun.
+ * `Asia/Makassar` is WITA (UTC+8), the villas' own zone, and the same zone
+ * `create_booking` compares against in supabase/migrations/0011_booking_writes.sql. The
+ * two must not drift apart.
+ *
+ * `en-CA` is not a stylistic choice: it is the locale whose short date format is
+ * `yyyy-mm-dd`, which is the format every day in this feature is a string of.
+ */
+export function propertyTodayISO(): string {
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Makassar",
+    }).format(new Date());
+}
+
 /** First day of the month `offset` months from the given day. */
 export function addMonths(iso: string, offset: number): string {
     const date = fromISO(iso);
@@ -131,6 +150,29 @@ export function expandBlockedDays(ranges: BookedRange[]): Set<string> {
     }
 
     return blocked;
+}
+
+/**
+ * Whether every night of `[checkIn, checkOut)` is still free.
+ *
+ * ⚠️ The loop stops **before** `checkOut` for the same reason `expandBlockedDays()` does:
+ * the departure day is not a night, and a stay ending the morning another begins is normal
+ * turnover, not a clash. Checking `<=` here would refuse exactly the bookings the calendar
+ * offers.
+ *
+ * A read-time answer, and therefore not a guarantee — `bookings_no_overlap` in the
+ * database is what actually prevents a double booking. This exists to say so before a
+ * payment is attempted rather than after.
+ */
+export function rangeIsFree(
+    checkIn: string,
+    checkOut: string,
+    blocked: Set<string>,
+): boolean {
+    for (let day = checkIn; day < checkOut; day = addDays(day, 1)) {
+        if (blocked.has(day)) return false;
+    }
+    return true;
 }
 
 /**
