@@ -5,9 +5,9 @@ interface ServiceCardProps {
     serviceName: string;
     bookButtonText: string;
     /**
-     * Fill the grid cell (4:3) instead of the fixed 385x445 preview size.
-     * Used by the 2-up service row on interior pages, where each card takes
-     * half the container instead of a third.
+     * Fill the grid cell at a 4:3 ratio instead of the 385:445 preview
+     * ratio. Used by the 2-up service row on interior pages, where each
+     * card takes half the container instead of a third.
      */
     fluid?: boolean;
     /** Only worth preloading when the card sits above the fold. */
@@ -29,13 +29,15 @@ export default function ServiceCard({
     preload = true,
 }: ServiceCardProps) {
     return (
-        // `fluid` drops the inline size entirely rather than overriding it —
-        // an inline `style` would win over any Tailwind width class.
+        // Was a fixed 385x445 inline style on the non-`fluid` path — same
+        // "hero image tidak tercrop" root cause as stay-card-preview.tsx.
+        // `aspect-385/445` keeps the original photo proportions while
+        // `w-full` lets the grid column (1-up mobile, up to 3-up at md+ in
+        // ServiceAndAmenitiesPreview) drive the actual rendered width.
         <div
-            className={`relative overflow-hidden rounded-[20px] cursor-pointer group ${
-                fluid ? "w-full aspect-4/3" : ""
+            className={`relative w-full overflow-hidden rounded-[20px] cursor-pointer group ${
+                fluid ? "aspect-4/3" : "aspect-385/445"
             }`}
-            style={fluid ? undefined : { width: 385, height: 445 }}
         >
             <Image
                 className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
@@ -49,7 +51,9 @@ export default function ServiceCard({
                 fill
                 // Without `sizes`, a `fill` image defaults to 100vw and the
                 // browser downloads a far larger source than the card needs.
-                sizes={fluid ? "50vw" : "385px"}
+                sizes={
+                    fluid ? "50vw" : "(min-width: 768px) 385px, 100vw"
+                }
                 alt={`${serviceName} service preview`}
             />
 

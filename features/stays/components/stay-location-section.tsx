@@ -8,20 +8,21 @@ import StayMap from "@/features/stays/components/stay-map";
 import TravelOptionCard from "@/features/stays/components/travel-option-card";
 
 /**
- * "How to get here": a pinned map of the stay plus three ways to reach it.
+ * "How to get here": a pinned map of the stay plus ways to reach it.
  *
  * Nothing here needs an API key: the map is Leaflet over CARTO tiles, and the
- * car/flight links are plain Google Maps URLs / Flights query strings. The
- * ferry link is per-stay data because operators differ island to island.
+ * drive link is a plain Google Maps URL. The "by air" card used to build a
+ * Google Flights link from a per-stay nearest-airport code/city, but every
+ * villa in the catalogue hardcoded the same 'DPS'/'Denpasar' pair with no
+ * lookup table behind it — not meaningfully per-villa data — so that column
+ * was dropped (0016_stays_drop_unvalidated_fields.sql) and this card is now
+ * generic instead.
  */
 export default function StayLocationSection({ stay }: { stay: Stay }) {
     const { lat, lng } = stay.coordinates;
-    const { code, city } = stay.nearestAirport;
 
     const driveUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    const flightUrl = `https://www.google.com/travel/flights?q=${encodeURIComponent(
-        `flights to ${city} ${code}`,
-    )}`;
+    const flightUrl = "https://www.google.com/travel/flights";
 
     return (
         <div className="rounded-[20px] bg-[#F7F8F9] p-3 mt-24">
@@ -54,7 +55,7 @@ export default function StayLocationSection({ stay }: { stay: Stay }) {
                         />
                     }
                     title="by air"
-                    description={`Fly into ${city} (${code}) and enjoy a comfortable transit through the heart of the island.`}
+                    description="Fly into the nearest airport and arrange a comfortable transit through the heart of the island."
                     ctaLabel="Search flights"
                     href={flightUrl}
                 />

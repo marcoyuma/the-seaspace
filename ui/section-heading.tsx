@@ -14,7 +14,7 @@ export default function SectionHeading({
             <h2 className="font-semibold text-[48px] leading-none text-black">
                 {title}
             </h2>
-            <p className="mt-6 text-[18px] leading-relaxed text-black/50 font-medium">
+            <p className="mt-6 text-[16px] leading-relaxed text-black/60 font-medium tracking-normal">
                 {description}
             </p>
         </div>

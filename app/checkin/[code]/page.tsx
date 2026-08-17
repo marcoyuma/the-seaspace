@@ -52,24 +52,24 @@ export default async function CheckInPage({
                 {invite.alreadyCheckedIn ? "You're already in" : "Welcome"}
             </h1>
 
-            <p className="mt-6 text-[18px] font-medium text-black/50">
+            <p className="mt-6 text-[16px] font-medium text-black/60">
                 {invite.stayName}, {invite.stayLocation}
             </p>
-            <p className="mt-2 text-[18px] font-medium text-black/50">
+            <p className="mt-2 text-[16px] font-medium text-black/60">
                 {formatFullDate(invite.checkIn)} –{" "}
                 {formatFullDate(invite.checkOut)}
             </p>
 
             <div className="mt-14 border-t border-black/10 pt-12">
                 {invite.alreadyCheckedIn ? (
-                    <p className="text-[16px] text-black/50">
+                    <p className="text-[16px] font-medium text-black/60">
                         This villa has already been checked into, so the door is
                         open. If it will not let you in, use the lock box beside
                         it — the same code works there.
                     </p>
                 ) : (
                     <>
-                        <p className="mb-8 max-w-140 text-[16px] text-black/50">
+                        <p className="mb-8 max-w-140 text-[16px] font-medium text-black/60">
                             Press this to unlock the door and start your stay. If
                             nothing happens, the lock box beside the door takes
                             the same code.

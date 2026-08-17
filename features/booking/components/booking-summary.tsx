@@ -12,8 +12,8 @@ import HorizontalLine from "@/ui/horizontal-line";
 function Row({ label, value }: { label: React.ReactNode; value: string }) {
     return (
         <div className="flex items-baseline justify-between gap-6">
-            <span className="text-[16px] text-black/50">{label}</span>
-            <span className="text-[16px] text-black tabular-nums">{value}</span>
+            <span className="text-[16px] font-medium text-black/60">{label}</span>
+            <span className="text-[16px] font-semibold text-black tabular-nums">{value}</span>
         </div>
     );
 }
@@ -92,7 +92,7 @@ export default function BookingSummary({
             {/* Airbnb's "Flexible" policy, adapted: a full refund if cancelled at least
                 24 hours before check-in. The date comes from freeCancellationDeadline(),
                 which is where the rule is written down. */}
-            <p className="mt-4 text-[16px] text-black/50">
+            <p className="mt-4 text-[16px] font-medium text-black/60">
                 Free cancellation before{" "}
                 <span className="font-medium text-black">
                     {formatDayMonth(freeCancellationDeadline(checkIn))}

@@ -1,11 +1,10 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isActiveLink } from "@/lib/nav";
 import Logo from "@/ui/logo";
-import ProfileIcon from "@/ui/profile-icon";
 import MenuPanel from "@/ui/menu-panel";
 
 // Centralized nav targets — one place to change routes if they move.
@@ -44,11 +43,17 @@ function getHeroSweptSnapshot() {
     return window.scrollY >= window.innerHeight - 100;
 }
 
-function Header() {
+/**
+ * @param profileSlot The account control, passed in rather than imported. `ProfileIcon` is
+ * an async Server Component that reads the session, and this header is a Client Component —
+ * so it can only receive that subtree as a prop from a server parent (app/layout.tsx).
+ */
+function Header({ profileSlot }: { profileSlot: ReactNode }) {
     const pathname = usePathname();
     const isHome = pathname === "/";
-    console.log(isHome);
 
+    // Feeds both the bar and the panel; off the homepage the `/#` anchors would
+    // scroll nowhere, so interior routes swap in real destinations.
     const navLinks = isHome ? NAV_LINKS : PANEL_NAV_LINKS;
 
     // `useSyncExternalStore` subscribes to browser scroll/resize without the
@@ -83,9 +88,11 @@ function Header() {
         >
             <div
                 // The bar above can go full-bleed, but the content stays capped:
-                // expanded it's `100% - 240px` (a 120px inset per side, matching
-                // `Container`'s `px-30`) so the logo/nav/icons align with the
-                // section edges; collapsed it simply fills the pill.
+                // expanded, the inset mirrors `Container`'s mx-* at every
+                // breakpoint (48px mobile → 64px sm → 128px md → 240px lg,
+                // i.e. double Container's per-side margin) so the
+                // logo/nav/icons align with the section edges; collapsed it
+                // simply fills the pill.
                 // Side columns share equal `1fr` so the `auto` center column
                 // (the nav) stays geometrically centered between logo and
                 // account regardless of their differing widths.
@@ -95,7 +102,11 @@ function Header() {
                 // >
                 className={`mx-auto flex h-full justify-between items-center
                             transition-[width,padding] duration-500 ease-in-out motion-reduce:transition-none
-                            ${expanded ? "w-[calc(100%-240px)] px-0" : "w-full px-4"}`}
+                            ${
+                                expanded
+                                    ? "w-[calc(100%-48px)] px-0 sm:w-[calc(100%-64px)] md:w-[calc(100%-128px)] lg:w-[calc(100%-240px)]"
+                                    : "w-full px-4"
+                            }`}
             >
                 {/* Left: brand */}
                 <div className="min-w-0 justify-self-start">
@@ -152,11 +163,16 @@ function Header() {
                     to the logo and the hamburger. */}
                 <div className="flex min-w-0 items-center justify-self-end gap-4">
                     {isHome && (
-                        <div className="hidden lg:block">
-                            <ProfileIcon />
-                        </div>
+                        <div className="hidden lg:block">{profileSlot}</div>
                     )}
-                    <MenuPanel links={navLinks} showOnDesktop={!isHome} />
+                    {/* Interior pages hand all navigation to the panel, so it
+                        stays visible at every breakpoint. The homepage keeps
+                        its inline nav at `lg` (above), so the trigger fills
+                        every viewport below that instead. */}
+                    <MenuPanel
+                        links={navLinks}
+                        visibleClassName={isHome ? "block lg:hidden" : ""}
+                    />
                 </div>
             </div>
         </header>

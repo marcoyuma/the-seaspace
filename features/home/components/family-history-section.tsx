@@ -86,7 +86,15 @@ const TIMING = {
     // these stay correct as SLOWDOWN_FACTOR scales durations.
     topOverlapPercent: 50, // side batch → that batch's top image (both batches)
     batch2OverlapPercent: 30, // batch 1's top image → side batch 2
-    textVanishPercent: 42, // batch 2's top image → heading snaps out
+    // 50% = the exact midpoint of topEl2's OWN symmetric travel
+    // (TRAVEL.hiddenBelow 90vh → TRAVEL.hiddenAbove -90vh), i.e. the instant
+    // it's sitting at y:0 — its resting position over the heading. Freezing
+    // the pin any earlier (this used to be 42%) leaves topEl2 still short of
+    // that resting spot, which only mattered visually once the heading
+    // stopped being hidden via opacity on mobile/tablet (see isDesktop
+    // below) — the heading's top lines poked out above the not-yet-arrived
+    // image.
+    textVanishPercent: 50, // batch 2's top image → heading snaps out
     topDuration: 3.0 * SLOWDOWN_FACTOR,
 };
 
@@ -127,6 +135,14 @@ export default function FamilyHistorySection() {
             // Bail out early if any required element isn't mounted yet, to
             // avoid animating undefined targets.
             if (!container || !stage || !text || !topEl || !topEl2) return;
+
+            // Only desktop's topImage2 is sized large enough to fully cover
+            // the heading's bounding box (see the width/height classes on
+            // topImage2 below). On mobile/tablet the heading wraps into more
+            // lines and topImage2 can't grow enough to cover it without
+            // dwarfing the layout, so the vanish-text step below is skipped
+            // there — see its own comment for what that changes.
+            const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
 
             // Grab every individual letter span (see JSX below) so they can
             // be animated one by one.
@@ -242,17 +258,26 @@ export default function FamilyHistorySection() {
                 `<${TIMING.topOverlapPercent}%`,
             );
 
-            // Heading disappears INSTANTLY (not a fade) at the moment topEl2 is
-            // centred over it. .set() rather than .to() because we want a hard
-            // snap with no duration. Positioned relative to Phase 4's start, as
-            // a percentage of topEl2's own travel — landing where it sits at its
-            // resting position covering the h2.
-            tl.set(text, { autoAlpha: 0 }, `<${TIMING.textVanishPercent}%`);
+            // Marks the moment topEl2 reaches its resting position over the
+            // heading — landing where it would need to cover the h2.
+            // Positioned relative to Phase 4's start, as a percentage of
+            // topEl2's own travel. Added as a label (not derived from a
+            // .set() below) so the pin-release math further down stays
+            // identical whether or not the heading actually vanishes here.
+            tl.addLabel("textGone", `<${TIMING.textVanishPercent}%`);
 
-            // Marks the exact vanish instant: "<" anchors to the START of the
-            // .set() just added (zero-duration, so its start IS that instant),
-            // not the timeline's end. Read back below to decide pin release.
-            tl.addLabel("textGone", "<");
+            // Heading disappears INSTANTLY (not a fade), desktop-only. .set()
+            // rather than .to() because we want a hard snap with no duration.
+            // Only lg's topImage2 is sized to fully cover the heading's box
+            // (see its width/height classes below); at mobile/tablet widths
+            // the heading wraps into more lines than topImage2 can cover
+            // without oversizing it, so forcing autoAlpha:0 there left a bare
+            // gap where the text used to be. Keep it visible on those
+            // breakpoints instead — it scrolls away naturally once the pin
+            // releases.
+            if (isDesktop) {
+                tl.set(text, { autoAlpha: 0 }, "textGone");
+            }
 
             // Pin wiring: release the pin at the EXACT instant the heading
             // disappears, instead of holding through topEl2's remaining exit.
@@ -334,7 +359,22 @@ export default function FamilyHistorySection() {
                 <h2
                     aria-label={HEADING_TEXT}
                     ref={textRef}
-                    className="max-w-133 text-black font-semibold text-[48px] text-center relative z-20"
+                    // `w-full`: as a flex item centered by its container
+                    // (`justify-center items-center`), this h2 was shrinking
+                    // to its own unwrapped content width instead of the
+                    // container's available width, so it never wrapped and
+                    // overflowed at mobile widths (same underlying flex
+                    // quirk as `ui/heading.tsx`). `w-full` plus the
+                    // per-breakpoint `max-w-*` keeps it wrapping sensibly at
+                    // every viewport — mobile gets its OWN (smaller) cap
+                    // instead of stretching to the full viewport width,
+                    // which read as oversized/overflowing text edge-to-edge.
+                    // Font size is scaled down to match: at 48px on a
+                    // ~280px-wide mobile box the heading would wrap into a
+                    // tall column that no image could visually "cover" (see
+                    // topImage2 below, which the vanish tween relies on
+                    // landing on top of this text).
+                    className="w-full max-w-70 sm:max-w-100 md:max-w-115 lg:max-w-133 text-black font-semibold text-[28px] sm:text-[34px] md:text-[40px] lg:text-[48px] leading-tight text-center relative z-1"
                 >
                     {HEADING_TEXT.split(" ").map((word, wi, arr) => (
                         <React.Fragment key={wi}>
@@ -352,7 +392,14 @@ export default function FamilyHistorySection() {
                                     </span>
                                 ))}
                             </span>
-                            {wi < arr.length - 1 && "\u00A0"}
+                            {/* A real space (not a non-breaking space) so
+                                the browser has a soft-wrap point between
+                                words -- with a non-breaking space the whole
+                                sentence was one unbreakable run and never
+                                wrapped, forcing a ~500px-wide heading that
+                                overflowed every viewport narrower than
+                                that. */}
+                            {wi < arr.length - 1 && " "}
                         </React.Fragment>
                     ))}
                 </h2>
@@ -366,23 +413,36 @@ export default function FamilyHistorySection() {
                         }}
                         className={[
                             "absolute top-1/2 -translate-y-1/2 z-10 shrink-0",
+                            // Travel distance is in `vh` (see TRAVEL above),
+                            // independent of the element's own box size, so
+                            // shrinking these per breakpoint doesn't touch
+                            // the GSAP math — same pattern as gallery.tsx's
+                            // frame resize.
                             image.variant === "wide"
-                                ? "w-84 h-74"
-                                : "w-64 h-94",
+                                ? "w-40 h-34 sm:w-40 sm:h-35 md:w-56 md:h-49 lg:w-84 lg:h-74"
+                                : "w-28 h-42 sm:w-32 sm:h-46 md:w-44 md:h-64 lg:w-64 lg:h-94",
                             // Outer-edge inset matches Container's `mx-30`
                             // (120px) so these images line up vertically with
                             // StaysPreviewSection's content edges below. Kept as
                             // an `lg:` offset (mobile falls back to `left-8`)
                             // to avoid over-insetting on narrow viewports.
                             image.position === "left"
-                                ? "left-8 lg:left-30"
-                                : "right-8 lg:right-30",
+                                ? "left-8 md:left-16 lg:left-30"
+                                : "right-8 md:right-16 lg:right-30",
                         ].join(" ")}
                     >
                         <Image
                             src={image.src}
                             alt={image.alt}
                             fill
+                            // Matches this div's width classes above (wide:
+                            // 160/160/224/336px, slim: 112/128/176/256px) so
+                            // the browser doesn't fetch an oversized source.
+                            sizes={
+                                image.variant === "wide"
+                                    ? "(min-width: 1024px) 336px, (min-width: 768px) 224px, 160px"
+                                    : "(min-width: 1024px) 256px, (min-width: 768px) 176px, (min-width: 640px) 128px, 112px"
+                            }
                             className="object-cover rounded-2xl"
                         />
                     </div>
@@ -391,12 +451,14 @@ export default function FamilyHistorySection() {
                 {/* Batch 1 top/center image (3) */}
                 <div
                     ref={topImageRef}
-                    className="absolute top-[12%] left-1/2 -translate-x-1/2 w-122 h-72 z-30"
+                    className="absolute top-[12%] left-1/2 -translate-x-1/2 w-56 h-34 sm:w-56 sm:h-33 md:w-84 md:h-49 lg:w-122 lg:h-72 z-30"
                 >
                     <Image
                         src={topImage.src}
                         alt={topImage.alt}
                         fill
+                        // Matches this div's width classes above (224/224/336/488px).
+                        sizes="(min-width: 1024px) 488px, (min-width: 768px) 336px, 224px"
                         className="object-cover rounded-2xl"
                     />
                 </div>
@@ -412,37 +474,62 @@ export default function FamilyHistorySection() {
                         className={[
                             "absolute top-1/2 -translate-y-1/2 z-10 shrink-0",
                             image.variant === "wide"
-                                ? "w-84 h-74"
-                                : "w-64 h-94",
+                                ? "w-40 h-34 sm:w-40 sm:h-35 md:w-56 md:h-49 lg:w-84 lg:h-74"
+                                : "w-28 h-42 sm:w-32 sm:h-46 md:w-44 md:h-64 lg:w-64 lg:h-94",
                             // Outer-edge inset matches Container's `mx-30`
                             // (120px) so these images line up vertically with
                             // StaysPreviewSection's content edges below. Kept as
                             // an `lg:` offset (mobile falls back to `left-8`)
                             // to avoid over-insetting on narrow viewports.
                             image.position === "left"
-                                ? "left-8 lg:left-30"
-                                : "right-8 lg:right-30",
+                                ? "left-8 md:left-16 lg:left-30"
+                                : "right-8 md:right-16 lg:right-30",
                         ].join(" ")}
                     >
                         <Image
                             src={image.src}
                             alt={image.alt}
                             fill
+                            // Matches this div's width classes above (wide:
+                            // 160/160/224/336px, slim: 112/128/176/256px) so
+                            // the browser doesn't fetch an oversized source.
+                            sizes={
+                                image.variant === "wide"
+                                    ? "(min-width: 1024px) 336px, (min-width: 768px) 224px, 160px"
+                                    : "(min-width: 1024px) 256px, (min-width: 768px) 176px, (min-width: 640px) 128px, 112px"
+                            }
                             className="object-cover rounded-2xl"
                         />
                     </div>
                 ))}
 
-                {/* Batch 2 top/center image (6) — same position/z-index as
-                    batch 1's top image, only the ref differs */}
+                {/* Batch 2 top/center image (6) — same z-index as batch 1's
+                    top image, only the ref and vertical anchor differ.
+                    Anchored top-1/2 (not top-[12%] like the others) so it's
+                    centred on the SAME axis as the heading (also centred via
+                    the stage's items-center) instead of sitting near the top
+                    of the viewport — with a top-[12%] anchor the image and
+                    the multi-line heading only overlapped at their top edge,
+                    leaving the heading's lower lines exposed below it. Sized
+                    larger than the heading's own box at every breakpoint on
+                    purpose: on lg, the vanish tween above snaps the heading
+                    invisible right as this image reaches its resting
+                    position over it, and that "cover" illusion only reads
+                    if the image's box is at least as big as the text it's
+                    supposed to be covering. On mobile/tablet the heading
+                    isn't hidden via opacity (see isDesktop above), so this
+                    same oversizing is what visually covers it instead,
+                    purely through z-30 stacking over the heading's z-1. */}
                 <div
                     ref={topImageRef2}
-                    className="absolute top-[12%] left-1/2 -translate-x-1/2 w-140 h-103 z-30 shrink-0"
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-84 h-80 sm:w-108 sm:h-84 md:w-124 md:h-92 lg:w-140 lg:h-103 z-30 shrink-0"
                 >
                     <Image
                         src={topImage2.src}
                         alt={topImage2.alt}
                         fill
+                        // Matches this div's width classes above (336/432/496/560px).
+                        sizes="(min-width: 1024px) 560px, (min-width: 768px) 496px, (min-width: 640px) 432px, 336px"
                         className="object-cover rounded-2xl"
                     />
                 </div>

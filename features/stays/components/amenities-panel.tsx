@@ -71,7 +71,7 @@ export default function AmenitiesPanel({
                                 }`}
                             >
                                 <div className="overflow-hidden">
-                                    <p className="pr-8 pb-4.5 text-[16px] leading-[1.6] font-medium text-black/50">
+                                    <p className="pr-8 pb-4.5 text-[16px] leading-[1.6] font-medium text-black/60">
                                         {amenity.detail}
                                     </p>
                                 </div>

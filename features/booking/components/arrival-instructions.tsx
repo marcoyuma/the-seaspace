@@ -60,12 +60,12 @@ export default async function ArrivalInstructions({
                 >
                     Getting in
                 </h2>
-                <span className="text-[15px] text-black/40">
+                <span className="text-[16px] font-medium text-black/60">
                     {method.label}
                 </span>
             </div>
 
-            <p className="mt-4 max-w-160 text-[16px] text-black/50">
+            <p className="mt-4 max-w-160 text-[16px] font-medium text-black/60">
                 {method.instruction}
             </p>
 
@@ -90,13 +90,13 @@ export default async function ArrivalInstructions({
                         {formatAccessCode(accessCode)}
                     </p>
 
-                    <p className="mt-4 max-w-100 text-[15px] text-black/50">
+                    <p className="mt-4 max-w-100 text-[16px] font-medium text-black/60">
                         {isSmartLock
                             ? "If the reader does not respond — no power, no signal, a flat phone — type these same characters into the lock box beside the door."
                             : "You can also scan the code above at the smart door, if you would rather not use the keypad."}
                     </p>
 
-                    <p className="mt-4 max-w-100 text-[15px] text-black/40">
+                    <p className="mt-4 max-w-100 text-[16px] font-medium text-black/60">
                         Valid from {formatFullDate(booking.checkIn)} until you
                         leave on {formatFullDate(booking.checkOut)}.
                     </p>
@@ -109,7 +109,7 @@ export default async function ArrivalInstructions({
                 mysteriously absent. */}
             {booking.status === "confirmed" && booking.paidAt && (
                 <div className="mt-8 border-t border-black/10 pt-8">
-                    <p className="mb-4 max-w-160 text-[15px] text-black/50">
+                    <p className="mb-4 max-w-160 text-[16px] font-medium text-black/60">
                         Scanning the code does this too — this button is here for
                         when you are already looking at the screen.
                     </p>

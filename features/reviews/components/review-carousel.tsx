@@ -49,7 +49,7 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
         // stops a mid-slide card from bleeding past the border while the height
         // catches up — the 19px of vertical padding gives it room to do that
         // unseen.
-        <div className="flex flex-row justify-between border border-black/10 rounded-[20px] w-161 px-6.5 py-4.75 overflow-hidden">
+        <div className="flex flex-row justify-between border border-black/10 rounded-[20px] w-full max-w-161 px-6.5 py-4.75 overflow-hidden">
             <ReviewViewport
                 reviews={reviews}
                 index={index}

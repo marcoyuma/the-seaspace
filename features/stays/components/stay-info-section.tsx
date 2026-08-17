@@ -8,16 +8,8 @@ import BookingPanel from "@/features/booking/components/booking-panel";
 import { idr } from "@/lib/format";
 import HorizontalLine from "@/ui/horizontal-line";
 
-/** Uppercase field label sitting above a hairline, e.g. "BED TYPE". */
-function SpecField({
-    label,
-    value,
-    note,
-}: {
-    label: string;
-    value: string;
-    note?: string;
-}) {
+/** Uppercase field label sitting above a hairline, e.g. "CAPACITY". */
+function SpecField({ label, value }: { label: string; value: string }) {
     return (
         <div>
             <h3 className="text-[16px] font-medium tracking-[0.03em] text-black/40 uppercase">
@@ -28,8 +20,7 @@ function SpecField({
                 <HorizontalLine />
             </div>
 
-            <p className="mt-4 text-[16px] text-black">{value}</p>
-            {note && <p className="mt-1 text-[16px] text-black/40">{note}</p>}
+            <p className="mt-4 text-[16px] font-semibold text-black">{value}</p>
         </div>
     );
 }
@@ -51,14 +42,14 @@ export default function StayInfoSection({
     bookedRanges: BookedRange[];
 }) {
     return (
-        <div className="grid grid-cols-2 gap-x-16 pt-10">
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 pt-10 lg:grid-cols-2">
             <div>
                 <nav
                     aria-label="Breadcrumb"
                     className="flex items-center gap-2 text-[16px]"
                 >
                     <Link href="/stays" className="text-black hover:underline">
-                        All rooms
+                        All villas
                     </Link>
                     <CaretRightIcon
                         size={14}
@@ -66,7 +57,7 @@ export default function StayInfoSection({
                         aria-hidden
                         className="text-black/30"
                     />
-                    <span className="text-black/50">{stay.name}</span>
+                    <span className="font-medium text-black/60">{stay.name}</span>
                 </nav>
 
                 <h1 className="font-semibold mt-4 text-[48px] leading-none text-black">
@@ -76,21 +67,21 @@ export default function StayInfoSection({
                 {/* Same price treatment as the listing card (muted, semibold),
                     but at 20px so it reads as the headline's subtitle rather than
                     as body copy — 48/20 keeps a clear step while staying paired. */}
-                <p className="mt-3 text-[24px] tracking-[-1%] font-semibold text-black/50">
+                <p className="mt-3 text-[24px] tracking-normal font-semibold text-black/50">
                     {idr.format(stay.pricePerNight)} / night
                 </p>
 
-                <p className="mt-6 max-w-140 text-[16px] leading-[1.6] font-medium text-black/50">
+                <p className="mt-6 max-w-140 text-[16px] leading-[1.6] font-medium text-black/60">
                     {stay.description}
                 </p>
 
-                <div className="mt-6 grid grid-cols-2 gap-x-6">
-                    <SpecField
-                        label="Bed type"
-                        value={stay.bedType.label}
-                        note={stay.bedType.note}
-                    />
-                    <SpecField label="Capacity" value={stay.capacityLabel} />
+                {/* capacity/beds/area are the only spec numbers the DB actually
+                    validates (`stays_capacity_pos`), so the detail page renders
+                    those directly instead of admin-typed free text. */}
+                <div className="mt-6 grid grid-cols-3 gap-x-6">
+                    <SpecField label="Capacity" value={`${stay.capacity} Guests`} />
+                    <SpecField label="Beds" value={`${stay.beds}`} />
+                    <SpecField label="Area" value={`${stay.area} m²`} />
                 </div>
 
                 {/* Replaces the old link to /stays/{slug}/book, which never existed as a

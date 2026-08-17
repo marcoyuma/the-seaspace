@@ -32,34 +32,73 @@ export default async function StaysPreviewSection() {
                 for screen readers, instead of relying on a generic <div>. */}
             <section
                 aria-labelledby="stays-preview-heading"
-                className="flex flex-col gap-6.5"
+                // Centered on mobile (narrow columns make left-aligned text
+                // feel cramped), back to the original left-aligned layout
+                // from `md` up. `gap-5` (20px) is the site-wide gap from the
+                // intro block (overline/heading/text/CTA) to the actual
+                // content below it — a bit more breathing room than the
+                // 12px used inside the intro block itself. See
+                // RESPONSIVE-AUDIT.md Bagian F.
+                className="flex flex-col items-center gap-5 text-center md:items-start md:text-left"
             >
-                <OverlineText>Rooms and suites</OverlineText>
-                <Heading>Sea Escape</Heading>
+                {/* Intro block: `gap-3` (12px) is the site-wide spacing
+                    between overline/heading/text+CTA — see
+                    RESPONSIVE-AUDIT.md Bagian F. Isolated in its own wrapper
+                    so the section's `gap-5` above only governs the gap to
+                    the card grid, not the spacing within this block. */}
+                <div className="w-full flex flex-col items-center gap-3 md:items-start">
+                    <OverlineText>Rooms and suites</OverlineText>
+                    {/* `ui/heading.tsx`'s default `text-[48px]` is flat across
+                        every breakpoint. Landing-page headings are pinned to a
+                        single 36px instead of scaling per breakpoint — see
+                        RESPONSIVE-AUDIT.md Bagian F. `!` forces this to win over
+                        that default (same-specificity utility clashes are
+                        otherwise decided by Tailwind's generation order, not
+                        source position — see `faq-section.tsx`'s `!font-normal`
+                        for the same pattern already in use elsewhere). */}
+                    <Heading classname="!text-[36px]">Sea Escape</Heading>
 
-                <div className="w-full flex justify-between items-start gap-6">
-                    <Text>
-                        Each stay is crafted with intention, finished with
-                        elegance, and designed to feel like a home away from
-                        home surrounded by ocean breeze.
-                    </Text>
+                    <div className="w-full flex flex-col items-center gap-6 md:flex-row md:items-start md:justify-between">
+                        {/* `ui/text.tsx`'s default `max-w-128.25` (513px) never
+                            binds below that width, so on mobile this paragraph
+                            just wraps at whatever width `Container` leaves —
+                            i.e. it "follows" the container instead of having a
+                            width of its own. Every `<Text>` needs a DIFFERENT
+                            cap depending on its own copy length, so this can't
+                            live in the shared default; `!` overrides it here
+                            for this specific paragraph. */}
+                        <Text classname="!max-w-70 sm:!max-w-96 md:!max-w-105 lg:!max-w-128.25">
+                            Each stay is crafted with intention, finished with
+                            elegance, and designed to feel like a home away from
+                            home surrounded by ocean breeze.
+                        </Text>
 
-                    {/* Navigation, not an in-place action — must be a link
-                        (not a <button>) for correct semantics, SEO, and
-                        keyboard/middle-click/new-tab behavior out of the box. */}
-                    <PillLink
-                        href={STAYS_PAGE_PATH}
-                        variant="outline"
-                        className="shrink-0"
-                    >
-                        Explore stays
-                    </PillLink>
+                        {/* Navigation, not an in-place action — must be a link
+                            (not a <button>) for correct semantics, SEO, and
+                            keyboard/middle-click/new-tab behavior out of the box. */}
+                        <PillLink
+                            href={STAYS_PAGE_PATH}
+                            variant="outline"
+                            className="shrink-0"
+                        >
+                            Explore stays
+                        </PillLink>
+                    </div>
                 </div>
 
                 {/* CSS Grid (not flex justify-between) keeps the gap fixed
                     regardless of item count, matching the spacing used in
-                    ServiceAndAmenitiesPreview for visual consistency. */}
-                <div className="grid grid-cols-2 gap-6">
+                    ServiceAndAmenitiesPreview for visual consistency.
+                    `w-full` is load-bearing: the parent `<section>` is a
+                    flex column with `items-center` (only switching to
+                    `items-start` at `md:`), so without an explicit width
+                    this grid shrinks to its own min-content instead of
+                    stretching to the section's width. Each card's only
+                    content is an absolutely-positioned `next/image fill`,
+                    which contributes zero intrinsic width — so the
+                    `minmax(0,1fr)` columns collapsed to 0px and the whole
+                    grid (and every stay card in it) silently disappeared. */}
+                <div className="w-full grid grid-cols-1 gap-6 md:grid-cols-2">
                     {featuredStays.map((stay) => (
                         // The card looked clickable (cursor-pointer, zoom on hover) but went
                         // nowhere while the catalogue was hardcoded. Now that each entry is a

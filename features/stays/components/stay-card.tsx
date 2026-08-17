@@ -77,25 +77,33 @@ export default function StayCard({
             {/* Info block below the image (price → title → specs). Price and title
                 sit tight together as one unit; the specs row is the separated tail. */}
 
-            <h3 className="mt-4 text-black font-semibold text-[16px] tracking-[-1%]">
+            <h3 className="mt-4 text-black font-semibold text-[15px] sm:text-[16px] tracking-normal">
                 {name}, {location}
             </h3>
-            <p className="mt-0.5 text-[16px] text-black/50 font-semibold">
+            <p className="mt-0.5 text-[15px] sm:text-[16px] text-black/60 font-medium">
                 {idr.format(pricePerNight)} / night
             </p>
 
-            <p className="mt-4 flex items-center gap-x-6.5 text-[16px] text-black/50 font-medium">
-                <span className="flex items-center gap-2">
-                    <UsersIcon size={18} weight="regular" aria-hidden />
+            <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-x-6.5 text-[14px] sm:text-[16px] text-black/60 font-medium">
+                <span className="flex items-center gap-1.5 sm:gap-2">
+                    <UsersIcon
+                        className="size-4 sm:size-[18px]"
+                        weight="regular"
+                        aria-hidden
+                    />
                     {capacity} Guests
                 </span>
-                <span className="flex items-center gap-2">
-                    <BedIcon size={18} weight="regular" aria-hidden />
+                <span className="flex items-center gap-1.5 sm:gap-2">
+                    <BedIcon
+                        className="size-4 sm:size-[18px]"
+                        weight="regular"
+                        aria-hidden
+                    />
                     {beds} Beds
                 </span>
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 sm:gap-2">
                     <ArrowsOutSimpleIcon
-                        size={18}
+                        className="size-4 sm:size-[18px]"
                         weight="regular"
                         aria-hidden
                     />

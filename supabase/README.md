@@ -31,8 +31,12 @@ minus `ferryUrl` (dropped) and with nested objects flattened into columns.
 | `migrations/0011_booking_writes.sql` | `create_booking()` / `settle_booking_payment()` + the overlap constraint. The write path |
 | `migrations/0012_booking_arrival_and_payment.sql` | Door codes, arrival method, the payment record, `no_show`, the two check-in functions |
 | `migrations/0013_booking_lifecycle_cron.sql` | The hourly `pg_cron` job that advances `status`. Needs `pg_cron` enabled first |
+| `migrations/0014_admin_staff_access.sql` | `public.staff` + three `security definer` functions giving the admin panel scoped **reads** into `guests` |
+| `migrations/0015_staff_catalog_writes.sql` | RLS policies letting a staff session **write** the four catalogue tables and the `stays` bucket |
+| `migrations/0016_stays_drop_unvalidated_fields.sql` | ⚠️ Destructive — drops five unvalidated `stays` columns |
+| `migrations/0017_stays_revalidate_webhook.sql` | The webhook that expires the customer site's catalogue cache on write. Needs `pg_net` enabled and two Vault secrets |
 
-All eighteen SQL files are **idempotent**, but not all in the same sense. Seventeen are no-ops
+All twenty-two SQL files are **idempotent**, but not all in the same sense. Twenty-one are no-ops
 on a second run. `seed/0005_bookings_current_seed.sql` is **refresh-on-rerun**: it deletes the
 rows it owns and writes them again against today's date. That was harmless while nothing wrote
 to `bookings` — ⚠️ since step 19 it also deletes real reservations. See steps 18 and 19.
@@ -218,6 +222,75 @@ What turns the date picker into an actual reservation. Prerequisites: **step 17*
 > **Step 21 is optional and reversible.** Skip it and everything still works — `status`
 > simply stops advancing, exactly as it did before the job existed. `select
 > cron.unschedule('advance-booking-lifecycle');` puts it back that way.
+
+### 22–25. The admin panel seam
+
+What the admin panel needs to exist, and what tells this site when it has written something.
+The full contract these four serve is [ADMIN-PANEL-CONTEXT.md](../ADMIN-PANEL-CONTEXT.md).
+
+22. `migrations/0014_admin_staff_access.sql` → `public.staff`, then three `admin_*` functions.
+    ⚠️ Creates no staff rows — add them by hand, there is no INSERT policy for anyone
+23. `migrations/0015_staff_catalog_writes.sql` → 12 write policies across the four catalogue
+    tables, plus the `stays` bucket
+24. `migrations/0016_stays_drop_unvalidated_fields.sql` → five columns gone
+25. **Enable `pg_net` first** (Dashboard → Database → Extensions), then **store the two Vault
+    secrets** named in the file's header, then
+    `migrations/0017_stays_revalidate_webhook.sql` → one function and four statement triggers
+
+> ⚠️ **Step 24 is destructive and one-way.** It drops `bed_type_label`, `bed_type_note`,
+> `capacity_label`, `airport_code` and `airport_city`. The reasoning, and what renders in
+> their place, is in [STAYS-INPUT-DECISIONS.md](../STAYS-INPUT-DECISIONS.md).
+
+> **Step 25 is optional and reversible**, in the same sense as step 21. Skip it and the
+> catalogue simply goes back to being up to an hour stale — `cacheLife("hours")` in
+> `lib/supabase.ts` is still the safety net underneath it. Dropping the four `*_revalidate`
+> triggers puts it back that way.
+>
+> ⚠️ It also does **nothing for local development**: `pg_net` runs on Supabase's servers and
+> cannot reach `localhost`. That case is handled separately by shortening the cache profile
+> to `seconds` when `NODE_ENV` is `development`.
+
+#### ⚠️ Step 25 proves nothing until the site is deployed
+
+Running the migration is only half of it. Until this site has a public domain, every trigger
+it installs produces nothing but failed rows in `net._http_response` — and it will not look
+broken, because `notify_stays_changed()` is deliberately written never to fail the
+transaction that fired it.
+
+Nothing about a freshly added villa appearing quickly on `localhost` demonstrates the webhook
+works. That is the `seconds` cache profile above doing it, on a path the webhook never
+touches. **The only place this can be verified is a deployment.**
+
+Before the first deploy, these must exist in Vercel → Project Settings → Environment
+Variables:
+
+| Variable | Why |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | ⚠️ Needed at **build** time, not just runtime — `generateStaticParams()` calls `getStays()` while building |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same |
+| `STAYS_REVALIDATE_SECRET` | Must equal the Vault secret exactly, or every webhook comes back `401` |
+
+`SUPABASE_SERVICE_ROLE_KEY` and `SEED_ACCOUNT_PASSWORD` are **not** needed — only the one-off
+scripts under `scripts/` read them, never the app.
+
+Then point the Vault URL at the deployed origin, which is almost certainly still wrong from
+local testing:
+
+```sql
+select vault.update_secret(
+    (select id from vault.secrets where name = 'stays_revalidate_url'),
+    'https://your-deployment.vercel.app'  -- origin only, no trailing slash
+);
+```
+
+⚠️ Use the **stable production domain**, not a per-deploy preview URL — preview URLs change
+on every push, which would leave the webhook pointing at a dead deployment.
+
+To confirm it works end to end, run the verification queries at the foot of
+`migrations/0017_stays_revalidate_webhook.sql` and expect `200`. Reading a non-200: `401` is a
+secret mismatch, `500` means `STAYS_REVALIDATE_SECRET` is missing on Vercel, a timeout means
+the Vault URL still points somewhere unreachable, and no rows at all means either the triggers
+are missing or both Vault secrets are absent.
 
 ---
 

@@ -64,6 +64,24 @@ const WIDE_PARALLAX_SHIFT_PERCENT = 14;
 const SLIM_PARALLAX_SHIFT_PERCENT = 24;
 
 /**
+ * Mobile (<768px) uses one uniform frame size for every item — see
+ * `ImageShaper` — so there is only one parallax tuning, not a wide/slim
+ * split. Frames are much narrower than even the desktop slim frame, so the
+ * scale/shift pair borrows the slim frame's reasoning (small frame → deeper
+ * zoom, larger % shift) pushed further to keep the motion legible.
+ */
+const MOBILE_PARALLAX_SCALE = 1.6;
+const MOBILE_PARALLAX_SHIFT_PERCENT = 28;
+
+/**
+ * Same role as `SCROLL_RESISTANCE`, tuned for mobile. Frames are smaller so
+ * `getScrollDistance()` is naturally shorter; a slightly lower resistance
+ * keeps the pin from demanding an excessively long scroll on a device where
+ * users already scroll more per swipe.
+ */
+const MOBILE_SCROLL_RESISTANCE = 1.4;
+
+/**
  * Seconds for the time-based caption wipe-in that plays the instant the pin
  * engages (and plays in reverse when the user scrolls back up past the pin
  * start). Intentionally NOT scrubbed: the caption must be fully on screen
@@ -140,6 +158,11 @@ export default function Gallery() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const trackRef = useRef<HTMLDivElement>(null);
     const captionRef = useRef<HTMLDivElement>(null);
+    // Mobile-only pagination dots (one per GALLERY_ITEMS), driven imperatively
+    // from the scrub's `onUpdate` below instead of React state, matching the
+    // rest of this file's GSAP-owns-the-DOM approach and avoiding a re-render
+    // on every scroll tick.
+    const dotsRef = useRef<HTMLDivElement>(null);
 
     useIsomorphicLayoutEffect(() => {
         const section = sectionRef.current;
@@ -152,227 +175,303 @@ export default function Gallery() {
         if (!section || !track || !caption) return;
 
         /**
-         * GSAP lifecycle — `gsap.context()`:
+         * GSAP lifecycle — `gsap.matchMedia()`:
          *
-         * Every animation and ScrollTrigger created inside this callback is
-         * recorded against the context. On unmount, `ctx.revert()` kills the
-         * tween AND its ScrollTrigger, removes the pin-spacer element that
-         * ScrollTrigger injects into the DOM, and restores all inline styles.
+         * Same revert guarantees as `gsap.context()` (kills tweens/
+         * ScrollTriggers, removes the pin-spacer, restores inline styles on
+         * cleanup — critical for React Strict Mode's mount → cleanup →
+         * mount double-invoke), PLUS automatic re-run whenever the viewport
+         * crosses a registered breakpoint: crossing 768px reverts the old
+         * context and rebuilds the timeline with the other branch's tuning,
+         * so resizing across the breakpoint never leaves a stale pin/scale.
          *
-         * This is critical under React 18/19 Strict Mode, where effects run
-         * mount → cleanup → mount in development: without a full revert, the
-         * second mount would measure a DOM already wrapped in a pin-spacer
-         * and create a duplicate ScrollTrigger (double-initialization bug).
+         * Desktop and mobile need different scale/shift/resistance
+         * constants (see `MOBILE_*` above `ImageShaper` frames are a single
+         * uniform size on mobile instead of wide/slim), so each branch is
+         * its own `mm.add()` condition rather than one shared build.
          */
-        const ctx = gsap.context(() => {
-            /**
-             * Horizontal distance formula:
-             *
-             *   distance = track.scrollWidth - track.clientWidth
-             *
-             * `scrollWidth` is the full content width of all children (wide +
-             * slim images + flex gaps), `clientWidth` is the visible portion.
-             * Their difference is exactly how far the track must translate
-             * left so the last image's right edge reaches the viewport edge —
-             * i.e. every image has fully scrolled through the view.
-             *
-             * Defined as a function (not a constant) so ScrollTrigger re-reads
-             * it on every `refresh()` (window resize, font/image load), keeping
-             * the animation distance in sync with the real layout.
-             */
-            const getScrollDistance = () =>
-                track.scrollWidth - track.clientWidth;
+        const mm = gsap.matchMedia();
+        mm.add(
+            {
+                isDesktop: "(min-width: 768px)",
+                isMobile: "(max-width: 767px)",
+            },
+            (context) => {
+                const { isMobile } = context.conditions as {
+                    isMobile: boolean;
+                };
+                /**
+                 * Horizontal distance formula:
+                 *
+                 *   distance = track.scrollWidth - track.clientWidth
+                 *
+                 * `scrollWidth` is the full content width of all children (wide +
+                 * slim images + flex gaps), `clientWidth` is the visible portion.
+                 * Their difference is exactly how far the track must translate
+                 * left so the last image's right edge reaches the viewport edge —
+                 * i.e. every image has fully scrolled through the view.
+                 *
+                 * Defined as a function (not a constant) so ScrollTrigger re-reads
+                 * it on every `refresh()` (window resize, font/image load), keeping
+                 * the animation distance in sync with the real layout.
+                 */
+                const getScrollDistance = () =>
+                    track.scrollWidth - track.clientWidth;
 
-            /**
-             * Caption intro — time-based, fired by the pin, not the scrub.
-             *
-             * The caption must appear IMMEDIATELY when the pin engages, not
-             * progressively with scroll, so this wipe-in is a regular paused
-             * tween. The main ScrollTrigger's `onToggle` (below) plays it
-             * when the pin activates scrolling down and reverses it (wiping
-             * out right → left) when the user scrolls back up past the pin
-             * start. The end-of-pin side is owned by the scrubbed hide tween
-             * on the timeline instead, so the two never animate at once.
-             *
-             * `fromTo` renders its `from` state on creation, so the caption
-             * is hidden from first paint without needing a CSS pre-hide.
-             */
-            const captionIntro = gsap.fromTo(
-                caption,
-                { opacity: 0, clipPath: "inset(0% 100% 0% 0%)" },
-                {
-                    opacity: 1,
-                    clipPath: "inset(0% 0% 0% 0%)",
-                    duration: CAPTION_INTRO_DURATION,
-                    ease: "power2.out",
-                    paused: true,
-                },
-            );
-
-            /**
-             * Main pinned timeline.
-             *
-             * A timeline (rather than a lone tween) lets the horizontal
-             * travel and the caption reveal share one ScrollTrigger, so the
-             * caption's progress is derived from the same scroll position as
-             * the images — they can never fall out of sync.
-             */
-            const timeline = gsap.timeline({
-                scrollTrigger: {
-                    trigger: track,
-                    /**
-                     * Pinning mechanism:
-                     *
-                     * The trigger is the image track, so `start: "center
-                     * center"` engages the pin the moment the IMAGES' own
-                     * vertical center aligns with the viewport center — the
-                     * headings above and caption below simply come along for
-                     * the ride around that anchor.
-                     *
-                     * `pin: section` — the element frozen in place is still
-                     * the whole section (headings + track + caption); GSAP
-                     * allows the pinned element to differ from the trigger
-                     * used for position math.
-                     *
-                     * `end` extends the pin by the horizontal distance times
-                     * `SCROLL_RESISTANCE`: the user must scroll 1.8px
-                     * vertically to move the track 1px horizontally, which is
-                     * what produces the heavy, deliberate feel on entry.
-                     *
-                     * The pin wraps the section in a pin-spacer that
-                     * preserves document flow while the section is fixed.
-                     * `anticipatePin: 1` pre-applies the pin ~1 frame early to
-                     * avoid a visible jump on fast scrolling.
-                     */
-                    start: "center center",
-                    end: () => `+=${getScrollDistance() * SCROLL_RESISTANCE}`,
-                    pin: section,
-                    anticipatePin: 1,
-                    /**
-                     * `scrub: true` binds timeline progress directly to the
-                     * scrollbar position — the track and caption respond
-                     * instantly to scroll input and stop the moment the user
-                     * stops, with no smoothing lag and no drift.
-                     */
-                    scrub: true,
-                    // Recompute `x` and `end` (both function-based) whenever
-                    // ScrollTrigger refreshes, e.g. after a resize.
-                    invalidateOnRefresh: true,
-                    /**
-                     * Drives the caption intro from the pin's state changes:
-                     * pin engages scrolling down → play the wipe-in
-                     * immediately; pin disengages scrolling back up → reverse
-                     * it. The other two toggle cases (leaving/re-entering at
-                     * the pin's end) are deliberately ignored — there the
-                     * caption is owned by the scrubbed hide tween below.
-                     */
-                    onToggle: (self) => {
-                        if (self.isActive && self.direction === 1) {
-                            captionIntro.play();
-                        } else if (!self.isActive && self.direction === -1) {
-                            captionIntro.reverse();
-                        }
+                /**
+                 * Caption intro — time-based, fired by the pin, not the scrub.
+                 *
+                 * The caption must appear IMMEDIATELY when the pin engages, not
+                 * progressively with scroll, so this wipe-in is a regular paused
+                 * tween. The main ScrollTrigger's `onToggle` (below) plays it
+                 * when the pin activates scrolling down and reverses it (wiping
+                 * out right → left) when the user scrolls back up past the pin
+                 * start. The end-of-pin side is owned by the scrubbed hide tween
+                 * on the timeline instead, so the two never animate at once.
+                 *
+                 * `fromTo` renders its `from` state on creation, so the caption
+                 * is hidden from first paint without needing a CSS pre-hide.
+                 */
+                const captionIntro = gsap.fromTo(
+                    caption,
+                    { opacity: 0, clipPath: "inset(0% 100% 0% 0%)" },
+                    {
+                        opacity: 1,
+                        clipPath: "inset(0% 0% 0% 0%)",
+                        duration: CAPTION_INTRO_DURATION,
+                        ease: "power2.out",
+                        paused: true,
                     },
-                },
-            });
+                );
 
-            // Horizontal travel occupies the full timeline (progress 0 → 1).
-            // Linear easing is mandatory for scrubbed animations: any curve
-            // would break the direct mapping between scroll and motion.
-            timeline.to(track, {
-                x: () => -getScrollDistance(),
-                ease: "none",
-                duration: 1,
-            });
+                /**
+                 * Main pinned timeline.
+                 *
+                 * A timeline (rather than a lone tween) lets the horizontal
+                 * travel and the caption reveal share one ScrollTrigger, so the
+                 * caption's progress is derived from the same scroll position as
+                 * the images — they can never fall out of sync.
+                 */
+                const timeline = gsap.timeline({
+                    scrollTrigger: {
+                        trigger: track,
+                        /**
+                         * Pinning mechanism:
+                         *
+                         * The trigger is the image track, so `start: "center
+                         * center"` engages the pin the moment the IMAGES' own
+                         * vertical center aligns with the viewport center — the
+                         * headings above and caption below simply come along for
+                         * the ride around that anchor.
+                         *
+                         * `pin: section` — the element frozen in place is still
+                         * the whole section (headings + track + caption); GSAP
+                         * allows the pinned element to differ from the trigger
+                         * used for position math.
+                         *
+                         * `end` extends the pin by the horizontal distance times
+                         * `SCROLL_RESISTANCE`: the user must scroll 1.8px
+                         * vertically to move the track 1px horizontally, which is
+                         * what produces the heavy, deliberate feel on entry.
+                         *
+                         * The pin wraps the section in a pin-spacer that
+                         * preserves document flow while the section is fixed.
+                         * `anticipatePin: 1` pre-applies the pin ~1 frame early to
+                         * avoid a visible jump on fast scrolling.
+                         */
+                        start: "center center",
+                        end: () =>
+                            `+=${
+                                getScrollDistance() *
+                                (isMobile
+                                    ? MOBILE_SCROLL_RESISTANCE
+                                    : SCROLL_RESISTANCE)
+                            }`,
+                        pin: section,
+                        anticipatePin: 1,
+                        /**
+                         * `scrub: true` binds timeline progress directly to the
+                         * scrollbar position — the track and caption respond
+                         * instantly to scroll input and stop the moment the user
+                         * stops, with no smoothing lag and no drift.
+                         */
+                        scrub: true,
+                        // Recompute `x` and `end` (both function-based) whenever
+                        // ScrollTrigger refreshes, e.g. after a resize.
+                        invalidateOnRefresh: true,
+                        /**
+                         * Drives the caption intro from the pin's state changes:
+                         * pin engages scrolling down → play the wipe-in
+                         * immediately; pin disengages scrolling back up → reverse
+                         * it. The other two toggle cases (leaving/re-entering at
+                         * the pin's end) are deliberately ignored — there the
+                         * caption is owned by the scrubbed hide tween below.
+                         */
+                        onToggle: (self) => {
+                            if (self.isActive && self.direction === 1) {
+                                captionIntro.play();
+                            } else if (!self.isActive && self.direction === -1) {
+                                captionIntro.reverse();
+                            }
+                        },
+                        /**
+                         * Mobile pagination dots: each frame now fills nearly
+                         * the whole viewport (see `ImageShaper`), so the dot
+                         * row is the only cue for "which of the 8 images is
+                         * this". Progress maps directly to item index since
+                         * the track travel is linear across the full scrub.
+                         * Desktop has no dot row (`dotsRef` unmounted there),
+                         * so this is a no-op on that branch.
+                         */
+                        onUpdate: (self) => {
+                            if (!isMobile || !dotsRef.current) return;
+                            const activeIndex = Math.min(
+                                GALLERY_ITEMS.length - 1,
+                                Math.floor(self.progress * GALLERY_ITEMS.length),
+                            );
+                            Array.from(dotsRef.current.children).forEach(
+                                (dot, i) => {
+                                    dot.classList.toggle(
+                                        "w-6",
+                                        i === activeIndex,
+                                    );
+                                    dot.classList.toggle(
+                                        "bg-black/80",
+                                        i === activeIndex,
+                                    );
+                                    dot.classList.toggle(
+                                        "w-3",
+                                        i !== activeIndex,
+                                    );
+                                    dot.classList.toggle(
+                                        "bg-black/20",
+                                        i !== activeIndex,
+                                    );
+                                },
+                            );
+                        },
+                    },
+                });
 
-            /**
-             * Per-image parallax — an inner slide layered on the same scrub.
-             *
-             * Each <img> is scaled up (per-variant scale constants) so it
-             * overflows its `overflow-hidden` frame on both sides; the tween
-             * then slides it from −shift to +shift across the full pin —
-             * COUNTER to the frames' leftward travel. Moving the photo
-             * against its frame makes it appear to hold its ground while
-             * the window sweeps across it, which reads as the image being
-             * progressively revealed (mirrored on scroll-up), perfectly in
-             * sync with the scrub (no delay, no drift).
-             *
-             * The slide targets the images while the track tween above owns
-             * the frames' container, so the two transforms never conflict.
-             * GSAP applies translate before scale in its transform string,
-             * so the visual offset equals `xPercent` of the unscaled frame
-             * width and stays inside the (scale − 1) / 2 slack per side.
-             *
-             * Wide and slim frames are tuned separately: `xPercent` is
-             * relative to each frame's own width, so the narrow slim frames
-             * need a deeper zoom and a larger shift to travel a comparable
-             * number of absolute pixels (see the paired constants above).
-             */
-            const wideImages = track.querySelectorAll(
-                '[data-variant="wide"] img',
-            );
-            const slimImages = track.querySelectorAll(
-                '[data-variant="slim"] img',
-            );
-            gsap.set(wideImages, { scale: WIDE_PARALLAX_SCALE });
-            gsap.set(slimImages, { scale: SLIM_PARALLAX_SCALE });
-            timeline.fromTo(
-                wideImages,
-                { xPercent: -WIDE_PARALLAX_SHIFT_PERCENT },
-                {
-                    xPercent: WIDE_PARALLAX_SHIFT_PERCENT,
+                // Horizontal travel occupies the full timeline (progress 0 → 1).
+                // Linear easing is mandatory for scrubbed animations: any curve
+                // would break the direct mapping between scroll and motion.
+                timeline.to(track, {
+                    x: () => -getScrollDistance(),
                     ease: "none",
                     duration: 1,
-                },
-                0,
-            );
-            timeline.fromTo(
-                slimImages,
-                { xPercent: -SLIM_PARALLAX_SHIFT_PERCENT },
-                {
-                    xPercent: SLIM_PARALLAX_SHIFT_PERCENT,
-                    ease: "none",
-                    duration: 1,
-                },
-                0,
-            );
+                });
 
-            /**
-             * Caption hide — a scrubbed directional wipe on the main
-             * timeline.
-             *
-             * The left inset grows 0% → 100%, covering the caption in the
-             * same left → right direction the images travel, so it is fully
-             * gone by `CAPTION_HIDE_END` (80%) — well before the images run
-             * out and the pin releases. Because it is scrubbed, scrolling
-             * back up replays it mirrored, re-revealing the caption
-             * right → left.
-             *
-             * `immediateRender: false` is essential on this `fromTo`:
-             * without it the visible `from` state would render on creation
-             * and override the intro tween's hidden initial state. The
-             * explicit `from` values (rather than a `.to()` capturing start
-             * values lazily) keep the wipe deterministic across
-             * `invalidateOnRefresh` cycles.
-             */
-            timeline.fromTo(
-                caption,
-                { opacity: 1, clipPath: "inset(0% 0% 0% 0%)" },
-                {
-                    opacity: 0,
-                    clipPath: "inset(0% 0% 0% 100%)",
-                    ease: "none",
-                    duration: CAPTION_HIDE_END - CAPTION_HIDE_START,
-                    immediateRender: false,
-                },
-                CAPTION_HIDE_START,
-            );
-        }, section);
+                /**
+                 * Per-image parallax — an inner slide layered on the same scrub.
+                 *
+                 * Each <img> is scaled up (per-variant scale constants) so it
+                 * overflows its `overflow-hidden` frame on both sides; the tween
+                 * then slides it from −shift to +shift across the full pin —
+                 * COUNTER to the frames' leftward travel. Moving the photo
+                 * against its frame makes it appear to hold its ground while
+                 * the window sweeps across it, which reads as the image being
+                 * progressively revealed (mirrored on scroll-up), perfectly in
+                 * sync with the scrub (no delay, no drift).
+                 *
+                 * The slide targets the images while the track tween above owns
+                 * the frames' container, so the two transforms never conflict.
+                 * GSAP applies translate before scale in its transform string,
+                 * so the visual offset equals `xPercent` of the unscaled frame
+                 * width and stays inside the (scale − 1) / 2 slack per side.
+                 *
+                 * Wide and slim frames are tuned separately on desktop:
+                 * `xPercent` is relative to each frame's own width, so the
+                 * narrow slim frames need a deeper zoom and a larger shift to
+                 * travel a comparable number of absolute pixels (see the paired
+                 * constants above). On mobile every frame is the same uniform
+                 * size (see `ImageShaper`), so there is only one tuning —
+                 * `MOBILE_*` — applied to every image at once instead of a
+                 * wide/slim split.
+                 */
+                if (isMobile) {
+                    const allImages = track.querySelectorAll("img");
+                    gsap.set(allImages, { scale: MOBILE_PARALLAX_SCALE });
+                    timeline.fromTo(
+                        allImages,
+                        { xPercent: -MOBILE_PARALLAX_SHIFT_PERCENT },
+                        {
+                            xPercent: MOBILE_PARALLAX_SHIFT_PERCENT,
+                            ease: "none",
+                            duration: 1,
+                        },
+                        0,
+                    );
+                } else {
+                    const wideImages = track.querySelectorAll(
+                        '[data-variant="wide"] img',
+                    );
+                    const slimImages = track.querySelectorAll(
+                        '[data-variant="slim"] img',
+                    );
+                    gsap.set(wideImages, { scale: WIDE_PARALLAX_SCALE });
+                    gsap.set(slimImages, { scale: SLIM_PARALLAX_SCALE });
+                    timeline.fromTo(
+                        wideImages,
+                        { xPercent: -WIDE_PARALLAX_SHIFT_PERCENT },
+                        {
+                            xPercent: WIDE_PARALLAX_SHIFT_PERCENT,
+                            ease: "none",
+                            duration: 1,
+                        },
+                        0,
+                    );
+                    timeline.fromTo(
+                        slimImages,
+                        { xPercent: -SLIM_PARALLAX_SHIFT_PERCENT },
+                        {
+                            xPercent: SLIM_PARALLAX_SHIFT_PERCENT,
+                            ease: "none",
+                            duration: 1,
+                        },
+                        0,
+                    );
+                }
 
-        // Full teardown: kills the ScrollTrigger, removes the pin-spacer, and
-        // reverts inline styles — prevents memory leaks and Strict Mode
+                /**
+                 * Caption hide — a scrubbed directional wipe on the main
+                 * timeline.
+                 *
+                 * The left inset grows 0% → 100%, covering the caption in the
+                 * same left → right direction the images travel, so it is fully
+                 * gone by `CAPTION_HIDE_END` (80%) — well before the images run
+                 * out and the pin releases. Because it is scrubbed, scrolling
+                 * back up replays it mirrored, re-revealing the caption
+                 * right → left.
+                 *
+                 * `immediateRender: false` is essential on this `fromTo`:
+                 * without it the visible `from` state would render on creation
+                 * and override the intro tween's hidden initial state. The
+                 * explicit `from` values (rather than a `.to()` capturing start
+                 * values lazily) keep the wipe deterministic across
+                 * `invalidateOnRefresh` cycles.
+                 */
+                timeline.fromTo(
+                    caption,
+                    { opacity: 1, clipPath: "inset(0% 0% 0% 0%)" },
+                    {
+                        opacity: 0,
+                        clipPath: "inset(0% 0% 0% 100%)",
+                        ease: "none",
+                        duration: CAPTION_HIDE_END - CAPTION_HIDE_START,
+                        immediateRender: false,
+                    },
+                    CAPTION_HIDE_START,
+                );
+            },
+            section,
+        );
+
+        // Full teardown: kills every ScrollTrigger/tween created in either
+        // matchMedia branch, removes the pin-spacer, and reverts inline
+        // styles — prevents memory leaks and Strict Mode
         // double-initialization artifacts.
-        return () => ctx.revert();
+        return () => mm.revert();
     }, []);
 
     return (
@@ -381,11 +480,18 @@ export default function Gallery() {
         <div
             ref={sectionRef}
             id="gallery"
-            className="flex flex-col gap-6.5 max-w-dvw mb-27.5 overflow-hidden scroll-mt-14"
+            className="flex flex-col gap-5 max-w-dvw mb-12 md:mb-27.5 overflow-hidden scroll-mt-14"
         >
-            <div className="flex flex-col gap-6.5 justify-center items-center">
+            {/* Intro block: `gap-3` (12px) is the site-wide spacing between
+                overline/heading/text — see RESPONSIVE-AUDIT.md Bagian F.
+                The outer wrapper's `gap-5` above governs the (slightly
+                larger) gap from this block to the image track below. */}
+            <div className="flex flex-col gap-3 justify-center items-center">
                 <OverlineText>Gallery</OverlineText>
-                <Heading classname="text-center">
+                {/* Landing-page headings are pinned to 36px instead of
+                    `ui/heading.tsx`'s default 48px — see
+                    RESPONSIVE-AUDIT.md Bagian F. */}
+                <Heading classname="!text-[36px] text-center">
                     Sanctuary of Stolen Moment
                 </Heading>
                 <Text classname="text-center">
@@ -398,7 +504,7 @@ export default function Gallery() {
                 affected by the section's own column gap. */}
             <div>
                 {/* The horizontal track: translated on the X axis by GSAP. */}
-                <div ref={trackRef} className="flex gap-3.5">
+                <div ref={trackRef} className="flex gap-2 md:gap-3.5">
                     {GALLERY_ITEMS.map((item, index) => (
                         <ImageShaper key={index} variant={item.variant}>
                             <Image
@@ -413,18 +519,38 @@ export default function Gallery() {
                         </ImageShaper>
                     ))}
                 </div>
-                {/* Caption sits in normal layout flow, 13px (mt-3.25) below
-                    the track, with the text and arrow icon aligned on one
-                    horizontal row. Shown and hidden by the scrubbed
-                    clip-path wipes. */}
-                <div
-                    ref={captionRef}
-                    className="mt-6.5 flex items-center justify-center gap-2 text-[16px] font-bold text-black"
-                >
-                    <p>Keep scrolling to continue the journey</p>
-                    <span className="rounded-full border border-dotted border-black p-1">
-                        <ArrowDownIcon size={16} color="#000000" />
-                    </span>
+                {/* Caption block sits 13px (mt-6.5) below the track. On
+                    mobile a pagination dot row is stacked above the caption
+                    text — each frame now fills nearly the full viewport
+                    (see `ImageShaper`), so the dots are the only indicator
+                    of progress through the 8 images; desktop shows several
+                    frames at once so the dots would be redundant there. */}
+                <div className="mt-6.5 flex flex-col items-center gap-3">
+                    <div
+                        ref={dotsRef}
+                        className="flex md:hidden items-center gap-1.5"
+                    >
+                        {GALLERY_ITEMS.map((_, index) => (
+                            <span
+                                key={index}
+                                className={`h-1 rounded-full transition-all ${
+                                    index === 0
+                                        ? "w-6 bg-black/80"
+                                        : "w-3 bg-black/20"
+                                }`}
+                            />
+                        ))}
+                    </div>
+                    {/* Shown and hidden by the scrubbed clip-path wipes. */}
+                    <div
+                        ref={captionRef}
+                        className="flex items-center justify-center gap-2 text-[16px] font-bold text-black"
+                    >
+                        <p>Keep scrolling to continue the journey</p>
+                        <span className="rounded-full border border-dotted border-black p-1">
+                            <ArrowDownIcon size={16} color="#000000" />
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -438,14 +564,21 @@ function ImageShaper({
     children: React.ReactNode;
     variant: "wide" | "slim";
 }) {
-    const tempVariant =
-        variant === "wide" ? "w-[1000px] h-[609px]" : "w-[315px] h-[609px]";
+    // Below `md`, every frame is forced to the same near-full-viewport size
+    // (86% width, 75% height — one image reads as one "slide", per the
+    // reference design) so the horizontal track fits a phone viewport
+    // without overflowing; the wide/slim distinction only kicks back in at
+    // desktop widths.
+    const frameSize =
+        variant === "wide"
+            ? "w-[86dvw] h-[75dvh] md:w-[1000px] md:h-[609px]"
+            : "w-[86dvw] h-[75dvh] md:w-[315px] md:h-[609px]";
     return (
         // `data-variant` lets the parallax tweens target wide and slim
         // frames separately with variant-specific depth settings.
         <div
             data-variant={variant}
-            className={`relative overflow-hidden cursor-grab shrink-0 ${tempVariant}`}
+            className={`relative overflow-hidden cursor-grab shrink-0 ${frameSize}`}
         >
             {children}
         </div>

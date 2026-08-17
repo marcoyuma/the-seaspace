@@ -9,9 +9,18 @@ import OverlineText from "@/ui/overline-text";
  */
 export default function ReviewsHeader() {
     return (
-        <div className="flex flex-col justify-center items-center gap-6.5 mb-17.5">
+        // `gap-3` (12px) between overline/heading — the site-wide intro-
+        // block spacing. `mb-5` (20px) from heading to the reviews panel
+        // that follows, a bit more room than the 12px used inside the
+        // block itself — see RESPONSIVE-AUDIT.md Bagian F.
+        <div className="flex flex-col justify-center items-center gap-3 mb-5">
             <OverlineText>Reviews</OverlineText>
-            <Heading id="reviews-heading">Read our guests thought</Heading>
+            {/* Landing-page headings are pinned to 36px instead of
+                `ui/heading.tsx`'s default 48px — see
+                RESPONSIVE-AUDIT.md Bagian F. */}
+            <Heading id="reviews-heading" classname="!text-[36px] text-center">
+                Read our guests thought
+            </Heading>
         </div>
     );
 }

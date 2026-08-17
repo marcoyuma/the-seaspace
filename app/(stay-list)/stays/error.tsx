@@ -37,7 +37,7 @@ export default function StaysError({
                     We couldn&apos;t load the collection
                 </h1>
 
-                <p className="mx-auto mt-6 max-w-xl text-[18px] leading-relaxed font-medium text-black/50">
+                <p className="mx-auto mt-6 max-w-xl text-[16px] leading-relaxed font-medium text-black/60">
                     Something went wrong while fetching our stays. This is
                     usually temporary — please try again in a moment.
                 </p>
@@ -53,7 +53,7 @@ export default function StaysError({
                 {error.digest && (
                     // Gives support something to search the logs for without exposing the
                     // underlying error text.
-                    <p className="mt-6 text-[14px] font-medium text-black/30">
+                    <p className="mt-6 text-[16px] font-medium text-black/60">
                         Reference: {error.digest}
                     </p>
                 )}

@@ -21,8 +21,14 @@ export default function StayCardPreview({
 }: StayCardPreviewProps) {
     return (
         <div
-            className="relative overflow-hidden cursor-pointer rounded-[20px] group"
-            style={{ width: 600, height: 570 }}
+            // Was a fixed 600x570 inline style — the root cause of the
+            // "hero image tidak tercrop" bug: two 600px cards need a
+            // >=1200px container, so anything narrower (including this
+            // grid's own `md:grid-cols-2` columns) got silently clipped.
+            // `w-full` + `aspect-[600/570]` keeps the exact 600:570 photo
+            // proportions from the original design while letting the grid
+            // column (1 col mobile, 2 col md+) drive the actual width.
+            className="relative w-full aspect-600/570 overflow-hidden cursor-pointer rounded-[20px] group"
         >
             <Image
                 className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
@@ -45,11 +51,11 @@ export default function StayCardPreview({
                 Positioned with explicit offsets (not inset-0) so the height
                 stays driven by `h-12` rather than being stretched to fill
                 the parent. */}
-            <div className="absolute inset-x-3 bottom-3 flex justify-between items-center bg-white h-12 rounded-[20px]">
-                <p className="text-black font-medium text-[18px] tracking-[0.64%] mx-4">
+            <div className="absolute inset-x-3 bottom-3 flex flex-wrap justify-between items-center gap-x-3 bg-white min-h-12 rounded-[20px]">
+                <p className="text-black font-medium text-[18px] tracking-normal mx-4">
                     {villaNameText}
                 </p>
-                <p className="text-black font-light text-[16px] tracking-[0.64%] mx-4 opacity-50">
+                <p className="text-black/60 font-medium text-[16px] tracking-normal mx-4">
                     {locationText}
                 </p>
             </div>

@@ -44,7 +44,7 @@ export default function TripCard({ booking }: { booking: GuestBooking }) {
                             <h3 className="text-[20px] leading-tight font-semibold text-black">
                                 {booking.stayName}
                             </h3>
-                            <p className="mt-1 text-[16px] text-black/50">
+                            <p className="mt-1 text-[16px] font-medium text-black/60">
                                 {booking.stayLocation}
                             </p>
                         </div>
@@ -55,10 +55,10 @@ export default function TripCard({ booking }: { booking: GuestBooking }) {
                         />
                     </div>
 
-                    <p className="mt-4 text-[16px] text-black">
+                    <p className="mt-4 text-[16px] font-semibold text-black">
                         {formatFullDate(booking.checkIn)} –{" "}
                         {formatFullDate(booking.checkOut)}
-                        <span className="text-black/40">
+                        <span className="font-medium text-black/60">
                             {" · "}
                             {booking.nights}{" "}
                             {booking.nights === 1 ? "night" : "nights"}

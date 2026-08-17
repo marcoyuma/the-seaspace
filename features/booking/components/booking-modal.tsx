@@ -133,8 +133,10 @@ export default function BookingModal({
                 // that would dismiss the modal every time someone selected text.
                 if (event.target === event.currentTarget) onClose();
             }}
-            className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6 transition-opacity duration-200 ease-out motion-reduce:transition-none ${
-                isOpen ? "opacity-100" : "pointer-events-none invisible opacity-0"
+            className={`fixed inset-0 z-1150 flex items-center justify-center bg-black/40 p-4 transition-opacity duration-200 ease-out motion-reduce:transition-none sm:p-6 ${
+                isOpen
+                    ? "opacity-100"
+                    : "pointer-events-none invisible opacity-0"
             }`}
         >
             <div
@@ -143,7 +145,7 @@ export default function BookingModal({
                 role="dialog"
                 aria-modal="true"
                 aria-label={`Select dates and guests for ${stayName}`}
-                className={`max-h-full w-full max-w-225 overflow-y-auto rounded-3xl bg-white p-8 shadow-2xl transition-transform duration-200 ease-out focus:outline-none motion-reduce:transition-none ${
+                className={`max-h-full w-full max-w-225 overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl transition-transform duration-200 ease-out focus:outline-none motion-reduce:transition-none sm:p-6 md:p-8 ${
                     isOpen ? "scale-100" : "scale-95"
                 }`}
             >
@@ -156,7 +158,7 @@ export default function BookingModal({
                                 ? `${nights} ${nights === 1 ? "night" : "nights"} in ${location}`
                                 : "Select dates"}
                         </h2>
-                        <p className="mt-1 text-[16px] text-black/50">
+                        <p className="mt-1 text-[16px] font-medium text-black/60">
                             {hasRange
                                 ? `${formatFullDate(checkIn)} - ${formatFullDate(checkOut)}`
                                 : "Add your travel dates for exact pricing"}
@@ -181,20 +183,22 @@ export default function BookingModal({
                     </div>
                 </div>
 
-                {/* Calendars. The arrows sit outside the grid so they stay pinned to the
-                    edges no matter how many rows a month needs. */}
+                {/* Calendars. Below `lg` only the left month is shown — see MonthCalendar's
+                    own prev/next arrows next to its title, passed only here. The side
+                    arrows below stay for `lg`+, where both months are visible and pinned
+                    to the outer edges no matter how many rows a month needs. */}
                 <div className="mt-8 flex items-start gap-4">
                     <button
                         type="button"
                         disabled={!canGoBack}
                         onClick={() => setLeftMonth(addMonths(leftMonth, -1))}
                         aria-label="Previous month"
-                        className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-full text-black transition-colors duration-150 enabled:cursor-pointer enabled:hover:bg-black/6 disabled:opacity-25 motion-reduce:transition-none"
+                        className="mt-1 hidden size-9 shrink-0 items-center justify-center rounded-full text-black transition-colors duration-150 enabled:cursor-pointer enabled:hover:bg-black/6 disabled:opacity-25 motion-reduce:transition-none lg:flex"
                     >
                         <CaretLeftIcon size={18} aria-hidden />
                     </button>
 
-                    <div className="grid flex-1 grid-cols-2 gap-x-10">
+                    <div className="grid flex-1 grid-cols-1 gap-x-10 lg:grid-cols-2">
                         <MonthCalendar
                             monthStart={leftMonth}
                             today={today}
@@ -203,23 +207,32 @@ export default function BookingModal({
                             maxSelectable={maxSelectable}
                             checkoutOnlyDay={checkoutOnlyDay}
                             onSelectDay={onSelectDay}
+                            onPrevMonth={() =>
+                                setLeftMonth(addMonths(leftMonth, -1))
+                            }
+                            onNextMonth={() =>
+                                setLeftMonth(addMonths(leftMonth, 1))
+                            }
+                            canGoPrev={canGoBack}
                         />
-                        <MonthCalendar
-                            monthStart={addMonths(leftMonth, 1)}
-                            today={today}
-                            blocked={blocked}
-                            selection={selection}
-                            maxSelectable={maxSelectable}
-                            checkoutOnlyDay={checkoutOnlyDay}
-                            onSelectDay={onSelectDay}
-                        />
+                        <div className="hidden lg:block">
+                            <MonthCalendar
+                                monthStart={addMonths(leftMonth, 1)}
+                                today={today}
+                                blocked={blocked}
+                                selection={selection}
+                                maxSelectable={maxSelectable}
+                                checkoutOnlyDay={checkoutOnlyDay}
+                                onSelectDay={onSelectDay}
+                            />
+                        </div>
                     </div>
 
                     <button
                         type="button"
                         onClick={() => setLeftMonth(addMonths(leftMonth, 1))}
                         aria-label="Next month"
-                        className="mt-1 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-black transition-colors duration-150 hover:bg-black/6 motion-reduce:transition-none"
+                        className="mt-1 hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-black transition-colors duration-150 hover:bg-black/6 motion-reduce:transition-none lg:flex"
                     >
                         <CaretRightIcon size={18} aria-hidden />
                     </button>
@@ -245,7 +258,11 @@ export default function BookingModal({
                     {/* Decorative, exactly as in the reference: it marks the fields above
                         as typeable. Hidden from screen readers, which have the inputs
                         themselves. */}
-                    <KeyboardIcon size={24} aria-hidden className="text-black/70" />
+                    <KeyboardIcon
+                        size={24}
+                        aria-hidden
+                        className="text-black/70"
+                    />
 
                     <div className="flex items-center gap-6">
                         <button

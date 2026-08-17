@@ -51,7 +51,7 @@ function RadioCard({
                 <span className="block text-[16px] font-medium text-black">
                     {label}
                 </span>
-                <span className="mt-1 block text-[15px] text-black/50">
+                <span className="mt-1 block text-[16px] font-medium text-black/60">
                     {note}
                 </span>
             </span>
@@ -173,7 +173,7 @@ export default function CheckoutForm({
 
                 {/* Worth saying out loud: the choice is about which door you prefer, not
                     which one you are allowed to use. One code opens both. */}
-                <p className="mt-4 text-[14px] text-black/40">
+                <p className="mt-4 text-[16px] font-medium text-black/60">
                     Either way you get the same code, and it works at both the
                     smart door and the lock box. Pick whichever you would rather
                     use — you can still use the other one on the night.
@@ -193,14 +193,14 @@ export default function CheckoutForm({
                     placeholder="Arriving late, travelling with a wheelchair, celebrating something…"
                     className={`${INPUT} resize-y`}
                 />
-                <p className="mt-2 text-[14px] text-black/40">
+                <p className="mt-2 text-[16px] font-medium text-black/60">
                     Saved with the reservation and read by the team who prepare
                     the villa.
                 </p>
             </Step>
 
             <Step number={4} title="Review and pay">
-                <p className="text-[16px] text-black/50">
+                <p className="text-[16px] font-medium text-black/60">
                     Your dates are held the moment you press this button, and the
                     payment is attempted straight after. If it fails, the hold is
                     released again immediately.
@@ -216,7 +216,7 @@ export default function CheckoutForm({
                         disabled={isBlocked || pending}
                         className="mt-0.5 size-4 accent-black"
                     />
-                    <span className="text-[15px] text-black/60">
+                    <span className="text-[16px] font-medium text-black/60">
                         Simulate a declined payment, to see what happens when it
                         fails.
                     </span>
@@ -234,7 +234,7 @@ export default function CheckoutForm({
                     // `status`, not `alert`: this is standing copy, not something that
                     // appears in response to an action.
                     role="status"
-                    className="mt-4 text-center text-[14px] text-black/40"
+                    className="mt-4 text-center text-[16px] font-medium text-black/60"
                 >
                     No money moves. This is a simulated payment on a portfolio
                     site.
