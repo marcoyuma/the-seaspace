@@ -1,4 +1,5 @@
 import { getLatestReviews, getReviewStats } from "@/features/reviews/actions";
+import Container from "@/ui/container";
 import ReviewsHeader from "@/features/reviews/components/reviews-header";
 import ReviewsPanel from "@/features/reviews/components/reviews-panel";
 
@@ -28,9 +29,17 @@ export default async function ReviewsSection() {
     if (reviews.length === 0) return null;
 
     return (
-        <section aria-labelledby="reviews-heading" className="mb-27.5">
-            <ReviewsHeader />
-            <ReviewsPanel reviews={reviews} stats={stats} />
-        </section>
+        // Was a bare `<section>` with no horizontal inset at all (unlike
+        // every other section on this page) — its 48px heading had nothing
+        // to wrap against and overflowed every viewport narrower than the
+        // text's own unwrapped width. `Container` also owns the vertical
+        // gap now (its responsive `mb-*`), replacing the section's own
+        // fixed `mb-27.5`, matching the pattern used elsewhere on this page.
+        <Container>
+            <section aria-labelledby="reviews-heading">
+                <ReviewsHeader />
+                <ReviewsPanel reviews={reviews} stats={stats} />
+            </section>
+        </Container>
     );
 }

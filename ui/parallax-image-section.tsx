@@ -14,6 +14,14 @@ import kayakkingImg from "@/public/leisure/kayakking.jpg";
 // image can travel ±PARALLAX_OVERFLOW / 2 without ever exposing a gap in the frame.
 const PARALLAX_OVERFLOW = 220;
 
+// Keeps the paddleboarders in frame across every crop the responsive `fill` produces.
+const IMAGE_FOCAL_POINT = "50% 60%";
+
+const HEADLINE_WORDS = ["Here", "unfold"];
+
+const HEADLINE_CLASSNAME =
+    "text-white font-semibold text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[96px] leading-none select-none";
+
 export default function ParallaxImageSection() {
     const sectionRef = useRef<HTMLElement>(null);
     const prefersReducedMotion = useReducedMotion();
@@ -33,10 +41,10 @@ export default function ParallaxImageSection() {
     return (
         <section
             ref={sectionRef}
-            className="relative w-full h-240 overflow-hidden bg-white"
+            className="relative w-full h-140 sm:h-170 md:h-200 lg:h-240 overflow-hidden bg-white"
         >
             {/* Framed image container with top white bar */}
-            <div className="absolute inset-x-0 bottom-0 top-10 overflow-hidden shadow-2xl">
+            <div className="absolute inset-x-0 bottom-0 top-6 sm:top-8 md:top-10 overflow-hidden shadow-2xl">
                 {/* Background Image */}
                 <motion.div
                     style={{
@@ -50,7 +58,8 @@ export default function ParallaxImageSection() {
                         src={kayakkingImg}
                         alt="Aerial view of turquoise ocean with paddleboarders"
                         fill
-                        className="object-cover object-[0%_70%]"
+                        className="object-cover"
+                        style={{ objectPosition: IMAGE_FOCAL_POINT }}
                         sizes="100vw"
                         priority
                     />
@@ -60,19 +69,18 @@ export default function ParallaxImageSection() {
                 <div className="absolute inset-0 bg-black/10" />
 
                 {/* Content */}
-                <div className="relative z-10 flex flex-col h-full px-8 pb-16 pt-8">
-                    {/* Split headline — vertically centered */}
-                    <div className="flex items-center justify-between flex-1">
-                        <h1 className="text-white font-semibold text-[96px] leading-none select-none">
-                            Here
-                        </h1>
-                        <h1 className="text-white font-semibold text-[96px] leading-none select-none">
-                            unfold
-                        </h1>
+                <div className="relative z-10 flex flex-col h-full px-4 sm:px-6 md:px-8 pb-8 sm:pb-12 md:pb-16 pt-6 md:pt-8">
+                    {/* Headline — stacked on mobile, split apart from tablet up */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between flex-1 gap-2 sm:gap-0">
+                        {HEADLINE_WORDS.map((word) => (
+                            <h1 key={word} className={HEADLINE_CLASSNAME}>
+                                {word}
+                            </h1>
+                        ))}
                     </div>
 
                     {/* Bottom paragraph */}
-                    <p className="text-white/90 text-center text-base text-[24px] font-semibold max-w-198.75 mx-auto leading-relaxed">
+                    <p className="text-white/90 text-center text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-semibold max-w-72 sm:max-w-md md:max-w-2xl lg:max-w-198.75 mx-auto leading-relaxed">
                         in this sacred corner kissed by endless blue, we craft
                         moments that transcend ordinary stay. where the rhythm
                         of waves becomes the soundtrack to your spirit{"'"}s

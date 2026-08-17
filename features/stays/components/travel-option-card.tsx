@@ -23,10 +23,10 @@ export default function TravelOptionCard({
             <div>
                 <div className="flex items-center gap-2.5 text-black">
                     {icon}
-                    <h3 className="text-[20px] tracking-[-1%]">{title}</h3>
+                    <h3 className="text-[20px] tracking-normal">{title}</h3>
                 </div>
 
-                <p className="mt-4 text-[16px] leading-[1.6] font-medium text-black/50">
+                <p className="mt-4 text-[16px] leading-[1.6] font-medium text-black/60">
                     {description}
                 </p>
             </div>

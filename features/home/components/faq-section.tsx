@@ -40,10 +40,19 @@ export default function FaqSection() {
     const [openIndex, setOpenIndex] = useState<number | null>(null);
 
     return (
-        <div className="pb-27.5 flex flex-col gap-6.5">
-            <div className="flex flex-col justify-center items-center gap-6.5">
+        <div className="pb-27.5 px-4 sm:px-8 md:px-16 flex flex-col gap-5">
+            {/* Intro block: `gap-3` (12px) is the site-wide spacing between
+                overline/heading/text — see RESPONSIVE-AUDIT.md Bagian F.
+                The outer wrapper's `gap-5` above governs the (slightly
+                larger) gap from this block to the FAQ list below. */}
+            <div className="flex flex-col justify-center items-center gap-3">
                 <OverlineText>{"FAQ's"}</OverlineText>
-                <Heading>Your Wonders</Heading>
+                {/* Landing-page headings are pinned to 36px instead of
+                    `ui/heading.tsx`'s default 48px — see
+                    RESPONSIVE-AUDIT.md Bagian F. */}
+                <Heading classname="!text-[36px] text-center">
+                    Your Wonders
+                </Heading>
                 <Text>Answers for most wonderer wonders</Text>
             </div>
             <div className="flex flex-col justify-center items-center gap-2.5">
@@ -75,7 +84,7 @@ function Question({
     onToggle: () => void;
 }) {
     return (
-        <div className="flex flex-col px-4.25 py-4 w-161 border border-black/10 rounded-[20px]">
+        <div className="flex flex-col px-4.25 py-4 w-full max-w-161 border border-black/10 rounded-[20px]">
             <button
                 type="button"
                 onClick={onToggle}

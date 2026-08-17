@@ -70,10 +70,6 @@ export interface Stay {
 
     description: string;
     gallery: StayImage[];
-    bedType: { label: string; note?: string };
-    /** Free-text capacity phrasing, e.g. "4 adults and 2 children". */
-    capacityLabel: string;
     amenities: Amenity[];
     coordinates: { lat: number; lng: number };
-    nearestAirport: { code: string; city: string };
 }

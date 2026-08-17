@@ -29,7 +29,7 @@ function StepperRow({
         <div className="flex items-center justify-between gap-6">
             <div>
                 <p className="text-[16px] font-semibold text-black">{label}</p>
-                <p className="text-[15px] text-black/50">{hint}</p>
+                <p className="text-[16px] font-medium text-black/60">{hint}</p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -47,7 +47,7 @@ function StepperRow({
                     keep focus, so nothing else would read the change out. */}
                 <span
                     aria-live="polite"
-                    className="w-5 text-center text-[16px] text-black tabular-nums"
+                    className="w-5 text-center text-[16px] font-semibold text-black tabular-nums"
                 >
                     {value}
                 </span>
@@ -135,7 +135,7 @@ export default function GuestStepper({
                 canIncrement={false}
             />
 
-            <p className="text-[15px] leading-normal text-black/60">
+            <p className="text-[16px] leading-normal font-medium text-black/60">
                 This place has a maximum of {capacity} guests, not including infants.
                 Pets aren&apos;t allowed.
             </p>

@@ -34,14 +34,30 @@ const SUPABASE_ORIGIN = new URL(SUPABASE_URL).origin;
 export const STAYS_CACHE_TAG = "stays";
 
 /**
- * Cache profile for the catalogue: the built-in `hours` profile revalidates every hour.
+ * Cache profile for the catalogue. One hour in production, one second in development.
  *
- * The tag above is not invalidated by anything yet — on-demand revalidation from a Supabase
- * Database Webhook is a separate phase. Until then this interval is the only refresh
- * mechanism, and it stays as the safety net afterwards: pg_net is fire-and-forget, so a
- * webhook that never arrives would otherwise leave the catalogue stale forever.
+ * In production the tag above is invalidated on demand by the Supabase Database Webhook
+ * that POSTs to app/api/revalidate/stays/route.ts, and the hourly interval is the safety
+ * net behind it: pg_net is fire-and-forget, so a webhook that never arrives would
+ * otherwise leave the catalogue stale forever.
+ *
+ * Development gets `seconds` because that webhook cannot reach it. pg_net runs on
+ * Supabase's own servers, which have no route to localhost — so with `hours` the only way
+ * to see a row added from the admin panel was to restart `next dev`. The default
+ * "use cache" handler is an in-memory LRU with no on-disk persistence, so killing the
+ * process was the only thing that dropped the entry (see the handler's own `get`: an entry
+ * survives until `timestamp + revalidate`, and nothing else evicts it).
+ *
+ * ⚠️ None of this reaches a page that is already open in someone's browser, and nothing is
+ * planned that will. Invalidating the tag only guarantees the NEXT request renders fresh;
+ * an open tab keeps what it has until the visitor reloads or navigates. That was decided
+ * deliberately on 2026-08-16 — a villa catalogue changes a few times a week, and the
+ * freshness that actually carries risk is enforced where it belongs instead: create_booking()
+ * re-reads price, discount and capacity at payment time rather than trusting the page.
+ * Do not add polling, refresh-on-focus or Realtime here without revisiting that decision.
  */
-export const STAYS_CACHE_PROFILE = "hours";
+export const STAYS_CACHE_PROFILE =
+    process.env.NODE_ENV === "development" ? "seconds" : "hours";
 
 /** Cache tag for availability. Callers add a per-slug tag alongside it. */
 export const BOOKINGS_CACHE_TAG = "bookings";

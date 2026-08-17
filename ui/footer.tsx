@@ -22,18 +22,24 @@ export default function Footer() {
             <ParallaxImageSection />
 
             {/* Main Footer Content */}
-            <div className="px-16 pt-16 pb-20">
+            <div className="px-6 sm:px-10 md:px-16 pt-10 sm:pt-16 pb-10 sm:pb-20">
                 {/* CSS Grid (not flex) so the tagline column gets a fixed
                     proportional share (2fr) while the three link/contact
                     columns split the remainder evenly — matches the
                     asymmetric ratio in the design rather than relying on
-                    arbitrary fixed widths (`w-[420px]`) + `ml-auto`. */}
-                <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-x-16">
-                    {/* Left: Heading */}
-                    <Heading>Unforgettable stays by the sea.</Heading>
+                    arbitrary fixed widths (`w-[420px]`) + `ml-auto`.
+                    Single column on mobile: Sitemap/Amenities are hidden
+                    below `sm`, so only Heading + Contact remain, stacked. */}
+                <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr] gap-x-16 gap-y-8 sm:gap-y-0">
+                    {/* Left: Heading — sized down on narrow screens like other
+                        section headings (e.g. FamilyHistorySection), since the
+                        default Heading text-[48px] is fixed and doesn't scale. */}
+                    <Heading classname="!text-[28px] sm:!text-[34px] md:!text-[40px] lg:!text-[48px] leading-tight sm:leading-none">
+                        Unforgettable stays by the sea.
+                    </Heading>
 
-                    {/* Sitemap */}
-                    <nav aria-label="Sitemap" className="flex flex-col">
+                    {/* Sitemap — hidden on mobile per design, kept from sm up */}
+                    <nav aria-label="Sitemap" className="hidden sm:flex flex-col">
                         <span className="text-[16px] font-medium text-black/60">
                             / Sitemap
                         </span>
@@ -54,8 +60,8 @@ export default function Footer() {
                         </div>
                     </nav>
 
-                    {/* Amenities */}
-                    <nav aria-label="Amenities" className="flex flex-col">
+                    {/* Amenities — hidden on mobile per design, kept from sm up */}
+                    <nav aria-label="Amenities" className="hidden sm:flex flex-col">
                         <span className="text-[16px] font-medium text-black/60">
                             / Amenities
                         </span>
@@ -90,7 +96,9 @@ export default function Footer() {
 
             {/* Decorative watermark — "THE SEASPACE" bleeds past the
                 visible footer edge, clipped by `overflow-hidden` on the
-                parent <footer>.
+                parent <footer>. Hidden below `sm`: on mobile the footer
+                already drops Sitemap/Amenities, and at 200px this glyph
+                overwhelms the narrow viewport rather than reading as texture.
                 - `clamp()` scales the font-size with viewport width
                   (instead of a fixed 170px) so it stays proportional on
                   smaller screens without manual breakpoint overrides.
@@ -103,9 +111,9 @@ export default function Footer() {
                   and it shouldn't be selectable or intercept clicks. */}
             <p
                 aria-hidden="true"
-                className="select-none pointer-events-none text-black/10 font-bold whitespace-nowrap leading-none
+                className="hidden sm:block select-none pointer-events-none text-black/10 font-bold whitespace-nowrap leading-none
                  text-[200px]
-                 -mb-15 tracking-[0.5%]"
+                 -mb-15 tracking-normal"
             >
                 THE SEASPACE
             </p>

@@ -16,12 +16,24 @@ import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { StayImage } from "@/features/stays/types";
 
-// FRAME_WIDTH and GAP mirror the `w-131.5` / `gap-6` classes below. They only seed
-// the copy count — the wrap maths measures the real geometry off the DOM.
-/** Rail height in px. Applied inline on the viewport, and the basis of IMAGE_PAINT_WIDTH. */
+// FRAME_WIDTH and GAP mirror the `lg:` step of FRAME_HEIGHT_CLASSES / FRAME_WIDTH_CLASSES
+// below (the frame is smaller at narrower breakpoints — see those constants). They only
+// seed the copy count — the wrap maths measures the real geometry off the DOM, and an
+// over-estimate here just means a few unused spare copies, never too few.
+/** Rail height at the `lg` breakpoint, in px. Basis of IMAGE_PAINT_WIDTH — kept as the
+ * largest step so the `sizes` attribute never under-fetches at a smaller breakpoint. */
 const RAIL_HEIGHT = 600;
 const FRAME_WIDTH = 526;
 const GAP = 24;
+
+/** Viewport/frame height per breakpoint. No inline style anymore — media queries need
+ * real classes. Steps down from RAIL_HEIGHT at `lg` so a 600px-tall rail does not eat
+ * most of a phone's viewport. */
+const FRAME_HEIGHT_CLASSES = "h-70 sm:h-85 md:h-105 lg:h-150";
+/** Frame width per breakpoint, aspect-matched to FRAME_HEIGHT_CLASSES (~0.88, the same
+ * ratio as the original fixed 526×600). The peek (PEEK_RATIO) scales with this
+ * automatically since it is derived from the measured frame width, not a fixed px. */
+const FRAME_WIDTH_CLASSES = "w-61.5 sm:w-74.5 md:w-92 lg:w-131.5";
 
 /** `object-cover` paints `RAIL_HEIGHT × aspect` wide, not FRAME_WIDTH, so `sizes` must
  * describe that or the browser under-fetches. 1.5 is the widest villa aspect. */
@@ -33,9 +45,13 @@ const IMAGE_QUALITY = 80;
 /** Seconds for an arrow-driven step. */
 const STEP_DURATION = 0.6;
 
-/** Sliver of the previous frame kept visible. Baked into every resting position, so the
- * reference composition survives and consecutive stops stay one frame apart. */
-const INITIAL_PEEK = 130;
+/** Sliver of the previous frame kept visible, as a fraction of one frame's width rather
+ * than a fixed px — the frame itself is now responsive (FRAME_CLASSES below), and a flat
+ * px peek would eat an ever-larger share of a narrower mobile frame. ~0.25 matches the
+ * original 130px sliver at the desktop frame width (526px). Baked into every resting
+ * position, so the reference composition survives and consecutive stops stay one frame
+ * apart at any breakpoint. */
+const PEEK_RATIO = 0.25;
 
 /** Pointer travel before a press becomes a drag. Below it the gesture stays a click,
  * which is what keeps the arrows operable — see handlePointerDown. */
@@ -91,8 +107,11 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // An object rather than a number ref because gsap.to needs a mutable target, and
-    // never state because pointer moves must paint without a render per frame.
-    const posRef = useRef({ value: -INITIAL_PEEK });
+    // never state because pointer moves must paint without a render per frame. The peek
+    // is now a ratio of the measured frame width, so there is nothing meaningful to seed
+    // this with before the first measure() — it gets snapped to the real rest position
+    // there instead, before anything paints.
+    const posRef = useRef({ value: 0 });
     /** Measured px width of one full set (`count` frames plus gaps). Zero until the
      * first measure lands — that is what every `<= 0` guard in this file tests. */
     const setWidthRef = useRef(0);
@@ -133,12 +152,13 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
     const stepWidth = useCallback(() => setWidthRef.current / count, [count]);
     /** Where frame `index` comes to rest. */
     const restPosition = useCallback(
-        (index: number) => index * stepWidth() - INITIAL_PEEK,
+        (index: number) => index * stepWidth() - stepWidth() * PEEK_RATIO,
         [stepWidth],
     );
     /** Inverse of restPosition, rounded to whichever frame `value` is nearest. */
     const frameIndexAt = useCallback(
-        (value: number) => Math.round((value + INITIAL_PEEK) / stepWidth()),
+        (value: number) =>
+            Math.round((value + stepWidth() * PEEK_RATIO) / stepWidth()),
         [stepWidth],
     );
 
@@ -177,7 +197,14 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
 
             // A frame and its clone one set later differ by exactly the set width,
             // gaps included — so no spacing value is duplicated in JS.
+            const firstMeasure = setWidthRef.current <= 0;
             setWidthRef.current = firstOfNextSet.offsetLeft - first.offsetLeft;
+            // Nothing has painted yet, so snap straight to the target frame's real
+            // rest position instead of unwinding from the placeholder `0` posRef
+            // started at.
+            if (firstMeasure) {
+                posRef.current.value = restPosition(targetIndexRef.current);
+            }
             paint();
         };
 
@@ -188,7 +215,7 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
         const observer = new ResizeObserver(measure);
         observer.observe(viewport);
         return () => observer.disconnect();
-    }, [count, paint]);
+    }, [count, paint, restPosition]);
 
     // Kill any in-flight glide on unmount so GSAP never paints into a detached node.
     useEffect(() => () => void tweenRef.current?.kill(), []);
@@ -238,7 +265,9 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
 
             // Frame the gesture began on, and how many frames it travelled from
             // there — fractional, so 0.4 means "not quite one frame across".
-            const startIndex = Math.round((startValue + INITIAL_PEEK) / width);
+            const startIndex = Math.round(
+                (startValue + width * PEEK_RATIO) / width,
+            );
             const offsetFrames =
                 (posRef.current.value - restPosition(startIndex)) / width;
 
@@ -365,7 +394,7 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
                     ref={(el) => {
                         slideRefs.current[i] = el;
                     }}
-                    className="relative h-full w-131.5 shrink-0 overflow-hidden rounded-xl"
+                    className={`relative h-full ${FRAME_WIDTH_CLASSES} shrink-0 overflow-hidden rounded-xl`}
                 >
                     <Image
                         className="pointer-events-none object-cover"
@@ -399,8 +428,7 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
                 onPointerCancel={endDrag}
                 // `touch-pan-y` keeps vertical page scrolling native on touch while
                 // reserving horizontal gestures for the rail.
-                className="relative w-full cursor-grab touch-pan-y overflow-hidden select-none"
-                style={{ height: RAIL_HEIGHT }}
+                className={`relative w-full cursor-grab touch-pan-y overflow-hidden select-none ${FRAME_HEIGHT_CLASSES}`}
             >
                 {/* Absolute on purpose: in flow, the track's multi-thousand-px intrinsic
                     width propagates to <main> — a grid item, so `min-width: auto` stops

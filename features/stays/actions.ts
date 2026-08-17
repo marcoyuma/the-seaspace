@@ -17,8 +17,7 @@ const STAYS_BUCKET = "stays";
  */
 const STAY_SELECT = `
     slug, name, location, price_per_night, discount, capacity, beds, area, is_new,
-    description, bed_type_label, bed_type_note, capacity_label,
-    lat, lng, airport_code, airport_city,
+    description, lat, lng,
     stay_images ( storage_path, alt, blur_data_url, width, height, sort_order ),
     stay_amenities ( sort_order, amenities ( slug, label, detail ) )
 `;
@@ -53,13 +52,8 @@ interface StayRow {
     area: number;
     is_new: boolean;
     description: string;
-    bed_type_label: string;
-    bed_type_note: string | null;
-    capacity_label: string;
     lat: number;
     lng: number;
-    airport_code: string;
-    airport_city: string;
     stay_images: StayImageRow[];
     stay_amenities: StayAmenityRow[];
 }
@@ -109,11 +103,8 @@ function toStay(row: StayRow): Stay {
         isNew: row.is_new,
         description: row.description,
         gallery,
-        bedType: { label: row.bed_type_label, note: row.bed_type_note ?? undefined },
-        capacityLabel: row.capacity_label,
         amenities: toAmenities(row.stay_amenities),
         coordinates: { lat: row.lat, lng: row.lng },
-        nearestAirport: { code: row.airport_code, city: row.airport_city },
     };
 }
 

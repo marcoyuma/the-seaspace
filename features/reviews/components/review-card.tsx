@@ -56,7 +56,12 @@ export default function ReviewCard({
             {/* stars */}
             <RatingStars rating={review.rating} />
 
-            <p className="text-[16px] text-black/50 font-medium w-97.5">
+            {/* Was a fixed `w-97.5` (390px) — wider than the carousel card's
+                available space on mobile, so the quote's right edge got
+                clipped by the carousel's `overflow-hidden`. `w-full` lets it
+                match whatever width `ReviewViewport`'s `flex-1` gives it at
+                any breakpoint. */}
+            <p className="text-[16px] text-black/60 font-medium w-full">
                 “{review.quote}”
             </p>
         </div>

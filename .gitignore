@@ -69,13 +69,6 @@ ADMIN-PANEL-CONTEXT.md
 # salah satunya nanti benar-benar dipakai di halaman, cabut entrinya lalu
 # `git add` — kalau lupa, build gagal karena import @/public/... tidak resolve.
 
-# event-venue digunakan untuk nikah jawa
-wmremove-transformed-4.png
-# digunakan nikah umum
-object-remover-result-1780793424254.png
-# digunakan tedxtalk
-object-remover-result-1780793381353.png
-
 # bg yang tadinya dijadikan opsi kedua
 bg-1.jpg
 

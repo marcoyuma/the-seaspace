@@ -14,7 +14,7 @@ export default function ReviewContent({
                 <h3 className="text-[16px] font-semibold text-black">
                     {displayName}
                 </h3>
-                <p className="text-[16px] font-semibold text-black/30">
+                <p className="text-[16px] font-medium text-black/60">
                     {nationality}
                 </p>
             </div>

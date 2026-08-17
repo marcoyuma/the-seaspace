@@ -22,7 +22,7 @@ export default function ReviewsPanel({
         <div className="flex flex-col justify-center items-center gap-6.5">
             <ReviewCarousel reviews={reviews} />
 
-            <div className="flex flex-row justify-evenly items-center border rounded-[20px] border-black/10 w-161 px-6.5 py-4.75">
+            <div className="flex flex-row justify-evenly items-center border rounded-[20px] border-black/10 w-full max-w-161 px-3 py-4.75 sm:px-6.5">
                 {/* Locale pinned rather than left to the runtime: an implicit
                     locale can format differently on server and client and trip
                     a hydration mismatch once the count reaches four digits. */}
@@ -53,10 +53,10 @@ export default function ReviewsPanel({
 function StatItem({ value, label }: { value: string; label: string }) {
     return (
         <div>
-            <h3 className="font-semibold text-[24px] tracking-[0.5%]">
+            <h3 className="font-semibold text-[24px] tracking-normal">
                 {value}
             </h3>
-            <span className="text-black/50">{label}</span>
+            <span className="text-[16px] font-medium text-black/60">{label}</span>
         </div>
     );
 }

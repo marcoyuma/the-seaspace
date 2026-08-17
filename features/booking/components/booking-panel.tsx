@@ -177,7 +177,7 @@ export default function BookingPanel({
                         >
                             Reserve
                         </PillLink>
-                        <p className="mt-3 text-[15px] text-black/40">
+                        <p className="mt-3 text-[16px] font-medium text-black/60">
                             You won&apos;t be charged — checkout is simulated.
                         </p>
                     </>

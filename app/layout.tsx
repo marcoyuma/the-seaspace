@@ -29,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <html
             lang="en"
             style={{ overscrollBehavior: "none", overflowX: "hidden" }}
+            data-scroll-behavior="smooth"
         >
             {/* both `.variable` just defining its css variable 
                 and not implement any font-family, so that `font-sans`
@@ -65,7 +66,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     </ChromeGate>
                 </Suspense>
                 <div className="flex-1 grid">
-                    <main>{children}</main>
+                    {/* `min-w-0`: a grid item's default `min-width` is
+                        `auto`, which falls back to its content's min-content
+                        size — so `<main>` could grow past this grid track
+                        (and the viewport) if ANY descendant anywhere on the
+                        page had non-shrinkable content, even one that's
+                        visually clipped by its own `overflow-hidden`
+                        wrapper. That single missing override was the actual
+                        root cause behind several mobile-width bugs on `/`
+                        that looked, from the descendant side, like
+                        unrelated per-component overflow issues. */}
+                    <main className="min-w-0">{children}</main>
                 </div>
                 {/* Same reason as the header's boundary above. */}
                 <Suspense fallback={null}>

@@ -63,13 +63,41 @@ export default function MoreServiceAndAmenities() {
     return (
         <section className="relative mb-27.5" id="amenities">
             {/*
-                The content is absolutely positioned over the gradient background.
-                This approach is used so that the section's height is determined by
-                the background div (h-160), while the content can be centered
-                independently without affecting the surrounding document flow.
+               Background gradient — rendered FIRST in the DOM (not via
+                negative z-index) so it paints behind the content below
+                through normal stacking order alone. A `-z-10` approach was
+                tried here but this `<section>` has `position:relative`
+                without its own `z-index`, so it never becomes its own
+                stacking context — the negative z-index escaped to whatever
+                ancestor DOES establish one, painting the gradient behind
+                other unrelated page content instead of just behind this
+                section's own copy (the gradient and the heading over it both
+                went invisible against the page's white background).
+                <md: fills the section behind the in-flow content below.
+                >=md: fixed height (h-160) to match the design, establishing
+                the section's height itself.
             */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <Heading variant="white" classname="mb-13.25">
+            <div className="absolute inset-0 bg-linear-to-b from-[#2c8de2] via-[#267cc7] via-[#216cae] via-[#1c5c94] to-[#184d7c] md:static md:h-160" />
+
+            {/*
+                >=md: content is absolutely positioned over the gradient
+                background, so the section's height is driven by the
+                background div (h-160) while content centers independently.
+                <md: badges wrap (see flex-wrap below) and can need more
+                than 640px, so content instead flows normally and the
+                background switches to `absolute inset-0` to fill whatever
+                height that content ends up needing.
+            */}
+            <div className="relative flex flex-col items-center justify-center px-4 py-16 md:absolute md:inset-0 md:px-0 md:py-0">
+                {/* Landing-page headings are pinned to 36px instead of
+                    `ui/heading.tsx`'s default 48px. No overline/text here —
+                    `mb-5` (20px) is the heading-to-content gap, a bit more
+                    room than the 12px used within a full intro block — see
+                    RESPONSIVE-AUDIT.md Bagian F. */}
+                <Heading
+                    variant="white"
+                    classname="!text-[36px] text-center mb-5"
+                >
                     And so much more
                 </Heading>
 
@@ -78,7 +106,7 @@ export default function MoreServiceAndAmenities() {
                     // Use the index as the key because the row order is static—it is not reordered.
                     <div
                         key={rowIndex}
-                        className="flex flex-row gap-2.5 mb-5.75"
+                        className="flex flex-row flex-wrap justify-center gap-2.5 mb-5.75"
                     >
                         {row.map((service) => (
                             // Use `text` for the key because it is unique per item and stable across renders.
@@ -91,13 +119,6 @@ export default function MoreServiceAndAmenities() {
                     </div>
                 ))}
             </div>
-
-            {/*
-               Background gradient section.
-                Fixed height (h-160) to match the design; -z-10 to position it
-                behind the absolutely positioned content above.
-            */}
-            <div className="bg-linear-to-b from-[#2c8de2] via-[#267cc7] via-[#216cae] via-[#1c5c94] to-[#184d7c] h-160 -z-10" />
         </section>
     );
 }

@@ -13,7 +13,7 @@ export default function Hero() {
             {/* Full-screen fixed background with the hero copy overlaid and
                 centered. Kept as-is; only gated behind `lg` so it never shows
                 on tablet/mobile. */}
-            <div className="">
+            <div className="hidden lg:block">
                 <div className="fixed inset-0 -z-10 overflow-hidden">
                     {/* Sized by HEIGHT only (`w-auto`), so the rendered width is
                         always 1.75x the height — the photo's own aspect ratio.
@@ -71,8 +71,7 @@ export default function Hero() {
                 solid `#298BE0` panel (same blue as the amenity badge). The copy
                 is horizontally centered via `text-center` + `mx-auto`, and the
                 type scales fluidly with `clamp()` so it fits any viewport. */}
-            {/* <div className="min-h-dvh bg-[#298BE0] lg:hidden"> */}
-            <div className="min-h-dvh bg-[#298BE0] hidden">
+            <div className="min-h-dvh bg-[#298BE0] lg:hidden">
                 {/* Photo band */}
                 <div className="relative h-[38dvh] w-full sm:h-[44dvh]">
                     <Image

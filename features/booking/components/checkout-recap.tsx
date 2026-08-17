@@ -59,7 +59,7 @@ export default function CheckoutRecap({
                     >
                         {stay.name}
                     </Link>
-                    <p className="mt-1 text-[16px] text-black/50">
+                    <p className="mt-1 text-[16px] font-medium text-black/60">
                         {stay.location}
                     </p>
                 </div>

@@ -7,16 +7,17 @@ import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 /**
- * CARTO Positron — greyscale basemap that matches the site's #FAFAFA palette
- * better than a full-colour one. Chosen over tile.openstreetmap.org because the
- * OSMF tile policy forbids production use, and over Google because it needs no
- * API key, account, or billing. Swapping providers is this constant plus the
- * attribution string below.
+ * CARTO Voyager — full-colour basemap (green parks, blue water, tinted roads)
+ * in the spirit of the OSM standard style. Chosen over tile.openstreetmap.org
+ * because the OSMF tile policy forbids production use, and over Google because
+ * it needs no API key, account, or billing. Swap to `light_all` for the
+ * greyscale Positron variant; that is this constant only, the attribution and
+ * subdomains below are shared across all CARTO styles.
  *
  * {r} is filled with "@2x" by Leaflet when `detectRetina` is on.
  */
 const TILE_URL =
-    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
 /** Required by both OSM and CARTO's licences — must stay visible on the map. */
 const TILE_ATTRIBUTION =

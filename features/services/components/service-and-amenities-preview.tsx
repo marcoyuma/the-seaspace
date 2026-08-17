@@ -86,14 +86,39 @@ export default function ServiceAndAmenitiesPreview({
                 for screen readers, instead of relying on a generic <div>. */}
             <section
                 aria-labelledby="services-preview-heading"
-                // The cross-sell row on interior pages reads as a centred
-                // outro; the landing page's full trio stays left-aligned with
-                // the sections above it.
-                className={`flex flex-col gap-6 ${!isFullSet ? "items-center text-center" : ""}`}
+                // The cross-sell row on interior pages (`!isFullSet`) is
+                // always centered, at every breakpoint, as a centred outro.
+                // The landing page's full trio (`isFullSet`) is centered
+                // only on mobile now (left-aligned felt cramped in a narrow
+                // column) and reverts to the original left-aligned layout
+                // from `md` up, matching the sections above it.
+                className={`flex flex-col gap-5 items-center text-center ${
+                    !isFullSet ? "" : "md:items-start md:text-left"
+                }`}
             >
-                <OverlineText>{overline}</OverlineText>
-                <Heading id="services-preview-heading">{heading}</Heading>
-                <Text>{description}</Text>
+                {/* Intro block: `gap-3` (12px) is the site-wide spacing
+                    between overline/heading/description — see
+                    RESPONSIVE-AUDIT.md Bagian F. Isolated in its own wrapper
+                    so the section's `gap-5` above only governs the (slightly
+                    larger) gap to the card grid, not the spacing within
+                    this block. */}
+                <div
+                    className={`flex flex-col gap-3 items-center text-center ${
+                        !isFullSet ? "" : "md:items-start md:text-left"
+                    }`}
+                >
+                    <OverlineText>{overline}</OverlineText>
+                    {/* Landing-page headings are pinned to a single 36px
+                        instead of `ui/heading.tsx`'s default 48px — see
+                        RESPONSIVE-AUDIT.md Bagian F. */}
+                    <Heading
+                        id="services-preview-heading"
+                        classname="!text-[36px]"
+                    >
+                        {heading}
+                    </Heading>
+                    <Text>{description}</Text>
+                </div>
 
                 {/* CSS Grid (not flex justify-between) keeps the gap fixed
                     regardless of item count, matching the spacing used in
@@ -103,8 +128,14 @@ export default function ServiceAndAmenitiesPreview({
                     absolutely positioned (0 max-content), so the row would
                     collapse to zero width without an explicit width. */}
                 <div
-                    className={`grid w-full gap-6 ${
-                        isFullSet ? "grid-cols-3" : "grid-cols-2"
+                    // Both branches are written as complete, literal class
+                    // strings (not built via `md:${...}` concatenation) —
+                    // Tailwind's build-time scanner extracts candidates by
+                    // regex over the source text, not by evaluating the
+                    // template, so a split prefix/suffix would never match
+                    // and the md: variant would silently be dropped.
+                    className={`grid w-full grid-cols-1 gap-6 ${
+                        isFullSet ? "md:grid-cols-3" : "md:grid-cols-2"
                     }`}
                 >
                     {shownServices.map((service) => (

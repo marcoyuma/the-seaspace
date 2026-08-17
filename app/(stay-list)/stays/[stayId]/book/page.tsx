@@ -105,7 +105,7 @@ export default async function BookPage({
                 <h1 className="text-[48px] leading-none font-semibold text-black">
                     Confirm and pay
                 </h1>
-                <p className="mt-6 max-w-160 text-[18px] text-black/50">
+                <p className="mt-6 max-w-160 text-[16px] font-medium text-black/60">
                     Your dates are held as soon as you confirm, and released again
                     straight away if the payment does not go through.
                 </p>
@@ -113,27 +113,35 @@ export default async function BookPage({
                 {/* Said once, up front, in the guest's own words. The same sentence
                     appears under the button, because that is where the decision is
                     actually made. */}
-                <p className="mt-8 max-w-160 rounded-2xl border border-black/10 bg-black/3 px-5 py-4 text-[15px] text-black/60">
+                <p className="mt-8 max-w-160 rounded-2xl border border-black/10 bg-black/3 px-5 py-4 text-[16px] font-medium text-black/60">
                     <span className="font-medium text-black">Demo checkout.</span>{" "}
                     No payment is processed and no card details are collected — the
                     reservation itself is real and will appear in your trips.
                 </p>
 
+                {/* Stacked on mobile/tablet, recap first — a guest should see which villa
+                    and what it costs before working through payment and check-in.
+                    `order-*` restores the original left-form/right-recap reading order at
+                    lg, where the grid switches to two columns side by side. */}
                 <div className="mt-14 grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_26rem]">
-                    <CheckoutForm
-                        slug={stay.id}
-                        checkIn={checkIn}
-                        checkOut={checkOut}
-                        guests={guests}
-                        disabledReason={disabledReason}
-                    />
+                    <div className="order-1 lg:order-2">
+                        <CheckoutRecap
+                            stay={stay}
+                            checkIn={checkIn}
+                            checkOut={checkOut}
+                            guests={guests}
+                        />
+                    </div>
 
-                    <CheckoutRecap
-                        stay={stay}
-                        checkIn={checkIn}
-                        checkOut={checkOut}
-                        guests={guests}
-                    />
+                    <div className="order-2 lg:order-1">
+                        <CheckoutForm
+                            slug={stay.id}
+                            checkIn={checkIn}
+                            checkOut={checkOut}
+                            guests={guests}
+                            disabledReason={disabledReason}
+                        />
+                    </div>
                 </div>
             </div>
         </Container>

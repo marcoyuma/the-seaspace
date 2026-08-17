@@ -135,25 +135,30 @@ function PanelRow({
  * trigger, panel, and effects in one place.
  *
  * @param links - Primary nav targets, rendered as the large serif list.
- * @param showOnDesktop - Interior routes hand all navigation to this panel, so
- * they surface it at every breakpoint; the homepage keeps its inline nav and
- * only falls back to the panel below `lg`.
+ * @param visibleClassName - Tailwind visibility classes for the trigger + panel
+ * wrapper. Interior routes hand all navigation to this panel, so they pass
+ * `""` to surface it at every breakpoint; the homepage keeps its inline nav
+ * at `lg` and only needs the trigger from `md` up to just below that.
  */
 export default function MenuPanel({
     links,
-    showOnDesktop = false,
+    visibleClassName = "hidden",
 }: {
     links: NavLink[];
-    showOnDesktop?: boolean;
+    visibleClassName?: string;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
 
     // Close whenever the route changes — clicking a link navigates, and the
-    // panel should retract as the new page comes in.
-    useEffect(() => {
+    // panel should retract as the new page comes in. Adjusted during render
+    // (React's recommended pattern for state that depends on a prop change)
+    // rather than in an effect, which would fire a second, cascading render.
+    const [prevPathname, setPrevPathname] = useState(pathname);
+    if (pathname !== prevPathname) {
+        setPrevPathname(pathname);
         setIsOpen(false);
-    }, [pathname]);
+    }
 
     // Escape closes the panel while it's open.
     useEffect(() => {
@@ -168,7 +173,7 @@ export default function MenuPanel({
     const close = () => setIsOpen(false);
 
     return (
-        <div className={showOnDesktop ? "" : "hidden"}>
+        <div className={visibleClassName}>
             {/* Trigger: the hamburger, which merges its bars into a single
                 line while the panel is open. Toggles rather than only opening,
                 so the button and the glyph can't disagree about the state. */}
@@ -191,7 +196,7 @@ export default function MenuPanel({
                 aria-modal="false"
                 aria-label="Site menu"
                 className={`fixed right-3 top-3 z-30 w-80 max-w-[calc(100vw-24px)] sm:w-96
-                            origin-top-right rounded-3xl bg-linear-to-b from-[#2c8de2] via-[#267cc7] via-[#216cae] via-[#1c5c94] to-[#184d7c] mx-20 px-8 py-6 text-white shadow-2xl
+                            origin-top-right rounded-3xl bg-linear-to-b from-[#2c8de2] via-[#267cc7] via-[#216cae] via-[#1c5c94] to-[#184d7c] lg:mx-20 px-8 py-6 text-white shadow-2xl
                             transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none
                             ${
                                 isOpen

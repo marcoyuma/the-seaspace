@@ -10,7 +10,7 @@ export default function NotFound() {
                     We couldn&apos;t find that stay
                 </h1>
 
-                <p className="mx-auto mt-6 max-w-xl text-[18px] leading-relaxed font-medium text-black/50">
+                <p className="mx-auto mt-6 max-w-xl text-[16px] leading-relaxed font-medium text-black/60">
                     The suite you were looking for may have been renamed or is
                     no longer part of the collection.
                 </p>
