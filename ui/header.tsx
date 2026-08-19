@@ -81,9 +81,9 @@ function Header({ profileSlot }: { profileSlot: ReactNode }) {
                         border-b border-black/10
                         transition-[width,top,border-radius,border-color] duration-500 ease-in-out motion-reduce:transition-none
                         ${
-                            expanded
-                                ? "h-20 top-0 w-screen rounded-none border-black/10"
-                                : "top-10 w-190 max-w-[calc(100%-48px)] rounded-full border-transparent"
+                            !expanded
+                                ? "top-10 w-190 max-w-[calc(100%-48px)] rounded-full border-transparent"
+                                : "h-20 top-0 w-screen rounded-none border-black/10"
                         }`}
         >
             <div
