@@ -174,7 +174,10 @@ export default function MenuPanel({
     const close = () => setIsOpen(false);
 
     return (
-        <div>
+        // The panel is positioned against THIS box, whose top/right edges
+        // coincide with the hamburger glyph's — that's what lets the panel's
+        // dash land on the merged bars with one fixed pair of offsets.
+        <div className="relative">
             {/* Trigger: the hamburger, which merges its bars into a single
                 line while the panel is open. Toggles rather than only opening,
                 so the button and the glyph can't disagree about the state. */}
@@ -196,8 +199,15 @@ export default function MenuPanel({
                 role="dialog"
                 aria-modal="false"
                 aria-label="Site menu"
-                className={`fixed right-3 top-3 z-30 w-80 max-w-[calc(100vw-24px)] sm:w-96
-                            origin-top-right rounded-3xl bg-linear-to-b from-[#2c8de2] via-[#267cc7] via-[#216cae] via-[#1c5c94] to-[#184d7c] lg:mx-20 px-8 py-6 text-white shadow-2xl
+                // Offsets are negative because the panel hangs off the trigger:
+                // -28px/-24px put its dash exactly on the merged hamburger line
+                // (see the close button below), which holds in both the pill and
+                // the expanded header without any per-breakpoint tuning. Only
+                // 24px of the needed 32px is taken here — the last 8px is the
+                // dash's own -mr-2 — so the panel never overruns the viewport
+                // edge in the expanded header's narrowest inset.
+                className={`absolute -right-6 -top-7 z-30 w-80 max-w-[calc(100vw-16px)] sm:w-96
+                            origin-top-right rounded-3xl bg-linear-to-b from-[#2c8de2] via-[#267cc7] via-[#216cae] via-[#1c5c94] to-[#184d7c] px-8 py-6 text-white shadow-2xl
                             transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none
                             ${
                                 isOpen
@@ -205,15 +215,20 @@ export default function MenuPanel({
                                     : "pointer-events-none invisible -translate-y-2 scale-95 opacity-0"
                             }`}
             >
-                {/* Close affordance (dash), mirroring the reference. */}
-                <div className="mb-8 flex justify-end">
+                {/* Close affordance (dash): it sits directly on top of the
+                    hamburger's merged line, so the line reads as staying put
+                    while the panel grows behind it. `-mr-2` pulls it out of
+                    `px-8`, `justify-end` makes its right edge the row's, and
+                    `w-6.5` matches the middle bar's 26px exactly. The button
+                    stays `w-8` so the hit area isn't as thin as the line. */}
+                <div className="mb-8 -mr-2 flex justify-end">
                     <button
                         type="button"
                         onClick={close}
                         aria-label="Close menu"
-                        className="flex h-6 w-8 cursor-pointer items-center justify-center"
+                        className="flex h-6 w-8 cursor-pointer items-center justify-end"
                     >
-                        <span className="h-0.5 w-6 rounded-full bg-white" />
+                        <span className="h-0.5 w-6.5 rounded-full bg-white" />
                     </button>
                 </div>
 
