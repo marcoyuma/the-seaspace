@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import {
     getAuthUser,
@@ -16,6 +17,28 @@ export const metadata = { title: "Account" };
 /**
  * The guest's own profile.
  *
+ * Only the heading is static, which is the point: with Cache Components every route needs
+ * a shell that can be prerendered, and everything else here reads cookies. That read has
+ * to sit inside <Suspense> — until aa44990 the app-wide app/loading.tsx was the boundary
+ * that satisfied this, and it no longer exists.
+ */
+export default function AccountPage() {
+    return (
+        <div className="mx-auto w-full max-w-7xl px-6 py-24">
+            <h1 className="text-[48px] font-semibold leading-none text-black">
+                Account
+            </h1>
+
+            <Suspense fallback={<AccountSectionsFallback />}>
+                <AccountSections />
+            </Suspense>
+        </div>
+    );
+}
+
+/**
+ * Everything on the page that depends on who is signed in.
+ *
  * The `redirect()` below is the authoritative check, not the one users normally hit —
  * proxy.ts already bounces signed-out visitors, which is what makes that a real HTTP
  * redirect instead of a delayed meta refresh. This one still has to exist: Proxy runs on
@@ -23,12 +46,8 @@ export const metadata = { title: "Account" };
  *
  * The check lives here rather than in a layout because layouts do not re-render on
  * client-side navigation — a check placed there would pass once and never run again.
- *
- * Deliberately NOT wrapped in <Suspense>, unlike the header's session read. A boundary here
- * would buy a static shell for a page that is per-guest by definition, and delay the
- * fallback redirect for no gain.
  */
-export default async function AccountPage() {
+async function AccountSections() {
     const [user, profile, hasPassword] = await Promise.all([
         getAuthUser(),
         getGuestProfile(),
@@ -38,10 +57,7 @@ export default async function AccountPage() {
     if (!user) redirect("/login?next=/account");
 
     return (
-        <div className="mx-auto w-full max-w-7xl px-6 py-24">
-            <h1 className="text-[48px] font-semibold leading-none text-black">
-                Account
-            </h1>
+        <>
             <p className="mt-6 max-w-128.25 text-[16px] font-medium text-black/60">
                 Signed in as {user.email}
             </p>
@@ -161,6 +177,23 @@ export default async function AccountPage() {
                     <DeleteAccountDialog hasPassword={hasPassword} />
                 </div>
             </section>
+        </>
+    );
+}
+
+/** Blocks standing in for the profile, trips, session and danger-zone sections. */
+function AccountSectionsFallback() {
+    return (
+        <div aria-hidden>
+            <div className="mt-6 h-6 w-64 max-w-full rounded bg-black/5" />
+            {[0, 1, 2, 3].map((section) => (
+                <div
+                    key={section}
+                    className="mt-16 h-40 border-t border-black/10 pt-12"
+                >
+                    <div className="h-full rounded-2xl bg-black/3" />
+                </div>
+            ))}
         </div>
     );
 }

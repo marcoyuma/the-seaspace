@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { getAuthUser } from "@/features/auth/actions";
 import { getGuestBooking } from "@/features/booking/actions";
@@ -37,14 +38,47 @@ const HEADINGS: Record<BookingStatus, string> = {
 function Row({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-baseline justify-between gap-6">
-            <span className="text-[16px] font-medium text-black/60">{label}</span>
-            <span className="text-[16px] font-semibold text-black tabular-nums">{value}</span>
+            <span className="text-[16px] font-medium text-black/60">
+                {label}
+            </span>
+            <span className="text-[16px] font-semibold text-black tabular-nums">
+                {value}
+            </span>
         </div>
     );
 }
 
 /**
  * One reservation. Also the page a guest lands on straight after paying.
+ *
+ * The back link is all there is to prerender — the heading itself depends on the booking's
+ * status. This route has no `generateStaticParams()`, so even `params` is request-time data
+ * under Cache Components and has to be awaited inside the boundary below. `params` is
+ * therefore passed down un-awaited, the same way /login hands `searchParams` to its form.
+ */
+export default function TripPage({
+    params,
+}: {
+    params: Promise<{ bookingId: string }>;
+}) {
+    return (
+        <div className="mx-auto w-full max-w-4xl px-6 py-24">
+            <Link
+                href="/account/trips"
+                className="text-[16px] font-medium text-black/60 underline underline-offset-4 transition-opacity duration-300 ease-out hover:opacity-60 motion-reduce:transition-none"
+            >
+                ← All trips
+            </Link>
+
+            <Suspense fallback={<TripDetailFallback />}>
+                <TripDetail params={params} />
+            </Suspense>
+        </div>
+    );
+}
+
+/**
+ * The reservation itself.
  *
  * No ownership check is written here and none belongs here: `getGuestBooking()` reads
  * through the "guests read their own bookings" policy, so somebody else's id returns
@@ -54,7 +88,7 @@ function Row({ label, value }: { label: string; value: string }) {
  * Every number below comes from the row's own snapshot columns, never from the catalogue.
  * A villa's price may have changed since; this reservation's did not.
  */
-export default async function TripPage({
+async function TripDetail({
     params,
 }: {
     params: Promise<{ bookingId: string }>;
@@ -72,19 +106,13 @@ export default async function TripPage({
     const booking = await getGuestBooking(id);
     if (!booking) notFound();
 
-    const nightlyAfterDiscount = booking.pricePerNight - booking.discountPerNight;
+    const nightlyAfterDiscount =
+        booking.pricePerNight - booking.discountPerNight;
     const isUpcoming =
         booking.status === "confirmed" && booking.checkIn > propertyTodayISO();
 
     return (
-        <div className="mx-auto w-full max-w-4xl px-6 py-24">
-            <Link
-                href="/account/trips"
-                className="text-[16px] font-medium text-black/60 underline underline-offset-4 transition-opacity duration-300 ease-out hover:opacity-60 motion-reduce:transition-none"
-            >
-                ← All trips
-            </Link>
-
+        <>
             <div className="mt-8 flex flex-wrap items-start justify-between gap-6">
                 <h1 className="text-[48px] leading-none font-semibold text-black">
                     {HEADINGS[booking.status]}
@@ -102,8 +130,8 @@ export default async function TripPage({
             {booking.status === "confirmed" && !booking.paidAt && (
                 <p className="mt-6 max-w-160 rounded-2xl border border-amber-600/25 bg-amber-50 px-5 py-4 text-[15px] text-amber-900">
                     These dates are held for you, but the payment was never
-                    confirmed. On a live site a provider webhook would resolve this
-                    within minutes.
+                    confirmed. On a live site a provider webhook would resolve
+                    this within minutes.
                 </p>
             )}
 
@@ -219,8 +247,8 @@ export default async function TripPage({
                     {/* The rate is the row's own snapshot, so it stays true even after the
                         villa's price changes. */}
                     Charged at {idr.format(nightlyAfterDiscount)} per night, the
-                    rate on the day you booked. This was a simulated payment — no
-                    money moved.
+                    rate on the day you booked. This was a simulated payment —
+                    no money moved.
                 </p>
             </section>
 
@@ -257,6 +285,17 @@ export default async function TripPage({
                     </>
                 )}
             </p>
+        </>
+    );
+}
+
+/** Stands in for the heading, the villa card and the payment panel while they load. */
+function TripDetailFallback() {
+    return (
+        <div aria-hidden>
+            <div className="mt-8 h-12 w-96 max-w-full rounded bg-black/5" />
+            <div className="mt-14 h-46 rounded-3xl border border-black/10 bg-black/3" />
+            <div className="mt-8 h-72 rounded-3xl border border-black/10 bg-black/3" />
         </div>
     );
 }
