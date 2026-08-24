@@ -5,13 +5,22 @@ import { SignInIcon, UserCircleIcon } from "@phosphor-icons/react/dist/ssr";
 import { getGuestProfile } from "@/features/auth/actions";
 import { publicStorageUrl } from "@/lib/supabase";
 
-// One size for all three states, so the header's layout never shifts as the session
-// resolves behind the Suspense boundary.
-const SIZE = 38;
+// Rendered inside the menu panel's account row, so it inherits that row's
+// text size/weight and white color rather than fixing its own — unlike a
+// standalone header icon, it now only ever appears in that one context.
+const ICON_SIZE = 24;
+
+// `next/image` rejects any `width` that isn't literally one of
+// `next.config.ts`'s `images.imageSizes` (defaults to
+// [32, 48, 64, 96, 128, 256, 384] — a 400, not a fallback) — so the avatar
+// asks the optimizer for the nearest valid size and is then scaled back
+// down to `ICON_SIZE` with an explicit `style`, same as `AvatarUpload` does
+// at its own (valid) 96.
+const AVATAR_IMAGE_SIZE = 32;
 
 // `/dist/ssr` rather than the package root: these render inside Server Components, and it is
 // the specifier `optimizePackageImports` in next.config.ts matches on.
-const ICON_PROPS = { size: SIZE, color: "#000000", weight: "fill" } as const;
+const ICON_PROPS = { size: ICON_SIZE, weight: "fill" } as const;
 
 /**
  * Placeholder shown while the session is still being read.
@@ -23,18 +32,15 @@ const ICON_PROPS = { size: SIZE, color: "#000000", weight: "fill" } as const;
  */
 export function ProfileIconFallback() {
     return (
-        <Link
-            href="/login"
-            aria-label="Sign in"
-            className="flex items-center gap-4 z-10"
-        >
-            <SignInIcon {...ICON_PROPS} />
+        <Link href="/login" className="flex items-center gap-3">
+            <SignInIcon {...ICON_PROPS} aria-hidden />
+            Sign in
         </Link>
     );
 }
 
 /**
- * The header's account control, in one of three states:
+ * The menu panel's account row, in one of three states:
  *
  * 1. signed out — `SignInIcon`, linking to /login
  * 2. signed in without a photo — `UserCircleIcon` as a placeholder, linking to /account
@@ -49,11 +55,7 @@ export default async function ProfileIcon() {
     if (!profile) return <ProfileIconFallback />;
 
     return (
-        <Link
-            href="/account"
-            aria-label={`Account — ${profile.displayName}`}
-            className="flex items-center gap-4 z-10"
-        >
+        <Link href="/account" className="flex items-center gap-3">
             {profile.avatarPath ? (
                 <Image
                     // Bucket-relative path, never a stored URL — moving project or region
@@ -61,17 +63,18 @@ export default async function ProfileIcon() {
                     // /storage/v1/object/public/**, so the `guests` bucket needs no config.
                     src={publicStorageUrl("guests", profile.avatarPath)}
                     alt=""
-                    width={SIZE}
-                    height={SIZE}
-                    // Decorative: the link's aria-label already names the person, so an alt
-                    // here would have a screen reader announce the same thing twice.
+                    width={AVATAR_IMAGE_SIZE}
+                    height={AVATAR_IMAGE_SIZE}
+                    // Decorative: the visible display name already names the person, so an
+                    // alt here would have a screen reader announce the same thing twice.
                     aria-hidden
                     className="rounded-full object-cover"
-                    style={{ width: SIZE, height: SIZE }}
+                    style={{ width: ICON_SIZE, height: ICON_SIZE }}
                 />
             ) : (
-                <UserCircleIcon {...ICON_PROPS} />
+                <UserCircleIcon {...ICON_PROPS} aria-hidden />
             )}
+            {profile.displayName}
         </Link>
     );
 }
