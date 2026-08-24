@@ -1,4 +1,5 @@
 import Image, { StaticImageData } from "next/image";
+import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 interface ServiceCardProps {
     imageSrc: StaticImageData;
@@ -16,10 +17,11 @@ interface ServiceCardProps {
 
 /**
  * Preview card for a single bookable service/amenity, used in
- * `ServiceAndAmenitiesPreview`. At rest it's just the full-bleed image;
- * on hover (or keyboard focus) the image zooms slightly while a blurred
- * bottom scrim fades in and the service name + booking CTA slide up into
- * place.
+ * `ServiceAndAmenitiesPreview`. At rest the bottom pill shows only the
+ * centred service name; on hover it rolls (translate-y, same mechanic as
+ * `StayCardPreview`'s label) into a split layout — booking CTA text left,
+ * arrow affordance right. Below `md` (no hover) it stays on the centred
+ * rest state.
  */
 export default function ServiceCard({
     imageSrc,
@@ -57,52 +59,39 @@ export default function ServiceCard({
                 alt={`${serviceName} service preview`}
             />
 
-            {/* Bottom scrim: blurred + masked gradient so the white CTA pill
-                and label stay legible regardless of the underlying image's
-                brightness/contrast. Fades in with the label on hover — the
-                unhovered card is the photo alone. Opacity is animated rather
-                than `backdrop-filter` itself, which Safari doesn't interpolate.
-                `pointer-events-none` keeps it from blocking clicks on the card
-                beneath it. */}
-            <div
-                className="pointer-events-none absolute inset-0 opacity-0
-                   transition-opacity duration-500 ease-out
-                   group-hover:opacity-100 group-focus-within:opacity-100
-                   [backdrop-filter:blur(7px)]
-                   [-webkit-backdrop-filter:blur(7px)]
-                   mask-[linear-gradient(to_top,black_0%,black_30%,transparent_50%)]"
-            />
+            {/* Floating info pill anchored to the bottom edge of the card.
+                `h-12` (not `min-h-12`) is load-bearing: the two layouts
+                inside are `absolute inset-0` and roll vertically, so the
+                pill needs a fixed height for `translate-y-full` to resolve
+                against and for `overflow-hidden` to actually clip the roll. */}
+            <div className="absolute inset-x-3 bottom-3 h-12 overflow-hidden rounded-[20px] bg-white">
+                {/* Rest state: just the service name, centred. This is
+                    also the permanent state below `md`, where there's no
+                    hover to trigger the roll — it simply never translates. */}
+                <div className="absolute inset-0 flex items-center justify-center px-4 transition-transform duration-300 ease-out md:group-hover:-translate-y-full motion-reduce:transition-none">
+                    <p className="text-black font-medium text-[18px] tracking-normal">
+                        {serviceName}
+                    </p>
+                </div>
 
-            {/* Label + CTA slide up from fully below the card's bottom edge.
-                Anchored to `bottom-0` at its natural height (not `inset-0`) so
-                `translate-y-full` resolves to exactly this block's own height —
-                it starts completely out of frame and the card's `overflow-hidden`
-                clips it. Transition names `translate`, not `transform`: Tailwind
-                v4's translate utilities set the standalone `translate` property,
-                so a `transform` transition would never fire and the block would
-                snap into place. `group-focus-within` mirrors hover so the button
-                stays reachable by keyboard; `motion-reduce` drops the travel and
-                keeps only the fade. */}
-            <div
-                className="absolute inset-x-0 bottom-0 flex flex-col items-center px-2 py-2 gap-2
-                   translate-y-full opacity-0 transition-[translate,opacity] duration-500 ease-out
-                   group-hover:translate-y-0 group-hover:opacity-100
-                   group-focus-within:translate-y-0 group-focus-within:opacity-100
-                   motion-reduce:translate-y-0"
-            >
-                <span className="z-10 text-white text-[18px] font-semibold px-4 py-2">
-                    {serviceName}
-                </span>
-
-                {/* Booking CTA — semantic <button>, not a styled <span>,
-                    since this triggers an action (opening a booking flow),
-                    not just static text. */}
-                <button
-                    type="button"
-                    className="z-10 bg-white/95 text-black text-[16px] font-medium px-4 py-2 rounded-[20px] w-full transition-colors hover:bg-white"
+                {/* Hover state: `StayCardPreview`-style split layout — CTA
+                    text left, outlined arrow right. Starts parked one pill
+                    -height below (`translate-y-full`) and rolls up into
+                    view on hover, same as the rest state rolls out above
+                    it. There's no separate CTA button anymore: the whole
+                    card is the click target (booking flow not wired up
+                    yet). */}
+                <div
+                    aria-hidden
+                    className="absolute inset-0 flex translate-y-full items-center justify-between gap-x-3 py-1 pl-4 pr-2 transition-transform duration-300 ease-out md:group-hover:translate-y-0 motion-reduce:transition-none"
                 >
-                    {bookButtonText}
-                </button>
+                    <p className="text-black font-medium text-[18px] tracking-normal">
+                        {bookButtonText}
+                    </p>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-black text-black">
+                        <ArrowRightIcon size={16} weight="bold" />
+                    </span>
+                </div>
             </div>
         </div>
     );
