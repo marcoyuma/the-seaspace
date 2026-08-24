@@ -2,11 +2,18 @@ import Image from "next/image";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { AppImage } from "@/features/stays/types";
+import RatingSummary from "@/features/reviews/components/rating-summary";
 
 interface StayCardPreviewProps {
     imageSrc: AppImage;
     villaNameText: string;
     locationText: string;
+    /**
+     * Mean rating for this villa, or omitted when nobody has rated it — in which case the
+     * chip is absent rather than showing a zero. Optional so this card still renders
+     * without any rating data at all.
+     */
+    ratingAverage?: number;
 }
 
 /**
@@ -19,6 +26,7 @@ export default function StayCardPreview({
     imageSrc,
     villaNameText,
     locationText,
+    ratingAverage,
 }: StayCardPreviewProps) {
     return (
         <div
@@ -47,6 +55,27 @@ export default function StayCardPreview({
                 // independent of the rendered overlay text.
                 alt={`${villaNameText} in ${locationText}`}
             />
+
+            {/* Rating chip, mirroring the info pill at the opposite corner.
+
+                Deliberately NOT a third slot inside that pill: the pill runs two separate
+                roll animations (name→location on the left, location→arrow on the right),
+                and both size themselves from a grid whose cell is shared by two stacked
+                lines. Adding content there changes the widths those rolls are measured
+                against.
+
+                `top-3 left-3` rather than `inset-x-3`, so the chip is as wide as its own
+                content instead of stretching across the card. `bg-white` and
+                `rounded-[20px]` are copied from the pill below so the two read as one
+                language — the same trick `stay-card.tsx` uses for its "New" badge.
+
+                No review count here: at this size the average alone is the useful half, and
+                the pill already owns the card's text budget. */}
+            {ratingAverage !== undefined && (
+                <div className="absolute top-3 left-3 rounded-[20px] bg-white px-3 py-1.5">
+                    <RatingSummary average={ratingAverage} size={16} />
+                </div>
+            )}
 
             {/* Floating info pill anchored to the bottom edge of the card.
                 Positioned with explicit offsets (not inset-0) so the height

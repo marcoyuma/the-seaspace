@@ -1,9 +1,11 @@
 # Guests — what was built, and what is still planned
 
 **Status: `public.guests` is built** (migration `0006_guests.sql`), and `reviews.guest_id`
-replaced `reviews.guest_ref` (migration `0007_reviews_guest_id.sql`). **`bookings` is now built
-too** (`0009_bookings.sql`, seeded by `seed/0004_bookings_seed.sql`) — see §8 — but
-`reviews.booking_id` is not, so a verified review still does not exist.
+replaced `reviews.guest_ref` (migration `0007_reviews_guest_id.sql`). **`bookings` is built
+too** (`0009_bookings.sql`, seeded by `seed/0004_bookings_seed.sql`) — see §8 — and as of
+`0018_reviews_write_path.sql` **`reviews.booking_id` and the composite foreign key exist as
+well**, so a review is now structurally tied to a stay that actually happened. The write path
+that fills it lives in [features/reviews/README.md](features/reviews/README.md).
 
 This file used to be a plan for a table that did not exist. It is now the record of what was
 actually built, why it differs from that plan, and what is still ahead.
@@ -30,10 +32,24 @@ property, not a flag:
 - Once `bookings` exists, a review carries `booking_id`, and verified means
   `booking_id is not null` — derived from a foreign key, which cannot disagree with reality.
 
-`reviews` will gain a `booking_id` column, never an `is_verified` one. **Bookings now exist
-(§8), but `reviews.booking_id` does not — so there is still no verification mechanism.** The
-table was the harder half; what remains is one nullable column and the composite foreign key
-below.
+`reviews` will gain a `booking_id` column, never an `is_verified` one. ✅ **Both halves now
+exist**: `bookings` (§8) and `reviews.booking_id` with its composite foreign key, built by
+`0018_reviews_write_path.sql`.
+
+**Two clarifications that only became necessary once it was built**, recorded so the rule is
+not reopened from either direction:
+
+1. **A generated column is still the column this refused.** `verified boolean generated
+   always as (booking_id is not null) stored` looks like it escapes the objection — it is
+   derived, so it cannot lie. It does not escape it. The objection is that a second place
+   states a fact the relationship already states, and a generated column is a second place.
+   §8 counts three refused booleans; this would be a fourth wearing a different hat.
+2. **"Verified" is a property of the data, not a badge.** Nothing in the UI says the word,
+   and nothing should. Every review written through `upsert_stay_review()` has a booking
+   behind it by construction, and `0018`'s backfill gave the seeded rows one too — so a badge
+   would appear on every card and distinguish nothing. What `booking_id` is actually for is
+   the three items in §3: the one-review-per-stay cap, the drift guard, and the coverage
+   metric.
 
 ## 2. What was built
 
@@ -185,15 +201,44 @@ foreign key, not a trigger:
 alter table public.bookings add constraint bookings_id_guest_stay_key
     unique (id, guest_id, stay_id);
 
--- ❌ Not applied. Needs reviews.booking_id, which does not exist yet.
+-- ✅ Applied in 0018_reviews_write_path.sql — but NOT as written below. The
+--    referential actions were missing from this spec, and the default is wrong.
 alter table public.reviews add constraint reviews_matches_booking_fkey
     foreign key (booking_id, guest_id, stay_id)
-    references public.bookings (id, guest_id, stay_id);
+    references public.bookings (id, guest_id, stay_id)
+    on update cascade      -- ⚠️ see below; NOT the default
+    on delete no action;
 ```
 
 `MATCH SIMPLE` skips the check when any column is NULL, which is exactly right here: it covers
 both an unbooked testimonial (`booking_id` null) and an anonymised review (`guest_id` null)
 without needing an exemption for either.
+
+### ⚠️ Why `on update cascade`, and why the default would have broken account deletion
+
+This spec named the columns but not the actions, and the omission mattered. The referenced
+side of this key is **not** immutable: `bookings.guest_id` carries `on delete set null` from
+`0009`, and `ACCOUNT-DELETION-POLICY.md` records that one `DELETE` on `auth.users` cascades to
+`public.guests` and fires that action alongside the matching one on `reviews.guest_id`.
+
+So the referenced key changes mid-cascade, from `(57, uuid, 3)` to `(57, null, 3)`. With
+`ON UPDATE NO ACTION` — the default — Postgres **rejects** that update while a referencing row
+still points at the old key, and the order of two `set null` actions inside one cascade is not
+guaranteed. The observable symptom would have been: deleting an account fails with a foreign
+key violation, but only for guests who left a review behind.
+
+`on update cascade` lets it through and produces the outcome `0007` already asks for —
+`reviews.guest_id` becomes NULL too, `MATCH SIMPLE` then skips the check, and the review
+survives anonymised.
+
+**This makes an ordering in the application load-bearing.**
+`reviews_orphan_is_anonymised` requires `author_display_name = 'Former guest'` at the moment
+`guest_id` empties, so the `anonymize` branch in `features/auth/server-actions.ts` must
+overwrite the author columns *before* deleting the account. It already does. Do not reorder it.
+
+`DELETE` stays `NO ACTION` deliberately: a booking is never deleted (§8, and `0009`'s comment
+on `on delete restrict`), so the constraint becomes one more piece of evidence for that rule
+rather than quietly accommodating its violation.
 
 **Do NOT add `unique (guest_id, stay_id)`.** It looks sensible and it is wrong — a guest who
 stays at the same villa twice is entitled to two separate reviews.
@@ -413,11 +458,12 @@ still `0008_guest_avatars.sql`, unchanged.
 - ✅ **`bookings`** — built by `0009_bookings.sql`, seeded with 140 rows by
   `seed/0004_bookings_seed.sql`. `guest_id` got its `on delete set null` as required above.
   Details and the decisions behind the columns are in §8.
-- **`reviews.booking_id` + the composite FK — still missing, so "verified" still does not
-  stand up.** This is now the *only* thing between the schema and a verified review, and
-  `0009` already created its target (`bookings_id_guest_stay_key`). What remains is one
-  nullable column, the FK from §3, and a backfill matching each seeded review to the booking
-  that shares its guest and villa.
+- ✅ **`reviews.booking_id` + the composite FK — built** by `0018_reviews_write_path.sql`,
+  with the backfill matching each seeded review to the booking sharing its guest and villa.
+  The backfill pairs by `row_number()` on both sides rather than a plain join: a guest may
+  hold two reviews for the same villa, and `unique (booking_id)` would reject the second
+  non-deterministically. See §3 for the referential actions, which this document originally
+  left unspecified.
 - ✅ **Auth in the application** — built. `@supabase/ssr`, `proxy.ts` (Next 16's name for
   `middleware.ts`), `/login` and `/account`. Documented in
   [features/auth/README.md](features/auth/README.md), the single auth
@@ -426,8 +472,13 @@ still `0008_guest_avatars.sql`, unchanged.
   `next: { revalidate, tags }` onto every request. Caching moved to `use cache` at the
   function level when the data layer migrated to Cache Components, so the shared client can
   no longer cache an authenticated response.
-- **Review write path** — a form plus an RLS `insert` policy on `reviews`. Now expressible:
-  auth can prove who is writing.
+- ✅ **Review write path — built**, but *not* as an RLS `insert` policy. That plan was wrong
+  for the reason `0011` §1 gives about bookings: a policy authorises WHO is writing and cannot
+  constrain WHAT they wrote, so `auth.uid() = guest_id` would still permit a five-star review
+  attached to a villa the guest never booked. `upsert_stay_review()` is a `security definer`
+  function whose parameter list is the allow-list — a booking, a rating, and some words.
+  Everything else (villa, guest, displayed identity) is read inside it.
+  Documented in [features/reviews/README.md](features/reviews/README.md).
 - **Account deletion UI** — specified in `ACCOUNT-DELETION-POLICY.md`, not built.
 - **Moderation** — who approves a review, and whether that needs a state column.
 

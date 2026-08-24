@@ -35,8 +35,9 @@ minus `ferryUrl` (dropped) and with nested objects flattened into columns.
 | `migrations/0015_staff_catalog_writes.sql` | RLS policies letting a staff session **write** the four catalogue tables and the `stays` bucket |
 | `migrations/0016_stays_drop_unvalidated_fields.sql` | ⚠️ Destructive — drops five unvalidated `stays` columns |
 | `migrations/0017_stays_revalidate_webhook.sql` | The webhook that expires the customer site's catalogue cache on write. Needs `pg_net` enabled and two Vault secrets |
+| `migrations/0018_reviews_write_path.sql` | `reviews.booking_id` + the composite FK, `updated_at`, ⚠️ **revokes SELECT on `reviews`**, and seven `security definer` functions — the review read *and* write path |
 
-All twenty-two SQL files are **idempotent**, but not all in the same sense. Twenty-one are no-ops
+All twenty-three SQL files are **idempotent**, but not all in the same sense. Twenty-two are no-ops
 on a second run. `seed/0005_bookings_current_seed.sql` is **refresh-on-rerun**: it deletes the
 rows it owns and writes them again against today's date. That was harmless while nothing wrote
 to `bookings` — ⚠️ since step 19 it also deletes real reservations. See steps 18 and 19.
@@ -291,6 +292,42 @@ To confirm it works end to end, run the verification queries at the foot of
 secret mismatch, `500` means `STAYS_REVALIDATE_SECRET` is missing on Vercel, a timeout means
 the Vault URL still points somewhere unreachable, and no rows at all means either the triggers
 are missing or both Vault secrets are absent.
+
+### 26. The review write path
+
+What lets a guest rate a stay, and closes `public.reviews` to the browser at the same time.
+Prerequisites: **step 4** (`reviews` exists) and **step 15** (`bookings` exists). Steps 17–25
+are irrelevant to it — the numbering is authorship order, not dependency.
+
+26. `migrations/0018_reviews_write_path.sql` → a `notice` reporting how many of the 100
+    reviews the backfill paired with a booking, then eight verification blocks in its own
+    footer
+
+> ⚠️ **This step changes an existing read path, not just adds to one.** It runs
+> `revoke select on public.reviews from anon, authenticated`, because the new `booking_id`
+> column maps a reservation id to the guest who made it. Every review read moves into a
+> `security definer` function whose return type is the column allow-list — the same doctrine
+> step 22 uses, and for the reason `0014` gives: RLS filters rows, not columns.
+> `service_role` is untouched, which is what keeps the account-deletion flow and
+> `scripts/create-seed-accounts.mjs` working.
+>
+> Until this file runs, `pnpm build` fails with `PGRST202 · Could not find the function
+> public.get_latest_reviews` — the landing page queries reviews while prerendering, exactly
+> as it did with `PGRST205` before step 4.
+
+> **The backfill does not abort on leftovers**, unlike step 8. A review with no booking is a
+> legitimate state here — `unique (booking_id)` permits unlimited NULLs on purpose — so a
+> partial pairing is information rather than a failure. The `notice` prints the split.
+
+> ⚠️ **Block 8 in that file gates everything built on top of it.** The composite foreign key
+> spans `reviews.guest_id` and `bookings.guest_id`, and one account deletion sets both to
+> NULL inside a single cascade — so the constraint carries `on update cascade` instead of the
+> default `no action`, which would reject that deletion. If block 8 raises a foreign key
+> violation, that action is wrong. Do not work around it in the application.
+
+> **Nothing here is reversible by deleting a policy.** Restoring the old behaviour means
+> `grant select on public.reviews to anon, authenticated` — the `0005` policy is still in
+> place underneath and would govern rows again immediately.
 
 ---
 
@@ -921,13 +958,21 @@ What genuinely remains:
 2. **`_legacy/` still breaks `next build`.** Nine TypeScript errors there fail
    the build after it compiles cleanly, which means the app cannot deploy as-is.
    Nothing imports `_legacy/` any more, so deleting it turns the build green.
-3. **`reviews.booking_id`, and only then "verified".** Nothing links a review to the stay
-   behind it, so there is still no way to tell a review by someone who actually stayed from
-   one that was simply typed. The migration is small — one nullable column plus the composite
-   foreign key in `GUEST_PLANNING_TABLE.md` §3, whose target (`bookings_id_guest_stay_key`)
-   `0009` already created. As of step 21 a `checked_out` booking is a fact somebody's arrival
-   produced rather than a value nothing maintains, so "did this person actually stay" finally
-   has an answer worth joining to.
+3. ✅ **`reviews.booking_id` — built** by `0018_reviews_write_path.sql` (step 26), together
+   with the composite foreign key from `GUEST_PLANNING_TABLE.md` §3 and the write path
+   itself. A review now names the stay behind it, and `checked_out` is the only status that
+   may produce one.
+
+   Two things that came out of building it are worth carrying forward:
+
+   - **There is no `verified` column and no badge, in any form** — not a boolean and not a
+     generated one. `0005` refused that column, and a generated column is still the same
+     column. A badge would also be empty in practice: every review written through the RPC
+     has a booking by construction, so it would appear on 100% of cards.
+   - **`public.reviews` is no longer readable with the anon key.** Column-level `revoke` does
+     not work in Postgres when a table-level grant exists, so the whole grant went and the
+     reads became functions. Anything new that reads reviews must add an RPC, not a
+     `.select()`. Full reasoning in `features/reviews/README.md` §2.
 4. **Cancelling a booking.** The refund policy is written down
    (`features/booking/README.md` §11) and the `cancelled` status has existed since `0009`,
    but a guest cannot trigger it. It is its own phase: a refund rule is a decision, not a

@@ -14,9 +14,17 @@ export default function ReviewContent({
                 <h3 className="text-[16px] font-semibold text-black">
                     {displayName}
                 </h3>
-                <p className="text-[16px] font-medium text-black/60">
-                    {nationality}
-                </p>
+                {/* Guarded, not rendered unconditionally. `author_nationality` is NOT NULL
+                    but its "unknown" value is the empty string — the signup form makes
+                    nationality optional, and the anonymise branch of account deletion
+                    writes `''` outright (ACCOUNT-DELETION-POLICY.md). An empty <p> still
+                    occupies a line box, so without this the card would carry a blank
+                    second row for any guest who never gave one. */}
+                {nationality && (
+                    <p className="text-[16px] font-medium text-black/60">
+                        {nationality}
+                    </p>
+                )}
             </div>
         </div>
     );

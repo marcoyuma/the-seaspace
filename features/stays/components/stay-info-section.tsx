@@ -3,8 +3,10 @@ import { CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { Stay } from "@/features/stays/types";
 import type { BookedRange } from "@/features/booking/types";
+import type { StayRatingSummary } from "@/features/reviews/types";
 import AmenitiesPanel from "@/features/stays/components/amenities-panel";
 import BookingPanel from "@/features/booking/components/booking-panel";
+import RatingSummary from "@/features/reviews/components/rating-summary";
 import { idr } from "@/lib/format";
 import HorizontalLine from "@/ui/horizontal-line";
 
@@ -33,13 +35,17 @@ function SpecField({ label, value }: { label: string; value: string }) {
  * @param bookedRanges - Availability for this villa, from `getStayBookedRanges()`.
  * Fetched by the page and threaded through rather than read here, so this stays a pure
  * view of props like the rest of the stays components.
+ * @param ratingSummary - This villa's aggregate rating, or `undefined` when nobody has
+ * rated it yet. Threaded from the page for the same reason `bookedRanges` is.
  */
 export default function StayInfoSection({
     stay,
     bookedRanges,
+    ratingSummary,
 }: {
     stay: Stay;
     bookedRanges: BookedRange[];
+    ratingSummary?: StayRatingSummary;
 }) {
     return (
         <div className="grid grid-cols-1 gap-x-16 gap-y-10 pt-10 lg:grid-cols-2">
@@ -70,6 +76,22 @@ export default function StayInfoSection({
                 <p className="mt-3 text-[24px] tracking-normal font-semibold text-black/50">
                     {idr.format(stay.pricePerNight)} / night
                 </p>
+
+                {/* Price and rating are the two numbers people decide on, so both sit as
+                    subtitles under the h1 — `mt-3` matches the gap from the h1 to the price,
+                    which makes the three lines read as one block.
+
+                    Absent entirely for a villa nobody has rated. Not "0 reviews" and not
+                    "No rating yet": the same call ReviewsSection makes when the table is
+                    empty, and a 0.00 average would read as a bad review rather than as no
+                    reviews. */}
+                {ratingSummary && (
+                    <RatingSummary
+                        average={ratingSummary.averageRating}
+                        total={ratingSummary.total}
+                        className="mt-3"
+                    />
+                )}
 
                 <p className="mt-6 max-w-140 text-[16px] leading-[1.6] font-medium text-black/60">
                     {stay.description}

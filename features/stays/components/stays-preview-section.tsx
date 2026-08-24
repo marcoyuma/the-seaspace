@@ -7,6 +7,7 @@ import PillLink from "@/ui/pill-link";
 import StayCardPreview from "@/features/stays/components/stay-card-preview";
 import Text from "@/ui/text";
 import { getFeaturedStays } from "@/features/stays/actions";
+import { getStayRatingSummaries } from "@/features/reviews/actions";
 
 // Centralized route reference — avoids magic strings scattered across
 // components and keeps navigation targets in one place if routes change.
@@ -29,7 +30,13 @@ const STAYS_PAGE_PATH = "/stays";
  * static shell on its own.
  */
 export default async function StaysPreviewSection() {
-    const featuredStays = await getFeaturedStays();
+    // Parallel: neither read depends on the other. The ratings call returns every villa in
+    // one round trip rather than one per card, and it is the same cached entry the stay
+    // detail page reads — so on a warm cache this section adds nothing.
+    const [featuredStays, ratingSummaries] = await Promise.all([
+        getFeaturedStays(),
+        getStayRatingSummaries(),
+    ]);
 
     return (
         <Container>
@@ -116,6 +123,12 @@ export default async function StaysPreviewSection() {
                                 imageSrc={stay.imageSrc}
                                 villaNameText={stay.name}
                                 locationText={stay.location}
+                                // `stay.id` IS the slug column — see
+                                // features/stays/types.ts. `undefined` for a villa with no
+                                // reviews, which hides the chip rather than showing a zero.
+                                ratingAverage={
+                                    ratingSummaries.get(stay.id)?.averageRating
+                                }
                             />
                         </Link>
                     ))}

@@ -5,6 +5,8 @@ import { Suspense } from "react";
 
 import { getAuthUser } from "@/features/auth/actions";
 import { getGuestBooking } from "@/features/booking/actions";
+import { getOwnBookingReview } from "@/features/reviews/actions";
+import ReviewPrompt from "@/features/reviews/components/review-prompt";
 import ArrivalInstructions from "@/features/booking/components/arrival-instructions";
 import BookingStatusBadge from "@/features/booking/components/booking-status-badge";
 import { paymentMethodLabel } from "@/features/booking/lib/payment-methods";
@@ -110,6 +112,18 @@ async function TripDetail({
         booking.pricePerNight - booking.discountPerNight;
     const isUpcoming =
         booking.status === "confirmed" && booking.checkIn > propertyTodayISO();
+
+    // Only a completed stay may be reviewed, and 'checked_out' is the one status that means
+    // it: 0013's hourly job writes it, and that job is forbidden from writing 'checked_in'
+    // because a calendar cannot know whether anybody walked through the door. 'no_show' is
+    // excluded on purpose — paid for, but there is no experience to rate.
+    //
+    // Read only when it can matter. `getOwnBookingReview()` is uncached (it reads cookies),
+    // so skipping it for the other four statuses skips a round trip on most page loads.
+    // `upsert_stay_review` re-checks the same rule with SB017 regardless — this decides what
+    // is rendered, not what is permitted.
+    const canReview = booking.status === "checked_out";
+    const ownReview = canReview ? await getOwnBookingReview(id) : null;
 
     return (
         <>
@@ -253,6 +267,22 @@ async function TripDetail({
             </section>
 
             <ArrivalInstructions booking={booking} />
+
+            {/* Absent entirely for a stay that is not finished, rather than a disabled
+                button: the status badge at the top of this page already says what state the
+                reservation is in, and a dead control adds nothing to that. */}
+            {canReview && (
+                <ReviewPrompt
+                    bookingId={booking.id}
+                    stayName={booking.stayName}
+                    // Formatted here so the client component ships no date formatter — the
+                    // same reason every other date on this page is formatted server-side.
+                    dateRange={`${formatFullDate(booking.checkIn)} – ${formatFullDate(
+                        booking.checkOut,
+                    )}`}
+                    existing={ownReview}
+                />
+            )}
 
             {booking.guestNotes && (
                 <section

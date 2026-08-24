@@ -59,6 +59,21 @@ export const STAYS_CACHE_TAG = "stays";
 export const STAYS_CACHE_PROFILE =
     process.env.NODE_ENV === "development" ? "seconds" : "hours";
 
+/**
+ * Cache tag for reviews: the rows themselves and every aggregate over them.
+ *
+ * Separate from STAYS_CACHE_TAG because reviews now have a write path of their own
+ * (features/reviews/server-actions.ts). Review readers tag BOTH, so the catalogue webhook
+ * from 0017 keeps clearing them exactly as it did before, while a guest posting a review
+ * can invalidate just this — rather than dropping the whole four-villa catalogue, which is
+ * cached for an hour and did not change.
+ *
+ * No profile of its own: reviews are catalogue-shaped data, so they ride on
+ * STAYS_CACHE_PROFILE. What makes a new review appear immediately is `updateTag`, not a
+ * short interval.
+ */
+export const REVIEWS_CACHE_TAG = "reviews";
+
 /** Cache tag for availability. Callers add a per-slug tag alongside it. */
 export const BOOKINGS_CACHE_TAG = "bookings";
 
