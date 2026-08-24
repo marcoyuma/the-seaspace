@@ -11,7 +11,10 @@ import {
     useState,
 } from "react";
 import Image from "next/image";
-import gsap from "gsap";
+// Type-only: GSAP's module body reads `Date.now()` when it is evaluated (its ticker
+// IIFE), which `cacheComponents` counts as IO and reports as a prerender error on this
+// route. `import type` is erased, so the library itself is pulled in from an effect below.
+import type { gsap } from "gsap";
 import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { StayImage } from "@/features/stays/types";
@@ -118,6 +121,9 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
     /** The single in-flight glide, killed before any new one so a drag and an arrow
      * can never animate the rail at the same time. */
     const tweenRef = useRef<gsap.core.Tween | null>(null);
+    /** GSAP itself, once the deferred import below has landed. `null` on the server and
+     * for the first few frames in the browser — glideTo() snaps in the meantime. */
+    const gsapRef = useRef<typeof import("gsap").default | null>(null);
 
     /** Destination frame, tracked apart from the live position so rapid arrow clicks
      * queue instead of each restarting from wherever the tween had reached. */
@@ -169,7 +175,12 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
 
         // Fold the unbounded position onto [0, setWidth) — every set is identical,
         // so any two positions one set apart are visually the same rail.
-        const wrapped = gsap.utils.wrap(0, setWidth, posRef.current.value);
+        //
+        // Hand-rolled rather than `gsap.utils.wrap`: this runs on the very first paint,
+        // before the deferred GSAP import can have landed. JS `%` keeps the sign, hence
+        // the `+ setWidth` correction — the same shape as the dot maths below.
+        const value = posRef.current.value;
+        const wrapped = ((value % setWidth) + setWidth) % setWidth;
         // The extra setWidth parks the window on the SECOND copy, leaving a whole
         // set of slack to the left so negative positions (the peek, a backwards
         // step) still render frames rather than empty track.
@@ -217,6 +228,21 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
         return () => observer.disconnect();
     }, [count, paint, restPosition]);
 
+    // Pulls GSAP in after mount rather than at module scope. Its ticker reads
+    // `Date.now()` as the module evaluates, and with `cacheComponents` on that counts as
+    // reading the clock during the client prerender — which would cost this route its
+    // static shell (see the `import type` note at the top). The rail's markup and images
+    // carry no GSAP, so deferring it keeps the hero server-rendered.
+    useEffect(() => {
+        let cancelled = false;
+        import("gsap").then((module) => {
+            if (!cancelled) gsapRef.current = module.default;
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     // Kill any in-flight glide on unmount so GSAP never paints into a detached node.
     useEffect(() => () => void tweenRef.current?.kill(), []);
 
@@ -228,13 +254,17 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
             targetIndexRef.current = index;
             const target = restPosition(index);
 
-            if (prefersReducedMotion()) {
+            // The same snap serves two cases: motion is unwanted, or GSAP has not
+            // finished loading yet (a click within the first frames after hydration).
+            // Landing on the right frame instantly beats dropping the interaction.
+            const gsapInstance = gsapRef.current;
+            if (prefersReducedMotion() || !gsapInstance) {
                 posRef.current.value = target;
                 paint();
                 return;
             }
 
-            tweenRef.current = gsap.to(posRef.current, {
+            tweenRef.current = gsapInstance.to(posRef.current, {
                 value: target,
                 duration: STEP_DURATION,
                 ease: "power3.out",

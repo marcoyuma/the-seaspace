@@ -2,12 +2,10 @@
 
 import React, { useRef, useLayoutEffect } from "react";
 import Image from "next/image";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-// Register the plugin once — GSAP core doesn't know how to read scroll
-// position without this.
-gsap.registerPlugin(ScrollTrigger);
+// GSAP is imported inside the effect below, not here: its ticker reads `Date.now()` as
+// the module evaluates, and with `cacheComponents` on that counts as reading the clock
+// during the client prerender, which costs the route its static shell.
+// registerPlugin() moved along with it — it is idempotent, so calling it per mount is fine.
 
 const HEADING_TEXT =
     "Two family sanctuaries where beachfront paradise meets tropical highlands. welcoming guests since 1962.";
@@ -115,233 +113,251 @@ export default function FamilyHistorySection() {
     const topImageRef2 = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
-        // gsap.context() scopes all animations/ScrollTriggers created inside
-        // it to this component, so ctx.revert() below can clean everything
-        // up automatically when the component unmounts (prevents leaks).
-        const ctx = gsap.context(() => {
-            const container = containerRef.current;
-            const stage = stageRef.current;
-            const text = textRef.current;
-            // Filter out any refs that haven't attached yet (still null).
-            const sideEls = sideImageRefs.current.filter(
-                (el): el is HTMLDivElement => el !== null,
-            );
-            const topEl = topImageRef.current;
-            const sideEls2 = sideImageRefs2.current.filter(
-                (el): el is HTMLDivElement => el !== null,
-            );
-            const topEl2 = topImageRef2.current;
-
-            // Bail out early if any required element isn't mounted yet, to
-            // avoid animating undefined targets.
-            if (!container || !stage || !text || !topEl || !topEl2) return;
-
-            // Only desktop's topImage2 is sized large enough to fully cover
-            // the heading's bounding box (see the width/height classes on
-            // topImage2 below). On mobile/tablet the heading wraps into more
-            // lines and topImage2 can't grow enough to cover it without
-            // dwarfing the layout, so the vanish-text step below is skipped
-            // there — see its own comment for what that changes.
-            const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
-
-            // Grab every individual letter span (see JSX below) so they can
-            // be animated one by one.
-            const charEls =
-                text.querySelectorAll<HTMLSpanElement>("[data-char]");
-
-            // Initial states run BEFORE any tween is created, so the first
-            // painted frame is already correct (useLayoutEffect runs ahead of
-            // paint). Order matters — see the immediateRender note below.
-
-            // Letters start mostly transparent.
-            gsap.set(charEls, { opacity: HEADING_DIM_OPACITY });
-
-            // All six images: hidden below the viewport, visible/interactable
-            // via autoAlpha, waiting to be animated upward by the timeline.
-            gsap.set([...sideEls, topEl, ...sideEls2, topEl2], {
-                autoAlpha: 1,
-                y: TRAVEL.hiddenBelow,
-            });
-
-            // Heading fade: its OWN ScrollTrigger, separate from the pin
-            // timeline below, so it starts as soon as barely visible
-            // ("top 70%") and finishes ("top top") right as the pin begins.
-            //
-            // fromTo + immediateRender:false is load-bearing: a plain .to()
-            // reads its start value off the DOM at init time, and a scrubbed
-            // tween's init moment isn't deterministic — reloading mid-scroll
-            // can fire `scroll` before DOMContentLoaded, initing the tween
-            // while letters are still at their SSR opacity of 1, recording
-            // 1 → 1 (heading never visibly fades). fromTo hardcodes both
-            // ends so the DOM is never sampled; immediateRender:false stops
-            // the `from` being slammed on at creation, which would otherwise
-            // fight the gsap.set above.
-            gsap.fromTo(
-                charEls,
-                { opacity: HEADING_DIM_OPACITY },
-                {
-                    opacity: 1,
-                    immediateRender: false,
-                    stagger: { each: TIMING.textStaggerEach, from: "start" },
-                    scrollTrigger: {
-                        trigger: container,
-                        start: "top 70%",
-                        end: "top top",
-                        scrub: 1,
-                    },
-                },
-            );
-
-            // Main timeline: drives every image/text phase. Because they all
-            // share this one timeline, changing any timing value here
-            // (duration, position params) affects every phase's relative
-            // timing, not just the one you edited.
-            //
-            // `paused: true` is REQUIRED here: a GSAP timeline auto-plays on
-            // the global ticker the moment it's created. We don't want that —
-            // this timeline's playhead is driven manually from scroll position
-            // in the ScrollTrigger.onUpdate below, so it must start paused and
-            // never advance on its own.
-            const tl = gsap.timeline({ paused: true });
-
-            // Heading opacity is deliberately NOT animated here — that's the
-            // fromTo/ScrollTrigger above. Two scrubbed animations writing the
-            // same property would race (last one to render wins, and it'd
-            // sample its start value from whatever the first just wrote).
-
-            // --- PHASE 1: side images (1 & 2) move from hiddenBelow to
-            // hiddenAbove, from the first frame of the pin ---
-            tl.to(
-                sideEls,
-                {
-                    y: TRAVEL.hiddenAbove,
-                    duration: TIMING.sideDuration,
-                    ease: TRAVEL_EASE,
-                },
-                TIMING.sideStart,
-            );
-
-            // --- PHASE 2: top image (3) starts once Phase 1 has played
-            // topOverlapPercent% of its own duration — i.e. overlapping
-            // with Phase 1 instead of waiting for it to fully finish ---
-            tl.to(
-                topEl,
-                {
-                    y: TRAVEL.hiddenAbove,
-                    duration: TIMING.topDuration,
-                    ease: TRAVEL_EASE,
-                },
-                `<${TIMING.topOverlapPercent}%`,
-            );
-
-            // --- PHASE 3: side images batch 2 (4 & 5). Same style/duration/
-            // ease as Phase 1 — only the target elements differ ---
-            tl.to(
-                sideEls2,
-                {
-                    y: TRAVEL.hiddenAbove,
-                    duration: TIMING.sideDuration,
-                    ease: TRAVEL_EASE,
-                },
-                `<${TIMING.batch2OverlapPercent}%`,
-            );
-
-            // --- PHASE 4: top image batch 2 (6). Same style/duration/ease
-            // as Phase 2, overlapping with Phase 3 ---
-            tl.to(
-                topEl2,
-                {
-                    y: TRAVEL.hiddenAbove,
-                    duration: TIMING.topDuration,
-                    ease: TRAVEL_EASE,
-                },
-                `<${TIMING.topOverlapPercent}%`,
-            );
-
-            // Marks the moment topEl2 reaches its resting position over the
-            // heading — landing where it would need to cover the h2.
-            // Positioned relative to Phase 4's start, as a percentage of
-            // topEl2's own travel. Added as a label (not derived from a
-            // .set() below) so the pin-release math further down stays
-            // identical whether or not the heading actually vanishes here.
-            tl.addLabel("textGone", `<${TIMING.textVanishPercent}%`);
-
-            // Heading disappears INSTANTLY (not a fade), desktop-only. .set()
-            // rather than .to() because we want a hard snap with no duration.
-            // Only lg's topImage2 is sized to fully cover the heading's box
-            // (see its width/height classes below); at mobile/tablet widths
-            // the heading wraps into more lines than topImage2 can cover
-            // without oversizing it, so forcing autoAlpha:0 there left a bare
-            // gap where the text used to be. Keep it visible on those
-            // breakpoints instead — it scrolls away naturally once the pin
-            // releases.
-            if (isDesktop) {
-                tl.set(text, { autoAlpha: 0 }, "textGone");
-            }
-
-            // Pin wiring: release the pin at the EXACT instant the heading
-            // disappears, instead of holding through topEl2's remaining exit.
-            //
-            // Can't just shorten `end` on a normal `animation: tl` trigger —
-            // a scrubbed ScrollTrigger always maps start→end onto the FULL
-            // tl.duration(), so shrinking `end` only compresses the sequence
-            // (topEl2 still fully exits, just faster), it never stops partway.
-            //
-            // Instead the playhead is driven manually and clamped to the
-            // "textGone" moment: `self.progress` (0→1, scrub-smoothed) is
-            // scaled to the [0, textGone] slice and written via tl.time().
-            // Past `end`, the pin releases with topEl2 frozen mid-cover;
-            // its unplayed tail never runs on-screen.
-            //
-            // `scrollPerTimeUnit` recovers the original pacing as a rate — the
-            // prior design scrolled (150 * SLOWDOWN_FACTOR)% of viewport height
-            // across the full tl.duration(). Applying that rate to just the
-            // kept `textGone` slice gives the pin's scroll length at the same
-            // image speed. Derived at runtime so it stays correct if
-            // TIMING/SLOWDOWN_FACTOR change later.
-            const textGoneTime = tl.labels.textGone;
-            const scrollPerTimeUnit = (150 * SLOWDOWN_FACTOR) / tl.duration();
-            const pinDistancePercent = scrollPerTimeUnit * textGoneTime;
-
-            ScrollTrigger.create({
-                trigger: container,
-                start: "top top", // pin activates once container's top hits viewport top
-                end: `+=${pinDistancePercent}%`, // scroll length of the [0, textGone] slice at original pacing
-                scrub: 1, // smooth the scroll→progress mapping (1s catch-up)
-                pin: stage, // the element that stays fixed on screen while pinned
-                pinSpacing: true, // ScrollTrigger inserts a spacer exactly as tall as the pin duration, so no dead blank scroll trails the animation
-                // Map smoothed scroll progress onto ONLY the first `textGone`
-                // seconds of the timeline. This is what freezes topEl2 over the
-                // heading at release instead of playing its exit.
-                onUpdate: (self) => tl.time(self.progress * textGoneTime),
-            });
-        }, containerRef);
-
-        // The measurements above ran before the Manrope webfont swapped in
-        // and before images decoded — both reflow the page afterwards and
-        // silently invalidate the pin/trigger measurements. Re-measure once
-        // each has settled.
         let cancelled = false;
-        const refresh = () => {
-            if (!cancelled) ScrollTrigger.refresh();
-        };
+        /** Set once the animations are wired up; undefined if the chunk never landed. */
+        let teardown: (() => void) | undefined;
 
-        document.fonts?.ready.then(refresh);
+        // Deferred for the reason given by the imports. The section sits below the
+        // fold, so the extra round-trip lands long before it is scrolled into view.
+        Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(
+            ([{ default: gsap }, { ScrollTrigger }]) => {
+                // Unmounted while the chunk was in flight — nothing to attach to.
+                if (cancelled) return;
+                gsap.registerPlugin(ScrollTrigger);
 
-        // "load" has already fired if we mounted late (e.g. client-side nav),
-        // and it never fires twice — so check readyState rather than waiting
-        // for an event that will never arrive.
-        const alreadyLoaded = document.readyState === "complete";
-        if (alreadyLoaded) {
-            refresh();
-        } else {
-            window.addEventListener("load", refresh);
-        }
+                // gsap.context() scopes all animations/ScrollTriggers created inside
+                // it to this component, so ctx.revert() below can clean everything
+                // up automatically when the component unmounts (prevents leaks).
+                const ctx = gsap.context(() => {
+                    const container = containerRef.current;
+                    const stage = stageRef.current;
+                    const text = textRef.current;
+                    // Filter out any refs that haven't attached yet (still null).
+                    const sideEls = sideImageRefs.current.filter(
+                        (el): el is HTMLDivElement => el !== null,
+                    );
+                    const topEl = topImageRef.current;
+                    const sideEls2 = sideImageRefs2.current.filter(
+                        (el): el is HTMLDivElement => el !== null,
+                    );
+                    const topEl2 = topImageRef2.current;
+
+                    // Bail out early if any required element isn't mounted yet, to
+                    // avoid animating undefined targets.
+                    if (!container || !stage || !text || !topEl || !topEl2) return;
+
+                    // Only desktop's topImage2 is sized large enough to fully cover
+                    // the heading's bounding box (see the width/height classes on
+                    // topImage2 below). On mobile/tablet the heading wraps into more
+                    // lines and topImage2 can't grow enough to cover it without
+                    // dwarfing the layout, so the vanish-text step below is skipped
+                    // there — see its own comment for what that changes.
+                    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+
+                    // Grab every individual letter span (see JSX below) so they can
+                    // be animated one by one.
+                    const charEls =
+                        text.querySelectorAll<HTMLSpanElement>("[data-char]");
+
+                    // Initial states run BEFORE any tween is created, so the first
+                    // painted frame is already correct (useLayoutEffect runs ahead of
+                    // paint). Order matters — see the immediateRender note below.
+
+                    // Letters start mostly transparent.
+                    gsap.set(charEls, { opacity: HEADING_DIM_OPACITY });
+
+                    // All six images: hidden below the viewport, visible/interactable
+                    // via autoAlpha, waiting to be animated upward by the timeline.
+                    gsap.set([...sideEls, topEl, ...sideEls2, topEl2], {
+                        autoAlpha: 1,
+                        y: TRAVEL.hiddenBelow,
+                    });
+
+                    // Heading fade: its OWN ScrollTrigger, separate from the pin
+                    // timeline below, so it starts as soon as barely visible
+                    // ("top 70%") and finishes ("top top") right as the pin begins.
+                    //
+                    // fromTo + immediateRender:false is load-bearing: a plain .to()
+                    // reads its start value off the DOM at init time, and a scrubbed
+                    // tween's init moment isn't deterministic — reloading mid-scroll
+                    // can fire `scroll` before DOMContentLoaded, initing the tween
+                    // while letters are still at their SSR opacity of 1, recording
+                    // 1 → 1 (heading never visibly fades). fromTo hardcodes both
+                    // ends so the DOM is never sampled; immediateRender:false stops
+                    // the `from` being slammed on at creation, which would otherwise
+                    // fight the gsap.set above.
+                    gsap.fromTo(
+                        charEls,
+                        { opacity: HEADING_DIM_OPACITY },
+                        {
+                            opacity: 1,
+                            immediateRender: false,
+                            stagger: { each: TIMING.textStaggerEach, from: "start" },
+                            scrollTrigger: {
+                                trigger: container,
+                                start: "top 70%",
+                                end: "top top",
+                                scrub: 1,
+                            },
+                        },
+                    );
+
+                    // Main timeline: drives every image/text phase. Because they all
+                    // share this one timeline, changing any timing value here
+                    // (duration, position params) affects every phase's relative
+                    // timing, not just the one you edited.
+                    //
+                    // `paused: true` is REQUIRED here: a GSAP timeline auto-plays on
+                    // the global ticker the moment it's created. We don't want that —
+                    // this timeline's playhead is driven manually from scroll position
+                    // in the ScrollTrigger.onUpdate below, so it must start paused and
+                    // never advance on its own.
+                    const tl = gsap.timeline({ paused: true });
+
+                    // Heading opacity is deliberately NOT animated here — that's the
+                    // fromTo/ScrollTrigger above. Two scrubbed animations writing the
+                    // same property would race (last one to render wins, and it'd
+                    // sample its start value from whatever the first just wrote).
+
+                    // --- PHASE 1: side images (1 & 2) move from hiddenBelow to
+                    // hiddenAbove, from the first frame of the pin ---
+                    tl.to(
+                        sideEls,
+                        {
+                            y: TRAVEL.hiddenAbove,
+                            duration: TIMING.sideDuration,
+                            ease: TRAVEL_EASE,
+                        },
+                        TIMING.sideStart,
+                    );
+
+                    // --- PHASE 2: top image (3) starts once Phase 1 has played
+                    // topOverlapPercent% of its own duration — i.e. overlapping
+                    // with Phase 1 instead of waiting for it to fully finish ---
+                    tl.to(
+                        topEl,
+                        {
+                            y: TRAVEL.hiddenAbove,
+                            duration: TIMING.topDuration,
+                            ease: TRAVEL_EASE,
+                        },
+                        `<${TIMING.topOverlapPercent}%`,
+                    );
+
+                    // --- PHASE 3: side images batch 2 (4 & 5). Same style/duration/
+                    // ease as Phase 1 — only the target elements differ ---
+                    tl.to(
+                        sideEls2,
+                        {
+                            y: TRAVEL.hiddenAbove,
+                            duration: TIMING.sideDuration,
+                            ease: TRAVEL_EASE,
+                        },
+                        `<${TIMING.batch2OverlapPercent}%`,
+                    );
+
+                    // --- PHASE 4: top image batch 2 (6). Same style/duration/ease
+                    // as Phase 2, overlapping with Phase 3 ---
+                    tl.to(
+                        topEl2,
+                        {
+                            y: TRAVEL.hiddenAbove,
+                            duration: TIMING.topDuration,
+                            ease: TRAVEL_EASE,
+                        },
+                        `<${TIMING.topOverlapPercent}%`,
+                    );
+
+                    // Marks the moment topEl2 reaches its resting position over the
+                    // heading — landing where it would need to cover the h2.
+                    // Positioned relative to Phase 4's start, as a percentage of
+                    // topEl2's own travel. Added as a label (not derived from a
+                    // .set() below) so the pin-release math further down stays
+                    // identical whether or not the heading actually vanishes here.
+                    tl.addLabel("textGone", `<${TIMING.textVanishPercent}%`);
+
+                    // Heading disappears INSTANTLY (not a fade), desktop-only. .set()
+                    // rather than .to() because we want a hard snap with no duration.
+                    // Only lg's topImage2 is sized to fully cover the heading's box
+                    // (see its width/height classes below); at mobile/tablet widths
+                    // the heading wraps into more lines than topImage2 can cover
+                    // without oversizing it, so forcing autoAlpha:0 there left a bare
+                    // gap where the text used to be. Keep it visible on those
+                    // breakpoints instead — it scrolls away naturally once the pin
+                    // releases.
+                    if (isDesktop) {
+                        tl.set(text, { autoAlpha: 0 }, "textGone");
+                    }
+
+                    // Pin wiring: release the pin at the EXACT instant the heading
+                    // disappears, instead of holding through topEl2's remaining exit.
+                    //
+                    // Can't just shorten `end` on a normal `animation: tl` trigger —
+                    // a scrubbed ScrollTrigger always maps start→end onto the FULL
+                    // tl.duration(), so shrinking `end` only compresses the sequence
+                    // (topEl2 still fully exits, just faster), it never stops partway.
+                    //
+                    // Instead the playhead is driven manually and clamped to the
+                    // "textGone" moment: `self.progress` (0→1, scrub-smoothed) is
+                    // scaled to the [0, textGone] slice and written via tl.time().
+                    // Past `end`, the pin releases with topEl2 frozen mid-cover;
+                    // its unplayed tail never runs on-screen.
+                    //
+                    // `scrollPerTimeUnit` recovers the original pacing as a rate — the
+                    // prior design scrolled (150 * SLOWDOWN_FACTOR)% of viewport height
+                    // across the full tl.duration(). Applying that rate to just the
+                    // kept `textGone` slice gives the pin's scroll length at the same
+                    // image speed. Derived at runtime so it stays correct if
+                    // TIMING/SLOWDOWN_FACTOR change later.
+                    const textGoneTime = tl.labels.textGone;
+                    const scrollPerTimeUnit = (150 * SLOWDOWN_FACTOR) / tl.duration();
+                    const pinDistancePercent = scrollPerTimeUnit * textGoneTime;
+
+                    ScrollTrigger.create({
+                        trigger: container,
+                        start: "top top", // pin activates once container's top hits viewport top
+                        end: `+=${pinDistancePercent}%`, // scroll length of the [0, textGone] slice at original pacing
+                        scrub: 1, // smooth the scroll→progress mapping (1s catch-up)
+                        pin: stage, // the element that stays fixed on screen while pinned
+                        pinSpacing: true, // ScrollTrigger inserts a spacer exactly as tall as the pin duration, so no dead blank scroll trails the animation
+                        // Map smoothed scroll progress onto ONLY the first `textGone`
+                        // seconds of the timeline. This is what freezes topEl2 over the
+                        // heading at release instead of playing its exit.
+                        onUpdate: (self) => tl.time(self.progress * textGoneTime),
+                    });
+                }, containerRef);
+
+                // The measurements above ran before the Manrope webfont swapped in
+                // and before images decoded — both reflow the page afterwards and
+                // silently invalidate the pin/trigger measurements. Re-measure once
+                // each has settled.
+                const refresh = () => {
+                    if (!cancelled) ScrollTrigger.refresh();
+                };
+
+                document.fonts?.ready.then(refresh);
+
+                // "load" has already fired if we mounted late (e.g. client-side nav),
+                // and it never fires twice — so check readyState rather than waiting
+                // for an event that will never arrive.
+                const alreadyLoaded = document.readyState === "complete";
+                if (alreadyLoaded) {
+                    refresh();
+                } else {
+                    window.addEventListener("load", refresh);
+                }
+
+                teardown = () => {
+                    if (!alreadyLoaded)
+                        window.removeEventListener("load", refresh);
+                    ctx.revert();
+                };
+            },
+        );
 
         return () => {
             cancelled = true;
-            if (!alreadyLoaded) window.removeEventListener("load", refresh);
-            ctx.revert();
+            teardown?.();
         };
     }, []);
 
