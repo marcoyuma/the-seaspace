@@ -14,6 +14,10 @@ import ReviewsPanel from "@/features/reviews/components/reviews-panel";
  *
  * The content used to be a hardcoded REVIEWS array with hand-typed stats ("200+", "5.00",
  * "100%") in features/home/components/reviews.tsx.
+ *
+ * Still needs a <Suspense> boundary in app/page.tsx despite the caching below: `"use cache"`
+ * lives on the two action functions, not on this component, so the prerenderer still treats
+ * it as an ordinary async component awaiting a promise.
  */
 export default async function ReviewsSection() {
     // Parallel, not sequential: neither query depends on the other, and awaiting them in
@@ -39,6 +43,24 @@ export default async function ReviewsSection() {
             <section aria-labelledby="reviews-heading">
                 <ReviewsHeader />
                 <ReviewsPanel reviews={reviews} stats={stats} />
+            </section>
+        </Container>
+    );
+}
+
+/**
+ * <Suspense> fallback for `ReviewsSection`, exported so app/page.tsx can use it without
+ * duplicating the header. `ReviewsHeader` is static copy, not data, so it renders immediately
+ * either way — only the carousel + stats row (`ReviewsPanel`) is skeletonized.
+ */
+export function ReviewsSectionFallback() {
+    return (
+        <Container>
+            <section aria-labelledby="reviews-heading">
+                <ReviewsHeader />
+                {/* Roughly matches ReviewsPanel's real height (carousel + stats row) so
+                    swapping in the real content doesn't shift the page underneath it. */}
+                <div className="h-100 w-full max-w-161 mx-auto rounded-[20px] bg-black/5 animate-pulse" />
             </section>
         </Container>
     );

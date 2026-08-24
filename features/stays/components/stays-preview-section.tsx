@@ -22,6 +22,11 @@ const STAYS_PAGE_PATH = "/stays";
  *
  * Async Server Component: the query is cached and revalidated by the shared policy in
  * lib/supabase.ts, so this costs the landing page nothing per request.
+ *
+ * Still needs a <Suspense> boundary in app/page.tsx despite that caching: `"use cache"` lives
+ * on `getFeaturedStays()`, not on this component, so from the prerenderer's point of view this
+ * is an ordinary async component awaiting a promise — not something it can inline into the
+ * static shell on its own.
  */
 export default async function StaysPreviewSection() {
     const featuredStays = await getFeaturedStays();
@@ -113,6 +118,54 @@ export default async function StaysPreviewSection() {
                                 locationText={stay.location}
                             />
                         </Link>
+                    ))}
+                </div>
+            </section>
+        </Container>
+    );
+}
+
+/**
+ * <Suspense> fallback for `StaysPreviewSection`, exported so app/page.tsx can use it without
+ * duplicating the intro block. Only the card grid is skeletonized — the intro (overline,
+ * heading, copy, CTA) is static copy, not data, so it renders immediately either way.
+ */
+export function StaysPreviewSectionFallback() {
+    return (
+        <Container>
+            <section
+                aria-labelledby="stays-preview-heading"
+                className="flex flex-col items-center gap-5 text-center md:items-start md:text-left"
+            >
+                <div className="w-full flex flex-col items-center gap-3 md:items-start">
+                    <OverlineText>Rooms and suites</OverlineText>
+                    <Heading classname="!text-[36px]">Sea Escape</Heading>
+
+                    <div className="w-full flex flex-col items-center gap-6 md:flex-row md:items-start md:justify-between">
+                        <Text classname="!max-w-70 sm:!max-w-96 md:!max-w-105 lg:!max-w-128.25">
+                            Each stay is crafted with intention, finished with
+                            elegance, and designed to feel like a home away from
+                            home surrounded by ocean breeze.
+                        </Text>
+
+                        <PillLink
+                            href={STAYS_PAGE_PATH}
+                            variant="outline"
+                            className="shrink-0"
+                        >
+                            Explore stays
+                        </PillLink>
+                    </div>
+                </div>
+
+                {/* Two placeholder cards, same aspect ratio as StayCardPreview, so the grid
+                    doesn't jump in height once real cards stream in. */}
+                <div className="w-full grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {Array.from({ length: 2 }).map((_, index) => (
+                        <div
+                            key={index}
+                            className="w-full aspect-600/570 rounded-[20px] bg-black/5 animate-pulse"
+                        />
                     ))}
                 </div>
             </section>

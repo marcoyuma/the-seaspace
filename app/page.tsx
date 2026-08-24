@@ -1,12 +1,18 @@
+import { Suspense } from "react";
+
 import bg from "@/public/bg.jpg";
 
 import ScrollRunningText from "@/features/home/components/scroll-running-text";
 import FamilyHistorySection from "@/features/home/components/family-history-section";
-import StaysPreviewSection from "@/features/stays/components/stays-preview-section";
+import StaysPreviewSection, {
+    StaysPreviewSectionFallback,
+} from "@/features/stays/components/stays-preview-section";
 import ServiceAndAmenitiesPreview from "@/features/services/components/service-and-amenities-preview";
 import MoreServiceAndAmenities from "@/features/services/components/more-service-and-amenities";
 import Gallery from "@/features/home/components/gallery";
-import ReviewsSection from "@/features/reviews/components/reviews-section";
+import ReviewsSection, {
+    ReviewsSectionFallback,
+} from "@/features/reviews/components/reviews-section";
 import FaqSection from "@/features/home/components/faq-section";
 import Hero from "@/features/home/components/hero";
 
@@ -35,7 +41,13 @@ export default function Page() {
                 <FamilyHistorySection />
 
                 {/* ADA MASALAH DI SINI MENGENAI RESPONSIVITAS HERO IMAGE TIDAK TERCROP */}
-                <StaysPreviewSection />
+                {/* `"use cache"` lives on getFeaturedStays(), not on this component, so it
+                    still needs an explicit Suspense boundary for the build to produce a
+                    static shell — loading.tsx used to provide this implicitly, but that would
+                    gate the whole static page behind one fallback instead of just this section. */}
+                <Suspense fallback={<StaysPreviewSectionFallback />}>
+                    <StaysPreviewSection />
+                </Suspense>
 
                 <ServiceAndAmenitiesPreview />
 
@@ -48,7 +60,10 @@ export default function Page() {
                 */}
                 <Gallery />
 
-                <ReviewsSection />
+                {/* Same reasoning as StaysPreviewSection's boundary above. */}
+                <Suspense fallback={<ReviewsSectionFallback />}>
+                    <ReviewsSection />
+                </Suspense>
 
                 <FaqSection />
 
