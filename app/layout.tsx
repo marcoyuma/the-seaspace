@@ -8,6 +8,7 @@ import seaspaceIcon from "@/public/icons/seaspace-logo-final.png";
 import Footer from "@/ui/footer";
 import ProfileIcon, { ProfileIconFallback } from "@/ui/profile-icon";
 import ChromeGate from "@/ui/chrome-gate";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
     title: {
@@ -77,6 +78,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                         that looked, from the descendant side, like
                         unrelated per-component overflow issues. */}
                     <main className="min-w-0">{children}</main>
+                    <Analytics />
                 </div>
                 {/* Same reason as the header's boundary above. */}
                 <Suspense fallback={null}>
