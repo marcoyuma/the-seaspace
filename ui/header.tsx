@@ -1,14 +1,12 @@
 "use client";
 
 import { useSyncExternalStore, type ReactNode } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { isActiveLink } from "@/lib/nav";
 import Logo from "@/ui/logo";
 import MenuPanel from "@/ui/menu-panel";
 
-// Centralized nav targets — one place to change routes if they move.
-// Homepage only: the last two are anchors into this page's sections.
+// Fed to the panel — homepage only: the last two are anchors into this
+// page's sections, so only valid while the panel is rendered on '/'.
 const NAV_LINKS = [
     { label: "Stays", href: "/stays" },
     { label: "Experiences", href: "/spa" },
@@ -113,66 +111,11 @@ function Header({ profileSlot }: { profileSlot: ReactNode }) {
                     <Logo />
                 </div>
 
-                {/* Center: primary navigation. Homepage only — interior pages
-                    hand navigation entirely to the panel, leaving the bar as
-                    just brand + trigger. Not rendered at all off the homepage
-                    so the links aren't duplicated into the DOM invisibly.
-                    Below `lg` the panel takes over here too. */}
-                {isHome && (
-                    <nav className="hidden justify-self-center lg:block">
-                        <ul className="flex items-center gap-6 text-[18px] font-medium">
-                            {navLinks.map((link) => {
-                                const isActive = isActiveLink(
-                                    link.href,
-                                    pathname,
-                                );
-
-                                return (
-                                    <li key={link.href}>
-                                        <Link
-                                            href={link.href}
-                                            // `aria-current` carries the active
-                                            // state for screen readers; the
-                                            // underline below is purely visual.
-                                            aria-current={
-                                                isActive ? "page" : undefined
-                                            }
-                                            // Simple hover affordance: a 2px underline
-                                            // that wipes in from the left. `scale-x`
-                                            // (not width) so it animates on the GPU.
-                                            // The active route pins that same
-                                            // underline open instead of adding a
-                                            // second treatment.
-                                            className={`relative text-[16px] tracking-wide font-semibold py-1 after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:bg-black after:transition-transform after:duration-300 after:ease-out after:content-[''] hover:after:scale-x-100 ${
-                                                isActive
-                                                    ? "after:scale-x-100"
-                                                    : "text-black/60 after:scale-x-0 hover:text-black"
-                                            }`}
-                                        >
-                                            {link.label}
-                                        </Link>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </nav>
-                )}
-
-                {/* Right: account + menu trigger. Off the homepage the account
-                    icon lives inside the panel instead, so the bar stays down
-                    to the logo and the hamburger. */}
+                {/* Every route hands navigation and the account control
+                    entirely to the panel now — the bar itself stays down to
+                    just brand + trigger, at every breakpoint. */}
                 <div className="flex min-w-0 items-center justify-self-end gap-4">
-                    {isHome && (
-                        <div className="hidden lg:block">{profileSlot}</div>
-                    )}
-                    {/* Interior pages hand all navigation to the panel, so it
-                        stays visible at every breakpoint. The homepage keeps
-                        its inline nav at `lg` (above), so the trigger fills
-                        every viewport below that instead. */}
-                    <MenuPanel
-                        links={navLinks}
-                        visibleClassName={isHome ? "block lg:hidden" : ""}
-                    />
+                    <MenuPanel links={navLinks} profileSlot={profileSlot} />
                 </div>
             </div>
         </header>

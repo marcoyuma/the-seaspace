@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserCircleIcon } from "@phosphor-icons/react/dist/ssr";
 
 import { isActiveLink } from "@/lib/nav";
 import HamburgerIcon from "@/ui/hamburger-icon";
@@ -134,18 +133,20 @@ function PanelRow({
  * state here decouples the panel from that render churn and colocates the
  * trigger, panel, and effects in one place.
  *
+ * Every route hands both navigation and the account control to this panel —
+ * the header bar itself only ever shows brand + trigger.
+ *
  * @param links - Primary nav targets, rendered as the large serif list.
- * @param visibleClassName - Tailwind visibility classes for the trigger + panel
- * wrapper. Interior routes hand all navigation to this panel, so they pass
- * `""` to surface it at every breakpoint; the homepage keeps its inline nav
- * at `lg` and only needs the trigger from `md` up to just below that.
+ * @param profileSlot - The header's account control (sign-in link, or avatar/
+ * account link once signed in), passed through from `Header` so the panel's
+ * account row reflects the real session instead of a static placeholder.
  */
 export default function MenuPanel({
     links,
-    visibleClassName = "hidden",
+    profileSlot,
 }: {
     links: NavLink[];
-    visibleClassName?: string;
+    profileSlot: ReactNode;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
@@ -173,7 +174,7 @@ export default function MenuPanel({
     const close = () => setIsOpen(false);
 
     return (
-        <div className={visibleClassName}>
+        <div>
             {/* Trigger: the hamburger, which merges its bars into a single
                 line while the panel is open. Toggles rather than only opening,
                 so the button and the glyph can't disagree about the state. */}
@@ -245,19 +246,14 @@ export default function MenuPanel({
                         Contact us
                     </PanelRow>
 
-                    <PanelRow
-                        href="/account"
-                        onNavigate={close}
-                        icon={
-                            <UserCircleIcon
-                                size={24}
-                                weight="fill"
-                                aria-hidden
-                            />
-                        }
-                    >
-                        Account
-                    </PanelRow>
+                    {/* Not a `PanelRow`: `profileSlot` is already a `Link`
+                        (sign-in, or account/avatar once signed in), and
+                        nesting an anchor inside `PanelRow`'s own anchor
+                        would be invalid HTML. Its own icon carries
+                        `currentColor`, so it inherits this row's white. */}
+                    <div className="flex items-center gap-3 border-b border-white/25 py-4 text-[18px] font-medium text-white transition-opacity hover:opacity-80">
+                        {profileSlot}
+                    </div>
                 </div>
 
                 {/* Bottom strip: socials + copyright. */}
