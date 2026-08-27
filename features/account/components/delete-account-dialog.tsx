@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { deleteAccount } from "@/features/auth/server-actions";
 import { ERROR, INPUT, LABEL } from "@/features/auth/components/form-primitives";
 import Modal from "@/ui/modal";
+import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
  * One of the two review outcomes a guest picks between when deleting their account. Kept
@@ -68,7 +69,7 @@ export default function DeleteAccountDialog({
             <button
                 type="button"
                 onClick={() => setIsOpen(true)}
-                className="rounded-[40px] border border-red-700/30 px-6 py-3 text-[16px] font-medium text-red-700 transition-colors duration-300 ease-out motion-reduce:transition-none hover:border-transparent hover:bg-red-700 hover:text-white focus-visible:border-transparent focus-visible:bg-red-700 focus-visible:text-white"
+                className={`rounded-full ${PILL_SIZE.md} border border-red-700/30 font-medium text-red-700 transition-colors duration-300 ease-out motion-reduce:transition-none hover:border-transparent hover:bg-red-700 hover:text-white focus-visible:border-transparent focus-visible:bg-red-700 focus-visible:text-white`}
             >
                 Delete account
             </button>
@@ -153,7 +154,7 @@ export default function DeleteAccountDialog({
                         <button
                             type="submit"
                             disabled={pending}
-                            className="rounded-[40px] bg-red-700 px-6 py-3.5 text-[16px] font-medium text-white transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                            className={`rounded-full ${PILL_SIZE.md} bg-red-700 font-medium text-white transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40`}
                         >
                             {pending ? "Deleting…" : "Permanently delete account"}
                         </button>

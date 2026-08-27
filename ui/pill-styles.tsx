@@ -1,9 +1,35 @@
 export type PillVariant = "gradient" | "white" | "outline";
 
+/**
+ * The geometry of a pill, at every size the site uses.
+ *
+ * Horizontal padding is half the pill's height — which, on a capsule, is exactly its
+ * corner radius. Below that the label reads as crowded against the curve; much above it
+ * and the pill reads as a stretched bar. It's the same ratio Material 3 uses across its
+ * capsule button sizes (0.375–0.5 × height).
+ *
+ * Height is `2 × py + line-height`, so each row checks itself:
+ * `sm` 4+4+20 = 28 → px-3.5 · `md` 12+12+24 = 48 → px-6 · `lg` 16+16+24 = 56 → px-7.
+ *
+ * The leading is pinned rather than left to inherit: `text-[…]` is an arbitrary value,
+ * and Tailwind v4 emits no line-height alongside one, so the height would otherwise ride
+ * on whatever an ancestor happened to set — and the padding rule with it.
+ *
+ * Weight is deliberately absent. This token is geometry only.
+ *
+ * @example
+ * // A hand-rolled pill that needs a surface these three variants don't cover:
+ * className={`rounded-full ${PILL_SIZE.md} font-medium bg-red-700 text-white`}
+ */
+export const PILL_SIZE = {
+    sm: "px-3.5 py-1 text-[14px] leading-5",
+    md: "px-6 py-3 text-[16px] leading-6",
+    lg: "px-7 py-4 text-[16px] leading-6",
+} as const;
+
 // Shape shared by both variants, so the CTAs can't drift apart again.
-// `overflow-hidden` keeps the gradient layer inside the 40px corners.
-const PILL_BASE =
-    "group relative inline-flex items-center justify-center overflow-hidden rounded-[40px] px-4 py-3 text-[16px] font-medium";
+// `overflow-hidden` keeps the gradient layer inside the capsule.
+const PILL_BASE = `group relative inline-flex items-center justify-center overflow-hidden rounded-full ${PILL_SIZE.md} font-medium`;
 
 // Same 300ms/ease-out as the panel's nav links, so a CTA next to the menu
 // feels like the same interaction.
@@ -68,8 +94,9 @@ export function PillContents({
 
             {/* `overflow-hidden` clips the roll, so the line box has to be tall
                 enough to contain descenders ("y" in Stays) or they'd be shaved
-                off at rest. 24px matches the default leading at 16px, so no
-                button changes height. */}
+                off at rest. Must stay equal to the leading in `PILL_SIZE.md` —
+                a shorter clip here would shave the glyphs, a taller one would
+                grow the button past the height its padding was derived from. */}
             <span className="relative block overflow-hidden leading-6">
                 <span
                     className={`block transition-transform ${TRANSITION} group-hover:-translate-y-full group-focus-visible:-translate-y-full`}

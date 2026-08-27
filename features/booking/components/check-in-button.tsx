@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import { checkIn } from "@/features/booking/server-actions";
 import { FormBanner } from "@/features/auth/components/form-primitives";
+import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
  * The button that turns a code into a check-in.
@@ -61,7 +62,7 @@ export default function CheckInButton({
             <button
                 type="submit"
                 disabled={pending}
-                className="rounded-[40px] bg-[#131A2B] px-4 py-3.5 text-[16px] font-medium text-white transition-opacity duration-300 ease-out hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
+                className={`rounded-full ${PILL_SIZE.md} bg-[#131A2B] font-medium text-white transition-opacity duration-300 ease-out hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none`}
             >
                 {pending ? "Opening…" : label}
             </button>

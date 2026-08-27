@@ -9,6 +9,7 @@ import { UserCircleIcon } from "@phosphor-icons/react/dist/ssr";
 import { uploadAvatar } from "@/features/auth/server-actions";
 import { publicStorageUrl } from "@/lib/supabase";
 import { FormBanner } from "@/features/auth/components/form-primitives";
+import { PILL_SIZE } from "@/ui/pill-styles";
 
 const SIZE = 96;
 
@@ -82,7 +83,7 @@ export default function AvatarUpload({
 
                 <label
                     htmlFor="avatar"
-                    className="cursor-pointer rounded-[40px] border border-black/15 px-6 py-3 text-[16px] font-medium text-black transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-70 aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
+                    className={`cursor-pointer rounded-full ${PILL_SIZE.md} border border-black/15 font-medium text-black transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-70 aria-disabled:cursor-not-allowed aria-disabled:opacity-40`}
                     aria-disabled={pending}
                 >
                     {pending ? "Uploading…" : "Change photo"}
