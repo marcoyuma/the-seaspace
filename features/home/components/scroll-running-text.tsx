@@ -56,8 +56,26 @@ function MarqueeLine({
     return (
         <motion.h2
             style={{ x: prefersReducedMotion ? initialOffset : x }}
+            // Size ladder is the one already used for the same "one element,
+            // must shrink on mobile" job in family-history-section.tsx and
+            // ui/footer.tsx's heading (28/34/40/48) — desktop keeps its 48px,
+            // and mobile drops under the 36px landing-section headings instead
+            // of towering over them.
+            //
+            // `font-bold` stays: at `black/10` the weight is what makes the
+            // glyphs read as texture at all, and it matches the only other
+            // decorative black/10 display text in the repo (the "THE SEASPACE"
+            // watermark in ui/footer.tsx). Everything that is real copy here
+            // is `font-semibold`.
+            //
+            // Leading is a ratio, not `leading-14`: that was a fixed 56px tuned
+            // for 48px text, so at 28px it would have left a ~2x line box. 1.15
+            // reproduces the 48px rhythm and keeps the descenders in "explore"
+            // clear of the next line, which sits only `gap-px` away (same
+            // reasoning as the `leading-[1.05]` note in hero.tsx).
+            //
             // max-w-dvw to prevent the width takes more than screen wide
-            className="text-black/10 font-bold text-[48px] leading-14 whitespace-nowrap max-w-dvw will-change-transform"
+            className="text-black/10 font-bold text-[28px] sm:text-[34px] md:text-[40px] lg:text-[48px] leading-[1.15] whitespace-nowrap max-w-dvw will-change-transform"
         >
             {text}
         </motion.h2>
