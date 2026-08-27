@@ -63,7 +63,7 @@ export default function GolfHero() {
                         alt="Bunkers cut into a grassy bluff overlooking the sea, framed by wind-bent trees"
                         fill
                         placeholder="blur"
-                        quality={100}
+                        quality={90}
                         sizes="50vw"
                         className="object-cover"
                     />
@@ -81,7 +81,7 @@ export default function GolfHero() {
                     alt="Aerial view of a green ringed by bunkers on a spit of land reaching into the water"
                     fill
                     placeholder="blur"
-                    quality={100}
+                    quality={90}
                     preload
                     sizes="(min-width: 1024px) 50vw, 100vw"
                     className="object-cover"

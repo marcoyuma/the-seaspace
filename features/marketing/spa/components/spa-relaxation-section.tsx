@@ -21,7 +21,7 @@ export default function SpaRelaxationSection() {
                     alt="A whitewashed relaxation lounge with built-in seating beneath an semi indoor tropical vibes"
                     fill
                     placeholder="blur"
-                    quality={100}
+                    quality={90}
                     sizes="100vw"
                     className="object-cover"
                 />

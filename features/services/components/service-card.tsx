@@ -45,7 +45,7 @@ export default function ServiceCard({
                 className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                 src={imageSrc}
                 placeholder="blur"
-                quality={100}
+                quality={90}
                 // `priority` is deprecated as of Next 16 — `preload` is the
                 // direct replacement with clearer intent. See
                 // node_modules/next/dist/docs/01-app/03-api-reference/02-components/image.md

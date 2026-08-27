@@ -21,7 +21,7 @@ export default function GolfCourseSection() {
                     alt="A putter lined up behind a ball on a close-mown green"
                     fill
                     placeholder="blur"
-                    quality={100}
+                    quality={90}
                     sizes="100vw"
                     className="object-cover"
                 />
