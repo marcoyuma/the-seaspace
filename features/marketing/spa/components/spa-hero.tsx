@@ -63,7 +63,7 @@ export default function SpaHero() {
                         alt="Massage stones, dropper bottles and rolled towels arranged beside lit candles"
                         fill
                         placeholder="blur"
-                        quality={100}
+                        quality={90}
                         sizes="50vw"
                         className="object-cover"
                     />
@@ -81,7 +81,7 @@ export default function SpaHero() {
                     alt="A canopied treatment bed facing open water at sunrise"
                     fill
                     placeholder="blur"
-                    quality={100}
+                    quality={90}
                     preload
                     sizes="(min-width: 1024px) 50vw, 100vw"
                     className="object-cover"

@@ -47,7 +47,7 @@ export default function UpdatePasswordForm() {
             <button
                 type="submit"
                 disabled={pending}
-                className={`${SUBMIT} self-start px-6`}
+                className={`${SUBMIT} self-start`}
             >
                 {pending ? "Saving…" : "Update password"}
             </button>

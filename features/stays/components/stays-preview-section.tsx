@@ -8,6 +8,8 @@ import StayCardPreview from "@/features/stays/components/stay-card-preview";
 import Text from "@/ui/text";
 import { getFeaturedStays } from "@/features/stays/actions";
 import { getStayRatingSummaries } from "@/features/reviews/actions";
+import LinkPendingOverlay from "@/ui/link-pending-overlay";
+import Skeleton from "@/ui/skeleton";
 
 // Centralized route reference — avoids magic strings scattered across
 // components and keeps navigation targets in one place if routes change.
@@ -118,6 +120,8 @@ export default async function StaysPreviewSection() {
                         <Link
                             key={stay.id}
                             href={`${STAYS_PAGE_PATH}/${stay.id}`}
+                            // `relative` is what LinkPendingOverlay positions against.
+                            className="relative block"
                         >
                             <StayCardPreview
                                 imageSrc={stay.imageSrc}
@@ -130,6 +134,7 @@ export default async function StaysPreviewSection() {
                                     ratingSummaries.get(stay.id)?.averageRating
                                 }
                             />
+                            <LinkPendingOverlay />
                         </Link>
                     ))}
                 </div>
@@ -175,9 +180,9 @@ export function StaysPreviewSectionFallback() {
                     doesn't jump in height once real cards stream in. */}
                 <div className="w-full grid grid-cols-1 gap-6 md:grid-cols-2">
                     {Array.from({ length: 2 }).map((_, index) => (
-                        <div
+                        <Skeleton
                             key={index}
-                            className="w-full aspect-600/570 rounded-[20px] bg-black/5 animate-pulse"
+                            className="w-full aspect-600/570 rounded-[20px]"
                         />
                     ))}
                 </div>

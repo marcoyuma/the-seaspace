@@ -11,6 +11,7 @@ import {
     INPUT,
     LABEL,
 } from "@/features/auth/components/form-primitives";
+import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
  * Edits the three `public.guests` columns a guest owns.
@@ -90,7 +91,7 @@ export default function ProfileForm({ profile }: { profile: GuestProfile }) {
             <button
                 type="submit"
                 disabled={pending}
-                className="mt-2 self-start rounded-[40px] bg-black px-6 py-3.5 text-[16px] font-medium text-white transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                className={`mt-2 self-start rounded-full ${PILL_SIZE.md} bg-black font-medium text-white transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40`}
             >
                 {pending ? "Saving…" : "Save changes"}
             </button>

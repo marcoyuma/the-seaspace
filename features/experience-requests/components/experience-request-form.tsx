@@ -170,7 +170,7 @@ export default function ExperienceRequestForm({
                 <button
                     type="button"
                     onClick={onDone}
-                    className={`${SUBMIT} mt-2 px-8`}
+                    className={`${SUBMIT} mt-2`}
                 >
                     Close
                 </button>

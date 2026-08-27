@@ -16,6 +16,7 @@ import {
 } from "@/features/booking/lib/check-in-methods";
 import type { GuestCounts } from "@/features/booking/types";
 import { FormBanner, LABEL, INPUT } from "@/features/auth/components/form-primitives";
+import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
  * One choice in a radio group, as a whole clickable card.
@@ -225,7 +226,7 @@ export default function CheckoutForm({
                 <button
                     type="submit"
                     disabled={isBlocked || pending}
-                    className="mt-8 w-full rounded-[40px] bg-[#131A2B] px-4 py-3.5 text-[16px] font-medium text-white transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40"
+                    className={`mt-8 w-full rounded-full ${PILL_SIZE.md} bg-[#131A2B] font-medium text-white transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-40`}
                 >
                     {pending ? "Contacting the provider…" : "Confirm and pay"}
                 </button>

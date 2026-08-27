@@ -18,6 +18,7 @@ import type { gsap } from "gsap";
 import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { StayImage } from "@/features/stays/types";
+import Skeleton from "@/ui/skeleton";
 
 // FRAME_WIDTH and GAP mirror the `lg:` step of FRAME_HEIGHT_CLASSES / FRAME_WIDTH_CLASSES
 // below (the frame is smaller at narrower breakpoints — see those constants). They only
@@ -144,6 +145,12 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
 
     /** The only React state here; it exists purely to drive the dot row. */
     const [activeIndex, setActiveIndex] = useState(0);
+    /**
+     * Whether the first frame has painted. The page itself is prerendered, so there is no data
+     * to wait for here — the only gap is the photo bytes, and an empty rail with arrows and a
+     * dot row floating over nothing is what that gap looks like without this.
+     */
+    const [railReady, setRailReady] = useState(false);
 
     const count = images.length;
 
@@ -442,6 +449,11 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
                         // `preload` replaces the deprecated `priority` prop in Next 16;
                         // roughly three frames are on screen at first paint.
                         preload={i < 3}
+                        // Only the first frame reports in — the rail is legible as soon as
+                        // it has one photo, and waiting on all of them would leave the
+                        // skeleton up long after there is anything to hide.
+                        onLoad={i === 0 ? () => setRailReady(true) : undefined}
+                        onError={i === 0 ? () => setRailReady(true) : undefined}
                     />
                 </div>
             )),
@@ -502,6 +514,27 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
                             }`}
                         />
                     ))}
+                </div>
+
+                {/* Layered OVER the rail rather than replacing it: GSAP measures the real
+                    frames on mount, and swapping the markup out from under it would leave the
+                    rail sized against a placeholder. `z-20` clears the arrows and the dot row,
+                    which have nothing to point at yet. */}
+                <div
+                    className={`pointer-events-none absolute inset-0 z-20 transition-opacity duration-500 ease-out motion-reduce:transition-none ${
+                        railReady ? "opacity-0" : "opacity-100"
+                    }`}
+                >
+                    <div className="flex h-full w-max gap-6">
+                        {/* Three is what the widest breakpoint shows at once — enough to read
+                            as a rail, not so many that the placeholder outruns the viewport. */}
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <Skeleton
+                                key={i}
+                                className={`h-full ${FRAME_WIDTH_CLASSES} shrink-0 rounded-xl`}
+                            />
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>

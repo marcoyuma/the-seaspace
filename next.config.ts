@@ -12,7 +12,24 @@ const nextConfig: NextConfig = {
 
     /* config options here */
     images: {
-        qualities: [75, 80, 100],
+        // 90 for the local landing-page photos, 80 for the Supabase-hosted stay images whose
+        // sources are already WebP q80. 100 is deliberately gone: every source here is an
+        // already-lossy JPEG, so q100 re-encodes its compression noise at full fidelity —
+        // ~40% more bytes for detail that is not in the file to begin with.
+        qualities: [75, 80, 90],
+
+        // AVIF ships ~20% smaller than WebP at the same quality, so this buys quality PER
+        // BYTE rather than trading it away. WebP is the fallback for browsers without AVIF
+        // support; order matters, the first match against the Accept header wins.
+        // Trade-off: the first request for each image encodes ~50% slower, and both variants
+        // are cached separately.
+        formats: ["image/avif", "image/webp"],
+
+        // Default ladder jumps 2048 -> 3840. The hero is sized by HEIGHT (see hero.tsx), so on
+        // a short or narrow window it paints wider than 100vw and lands on 3840 every time
+        // with nothing in between. 2560 is that missing rung.
+        deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 2560, 3840],
+
         // Villa photos are served from Supabase Storage. Without this the optimizer rejects
         // them with a 400 rather than falling back, so every stays image would break.
         //

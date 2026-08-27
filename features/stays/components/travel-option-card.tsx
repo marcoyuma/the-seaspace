@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
 
+import { PILL_SIZE } from "@/ui/pill-styles";
+
 /**
  * One "how to get here" option: icon + lowercase title, a short description,
  * and a pill CTA that opens an external booking/navigation site in a new tab.
@@ -35,7 +37,7 @@ export default function TravelOptionCard({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-6 self-start rounded-full bg-black/[0.04] px-5 py-3 text-[16px] text-black transition-colors duration-200 ease-out hover:bg-black/[0.08] motion-reduce:transition-none"
+                className={`mt-6 self-start rounded-full ${PILL_SIZE.md} bg-black/[0.04] font-medium text-black transition-colors duration-200 ease-out hover:bg-black/[0.08] motion-reduce:transition-none`}
             >
                 {ctaLabel}
             </a>

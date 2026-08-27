@@ -1,7 +1,5 @@
 import { Suspense } from "react";
 
-import bg from "@/public/bg.jpg";
-
 import ScrollRunningText from "@/features/home/components/scroll-running-text";
 import FamilyHistorySection from "@/features/home/components/family-history-section";
 import StaysPreviewSection, {
@@ -15,14 +13,17 @@ import ReviewsSection, {
 } from "@/features/reviews/components/reviews-section";
 import FaqSection from "@/features/home/components/faq-section";
 import Hero from "@/features/home/components/hero";
-
-// TODO: `bg` is not defined/imported anywhere — this will throw a ReferenceError at runtime.
-// Remove this line or properly import/define `bg` before using it.
-console.log(bg);
+import Preloader from "@/ui/preloader";
 
 export default function Page() {
     return (
         <div className="relative">
+            {/* An OVERLAY, never a gate on rendering: everything below still server-renders
+                into the HTML, so a crawler reads the full page and the curtain is only a
+                fixed layer stacked on top of it. Whether it shows at all is decided before
+                paint by <PreloaderFlashGuard /> in app/layout.tsx. */}
+            <Preloader />
+
             <Hero />
 
             {/* 

@@ -1,5 +1,7 @@
 "use client";
 
+import { PILL_SIZE } from "@/ui/pill-styles";
+
 /**
  * The pieces every auth form is built from.
  *
@@ -18,8 +20,7 @@ export const INPUT =
 
 export const ERROR = "mt-2 text-[14px] font-medium text-red-700";
 
-export const SUBMIT =
-    "mt-2 rounded-[40px] bg-black px-4 py-3.5 text-[16px] font-medium text-white transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40";
+export const SUBMIT = `mt-2 rounded-full ${PILL_SIZE.md} bg-black font-medium text-white transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40`;
 
 /**
  * One labelled input with its validation message.

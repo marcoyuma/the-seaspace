@@ -1,4 +1,5 @@
 import type { BookingStatus } from "@/features/booking/types";
+import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
  * What a guest is told about the state of their reservation.
@@ -47,7 +48,7 @@ export default function BookingStatusBadge({
 
     return (
         <span
-            className={`inline-flex items-center rounded-full border px-3 py-1 text-[14px] font-medium ${TONE[tone]}`}
+            className={`inline-flex items-center rounded-full border ${PILL_SIZE.sm} font-medium ${TONE[tone]}`}
         >
             {label}
         </span>

@@ -23,7 +23,7 @@ export default function EventVenueSection() {
                     alt="Guests in traditional Javanese dress seated for a wedding reception in the hall"
                     fill
                     placeholder="blur"
-                    quality={100}
+                    quality={90}
                     sizes="100vw"
                     className="object-cover"
                 />

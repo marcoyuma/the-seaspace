@@ -59,7 +59,7 @@ export default function EventVenueHero() {
                         alt="Rows of conference attendees facing a lit stage inside the same wood-panelled hall"
                         fill
                         placeholder="blur"
-                        quality={100}
+                        quality={90}
                         sizes="50vw"
                         className="object-cover"
                     />
@@ -78,7 +78,7 @@ export default function EventVenueHero() {
                     alt="A wood-panelled hall laid out for a formal dinner, ringed by pinecone-shaped pendant lights"
                     fill
                     placeholder="blur"
-                    quality={100}
+                    quality={90}
                     preload
                     sizes="(min-width: 1024px) 50vw, 100vw"
                     className="object-cover"

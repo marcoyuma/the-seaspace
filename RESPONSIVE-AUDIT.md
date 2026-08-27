@@ -95,7 +95,9 @@ benerin section manapun di atasnya percuma karena "bocor" dari sini.
 - `ui/heading.tsx:19` — `text-[48px] leading-none`, fixed, tanpa scaling.
 - `ui/text.tsx:10` — `text-[18px] ... max-w-128.25` (~513px), fixed.
 - `ui/overline-text.tsx:9` — `text-[18px]`, fixed.
-- `ui/pill-link.tsx` → delegasi ke `ui/pill-styles.tsx:6` — `text-[16px] rounded-[40px]`, fixed.
+- `ui/pill-link.tsx` → delegasi ke `ui/pill-styles.tsx` — sekarang `rounded-full` +
+  `PILL_SIZE.md` (`px-6 py-3 text-[16px] leading-6`), masih fixed. Geometrinya sudah
+  dikunci dan dipusatkan, lihat **Bagian G**; yang belum ada cuma varian breakpoint-nya.
 - `ui/section-heading.tsx:13-17` — duplikat pola fixed yang sama (`text-[48px]`, `text-[18px]`).
 
 ---
@@ -284,6 +286,105 @@ bukan restrukturisasi grid/flex struktural):
 - Perubahan murni: gap (`gap-*`/`mb-*`) dan font-size Heading (`!text-[36px]`). Tidak ada
   className struktural lain (grid-cols, flex-direction, width/height) yang diubah di pass ini.
 - `npx tsc --noEmit` bersih setelah seluruh perubahan diterapkan.
+
+---
+
+## Bagian G — Aturan Pill (wrapper kapsul), sudah diterapkan 2026-08-27
+
+Sebelum pass ini ada **14 pill berteks** dengan **5 nilai padding horizontal berbeda**
+(`px-3`, `px-4`, `px-5`, `px-6`, `px-8`) untuk bentuk yang sebenarnya sama. Label terasa
+nempel ke lengkung kapsul di sebagian tempat dan terlalu longgar di tempat lain.
+
+Polanya penting: siapa pun yang menulis pill dengan tangan lalu menakarnya pakai mata
+selalu mendarat di `px-6`. Yang masih `px-4` justru primitive bersamanya sendiri
+(`ui/pill-styles.tsx`) plus klaster auth/booking yang menyalin dari situ. Jadi nilainya
+sudah ditemukan berkali-kali, cuma belum pernah ditulis jadi aturan.
+
+### G.1 — Aturan
+
+> **Padding kiri-kanan pill = setengah tinggi pill = radiusnya.**
+> Lalu bulatkan ke langkah Tailwind terdekat.
+
+Dasarnya: pada kapsul, radius selalu setengah tinggi. Material Design 3 menerbitkan spek
+tombol kapsulnya (tinggi 32/padding 12, 40/16, 56/24, 96/48, 136/64) dan semuanya jatuh
+di **0.375–0.50 × tinggi** — yang untuk kapsul sama saja dengan **0.75–1.0 × radius**.
+
+Catatan jujur soal *kenapa*: secara geometri lengkung kapsul nyaris tidak memakan ruang
+di pita vertikal tempat huruf duduk (di pill 48px cuma ~0.7px setinggi teks), jadi
+hurufnya tidak benar-benar tertabrak. Yang bikin sesak itu **optik** — mata membaca total
+ruang kosong di kedua ujung, dan ujung membulat memangkas ruang itu dibanding ujung
+kotak. Karena itu pill butuh padding lebih besar daripada rounded-rect setinggi sama.
+
+### G.2 — Preset final: `PILL_SIZE` di `ui/pill-styles.tsx`
+
+Tinggi = `2 × py + line-height`, jadi tiap baris bisa dicek sendiri:
+
+| Ukuran | Kelas | Tinggi | Radius | px | Rasio px:py |
+|---|---|---|---|---|---|
+| `sm` | `px-3.5 py-1 text-[14px] leading-5` | 28 | 14 | 14 | 3.5 : 1 |
+| `md` | `px-6 py-3 text-[16px] leading-6` | 48 | 24 | 24 | 2 : 1 |
+| `lg` | `px-7 py-4 text-[16px] leading-6` | 56 | 28 | 28 | 1.75 : 1 |
+
+`md` adalah default — dipakai `PILL_BASE` dan seluruh CTA. `sm` cuma dipakai
+`booking-status-badge.tsx`. `lg` disediakan tapi belum ada pemakainya.
+
+Leading dipatok eksplisit, bukan dibiarkan mewaris: `text-[…]` itu arbitrary value dan
+Tailwind v4 tidak memancarkan line-height untuk itu, jadi tanpa patokan tingginya ikut
+apa pun yang di-set leluhurnya — dan aturan padding di atas ikut meleset.
+
+**`font-medium` sengaja TIDAK masuk `PILL_SIZE`.** Itu urusan bobot huruf, bukan ukuran;
+token ini murni geometri. Pemanggil menambahkannya sendiri.
+
+### G.3 — Aturan turunan
+
+- **Radius** — `rounded-full`, bukan `rounded-[40px]`. Hasilnya identik di semua tinggi
+  yang dipakai sekarang (browser meng-clamp 40px jadi setengah tinggi), tapi
+  `rounded-full` menyatakan bentuknya jujur dan menjaga hubungan "radius = setengah
+  tinggi" yang jadi dasar seluruh aturan ini. Di pill setinggi >80px, `rounded-[40px]`
+  diam-diam berhenti jadi kapsul dan aturannya jadi salah.
+- **Ikon + teks sebaris** — padding tetap simetris, jarak ikon–teks `gap-2` (8px).
+  Satu-satunya pemakai: dua tombol OAuth di `features/auth/components/auth-form.tsx`.
+- **Ikon saja** — jangan pakai padding sama sekali; pakai `size-*` persegi
+  (`size-8`/`size-9`/`size-10`) + `rounded-full`. Sudah konsisten di codebase.
+- **Chip bundar menempel di ujung bar** — trailing padding turun jadi separuh
+  (`pl-4 pr-2`), karena lingkaran chip menyumbang inset optiknya sendiri. Sudah benar di
+  `stay-card-preview.tsx` dan `service-card.tsx`.
+- **Pill ber-`border`** — `box-sizing: border-box` bikin hairline 1px memakan padding,
+  jadi ruang dalamnya efektif 23px bukan 24px. Selisih 1px ini **sengaja tidak
+  dikompensasi**; dicatat di sini supaya tidak diperdebatkan ulang.
+
+### G.4 — File yang diupdate
+
+`ui/pill-styles.tsx` (`PILL_SIZE` + `PILL_BASE`), lalu 11 pill yang ditulis tangan ikut
+mengimpor token itu: `form-primitives.tsx` (`SUBMIT`, kena 5 form), `auth-form.tsx`
+(`OAUTH_BUTTON`), `checkout-form.tsx`, `check-in-button.tsx`, `booking-status-badge.tsx`,
+`profile-form.tsx`, `sign-out-button.tsx`, `avatar-upload.tsx`,
+`delete-account-dialog.tsx` (×2), `travel-option-card.tsx`. Dua override yang jadi tidak
+perlu dihapus di `update-password-form.tsx` (`px-6`) dan `experience-request-form.tsx`
+(`px-8`).
+
+`travel-option-card.tsx` sekaligus dikasih `font-medium` — satu-satunya pill berteks yang
+belum punya.
+
+### G.5 — Dikecualikan (didokumentasikan, sengaja tidak disentuh)
+
+- `stay-image-carousel.tsx` — kapsul rel titik indikator, wadah non-teks.
+- `ui/header.tsx` — bar chrome yang jadi kapsul saat menyusut, bukan tombol.
+- Tombol ber-radius sedang yang **bukan** kapsul (radius < setengah tinggi), jadi aturan
+  "px = radius" tidak berlaku: `rounded-[20px]` di halaman error & not-found,
+  `rounded-2xl` di `booking-modal.tsx`, `rounded-[20px]`/`rounded-[25px]` di `hero.tsx`,
+  `review-carousel.tsx`, `amenity-badge.tsx`. Keluarga ini masih perlu aturannya sendiri.
+
+### G.6 — Cakupan
+- Perubahan murni geometri (padding, radius, leading, satu `gap`). Surface — warna,
+  hairline, hover, disabled, animasi rolling label — tidak disentuh sama sekali.
+- Arah impor `features/` → `ui/`, sesuai Rule 3 ARCHITECTURE.md.
+- Interpolasi template literal di sini aman: nama class **utuh** tertulis sebagai literal
+  di dalam `PILL_SIZE` pada file yang dipindai Tailwind. Yang di-interpolasi cuma seluruh
+  string jadinya — beda dengan merakit nama dari potongan (`px-${n}`), yang tidak pernah
+  dipancarkan Tailwind v4 (lihat peringatan di `ui/heading.tsx`).
+- `npx tsc --noEmit`, `npm run lint`, `npm test` (131 tes) dan `npm run build` bersih.
+  Kehadiran `px-6`/`px-3.5`/`leading-5` diverifikasi langsung di CSS hasil build.
 
 ---
 

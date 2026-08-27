@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-// import bg from "@/public/bg.jpg";
 import bg from "@/public/bg.jpg";
+
+import { PRELOADER_GATE_ATTR } from "@/lib/preloader";
 import { MapTrifoldIcon } from "@phosphor-icons/react/dist/ssr";
 import PillLink from "@/ui/pill-link";
 
@@ -27,10 +28,23 @@ export default function Hero() {
                         className="absolute left-1/2 top-0 -translate-x-1/2 h-[calc(100dvh+200px)] w-auto min-w-full max-w-none object-cover object-[center_50%]"
                         src={bg}
                         placeholder="blur"
-                        quality={100}
-                        priority
-                        sizes="100vw"
+                        quality={90}
+                        // Neither variant may be `preload`ed or `loading="eager"`: BOTH sit in
+                        // the DOM (only CSS picks one), so either would fetch this 4.6 MB
+                        // photo twice. The Next 16 docs prescribe `fetchPriority` for exactly
+                        // this art-direction case — default lazy loading then skips the
+                        // `display:none` twin, which has no box to intersect the viewport.
+                        fetchPriority="high"
+                        // The photo is sized by HEIGHT (`w-auto`), so its painted width is
+                        // 1.46 x (viewport height + 200px), floored at the viewport width by
+                        // `min-w-full`. On 16:9 that lands near 100vw, but on a shorter or
+                        // narrower window (1280x1024) it reaches ~140vw — where the old
+                        // "100vw" served an image NARROWER than it was painted, i.e. real
+                        // softness. 120vw covers the common cases; `deviceSizes` in
+                        // next.config.ts carries the 2560 rung that keeps this off 3840.
+                        sizes="(min-width: 1024px) 120vw, 100vw"
                         alt="Beach scape views"
+                        {...{ [PRELOADER_GATE_ATTR]: "hero" }}
                     />
                     <div className="absolute inset-0 bg-linear-to-r from-black/20 to-100% to-transparent" />
                 </div>
@@ -51,9 +65,6 @@ export default function Hero() {
                         </p>
 
                         <div className="flex flex-row gap-1">
-                            {/* <button className="font-semibold px-8 py-3 bg-white text-black rounded-[40px]">
-                                Stay a night
-                            </button> */}
                             <PillLink href="/stays" variant="white">
                                 Stay a night
                             </PillLink>
@@ -79,10 +90,12 @@ export default function Hero() {
                         src={bg}
                         fill
                         placeholder="blur"
-                        quality={100}
-                        priority
+                        quality={90}
+                        // Same reasoning as the desktop variant above.
+                        fetchPriority="high"
                         sizes="100vw"
                         alt="Beach scape views"
+                        {...{ [PRELOADER_GATE_ATTR]: "hero" }}
                     />
                     {/* Blend the bottom of the photo into the blue panel */}
                     <div className="absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-b from-transparent to-[#298BE0]" />

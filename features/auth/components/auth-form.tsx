@@ -21,6 +21,7 @@ import {
     FormBanner,
     SUBMIT,
 } from "@/features/auth/components/form-primitives";
+import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
  * What a failed round trip through an auth route handler is shown as.
@@ -48,8 +49,9 @@ const ERROR_MESSAGES: Record<string, string> = {
  */
 const PASSWORD_RESET_AVAILABLE = false;
 
-const OAUTH_BUTTON =
-    "flex w-full items-center justify-center gap-2.5 rounded-[40px] border border-black/15 px-4 py-3.5 text-[16px] font-medium text-black transition-colors duration-300 ease-out motion-reduce:transition-none hover:border-black disabled:cursor-not-allowed disabled:opacity-40";
+// `gap-2` is the site's icon-to-label distance on a pill; the padding either side stays
+// symmetric, since the logo carries no more optical weight than the word next to it.
+const OAUTH_BUTTON = `flex w-full items-center justify-center gap-2 rounded-full ${PILL_SIZE.md} border border-black/15 font-medium text-black transition-colors duration-300 ease-out motion-reduce:transition-none hover:border-black disabled:cursor-not-allowed disabled:opacity-40`;
 
 /**
  * Submit half of an OAuth button.

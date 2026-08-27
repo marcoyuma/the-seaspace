@@ -1,4 +1,5 @@
 import { signOut } from "@/features/auth/server-actions";
+import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
  * Sign out, as a form rather than an onClick handler.
@@ -12,7 +13,7 @@ export default function SignOutButton() {
         <form action={signOut}>
             <button
                 type="submit"
-                className="rounded-[40px] border border-black px-6 py-3 text-[16px] font-medium text-black transition-colors duration-300 ease-out motion-reduce:transition-none hover:border-transparent hover:bg-black hover:text-white focus-visible:border-transparent focus-visible:bg-black focus-visible:text-white"
+                className={`rounded-full ${PILL_SIZE.md} border border-black font-medium text-black transition-colors duration-300 ease-out motion-reduce:transition-none hover:border-transparent hover:bg-black hover:text-white focus-visible:border-transparent focus-visible:bg-black focus-visible:text-white`}
             >
                 Sign out
             </button>
