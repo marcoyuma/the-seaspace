@@ -19,6 +19,11 @@ import gallery8 from "@/public/gallery/g8.jpg";
 // during the client prerender, which costs the route its static shell.
 import { ArrowDownIcon } from "@phosphor-icons/react/dist/ssr";
 
+import {
+    PRELOADER_GATE_ATTR,
+    PRELOADER_WARM_ATTR,
+} from "@/lib/preloader";
+
 /**
  * Stretches the pinned scroll distance relative to the horizontal travel:
  * a value of 1 gives a 1:1 (1px scroll = 1px slide) mapping; higher values
@@ -103,6 +108,32 @@ const CAPTION_HIDE_START = 0.6;
  */
 const CAPTION_HIDE_END = 0.8;
 
+/**
+ * `sizes` per frame variant. Load-bearing, not a nicety: with `fill` and no `sizes` the
+ * browser assumes 100vw for EVERY frame, so a 315px slim frame was pulling the same
+ * full-viewport file as the 1000px wide one.
+ *
+ * The number is the frame width times its parallax scale — each photo is deliberately painted
+ * larger than its frame so it has slack to slide inside it (see the constants above):
+ *   wide 1000px x 1.3 = 1300px, slim 315px x 1.5 = 473px,
+ *   mobile 86dvw x 1.6 = 138vw for both.
+ */
+const GALLERY_SIZES = {
+    wide: "(min-width: 768px) 1300px, 138vw",
+    slim: "(min-width: 768px) 473px, 138vw",
+} as const;
+
+/**
+ * Frames that skip lazy loading. Exactly one, and only because the preloader curtain gates on
+ * it — `loading="eager"` makes Next emit a `<link rel=preload>`, and the hero the curtain is
+ * really waiting for does not get one (it cannot; see hero.tsx). Every extra eager frame here
+ * is another below-the-fold photo bidding against it.
+ *
+ * The other seven are warmed in the background the moment the curtain lifts, which is long
+ * before anyone scrolls this far. See ui/preloader.tsx.
+ */
+const EAGER_FRAME_COUNT = 1;
+
 type GalleryItem = {
     src: StaticImageData;
     alt: string;
@@ -115,14 +146,46 @@ type GalleryItem = {
  * number of items or mix of variants works without touching the animation.
  */
 const GALLERY_ITEMS: GalleryItem[] = [
-    { src: gallery1, alt: "Stays preview", variant: "wide" },
-    { src: gallery2, alt: "Stays preview", variant: "slim" },
-    { src: gallery3, alt: "Stays preview", variant: "wide" },
-    { src: gallery4, alt: "Stays preview", variant: "slim" },
-    { src: gallery5, alt: "Stays preview", variant: "wide" },
-    { src: gallery6, alt: "Stays preview", variant: "slim" },
-    { src: gallery7, alt: "Stays preview", variant: "wide" },
-    { src: gallery8, alt: "Stays preview", variant: "slim" },
+    {
+        src: gallery1,
+        alt: "Infinity pool inside a limestone sea cave, bougainvillea spilling over the opening",
+        variant: "wide",
+    },
+    {
+        src: gallery2,
+        alt: "Narrow lap pool between whitewashed walls, an arch at its far end framing the sea",
+        variant: "slim",
+    },
+    {
+        src: gallery3,
+        alt: "White timber lounge set on the sand under a string of lights, facing the bay",
+        variant: "wide",
+    },
+    {
+        src: gallery4,
+        alt: "Weathered deck table and benches out over the water, a fishing boat passing beyond",
+        variant: "slim",
+    },
+    {
+        src: gallery5,
+        alt: "Aerial view of a charter boat anchored in clear water, guests swimming alongside",
+        variant: "wide",
+    },
+    {
+        src: gallery6,
+        alt: "Snorkeller gliding past a coral-covered rock wall in shallow, sunlit water",
+        variant: "slim",
+    },
+    {
+        src: gallery7,
+        alt: "Dining room with blue-framed doors opening onto a terrace above the sea",
+        variant: "wide",
+    },
+    {
+        src: gallery8,
+        alt: "Sun loungers and parasols along a palm-lined beach at the water's edge",
+        variant: "slim",
+    },
 ];
 
 /**
@@ -161,9 +224,6 @@ export default function Gallery() {
         const section = sectionRef.current;
         const track = trackRef.current;
         const caption = captionRef.current;
-        console.log(section);
-        console.log(track);
-        console.log(caption);
 
         if (!section || !track || !caption) return;
 
@@ -527,10 +587,27 @@ export default function Gallery() {
                                 className="h-full w-full object-cover"
                                 src={item.src}
                                 placeholder="blur"
-                                quality={100}
-                                priority
+                                quality={90}
                                 fill
+                                sizes={GALLERY_SIZES[item.variant]}
+                                // `priority` on all eight (deprecated in Next 16 anyway) put
+                                // eight preload hints for below-the-fold photos in the head,
+                                // competing with the hero for the connection.
+                                loading={
+                                    index < EAGER_FRAME_COUNT
+                                        ? "eager"
+                                        : undefined
+                                }
                                 alt={item.alt}
+                                // The first frame is what the preloader curtain waits on;
+                                // the lazy ones get warmed once it lifts so they do not pop
+                                // in mid-pin. See ui/preloader.tsx.
+                                {...(index === 0
+                                    ? { [PRELOADER_GATE_ATTR]: "gallery" }
+                                    : {})}
+                                {...(index >= EAGER_FRAME_COUNT
+                                    ? { [PRELOADER_WARM_ATTR]: "" }
+                                    : {})}
                             />
                         </ImageShaper>
                     ))}

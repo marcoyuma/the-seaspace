@@ -4,6 +4,7 @@ import { getStays } from "@/features/stays/actions";
 import Container from "@/ui/container";
 import SectionHeading from "@/ui/section-heading";
 import StayCard from "@/features/stays/components/stay-card";
+import LinkPendingOverlay from "@/ui/link-pending-overlay";
 
 export const metadata = {
     title: "Stays",
@@ -21,7 +22,13 @@ export default async function Page() {
 
             <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2">
                 {stays.map((stay) => (
-                    <Link key={stay.id} href={`/stays/${stay.id}`}>
+                    // `relative` is what LinkPendingOverlay positions against; it confirms
+                    // the click on a cold connection, where the prefetch has not landed yet.
+                    <Link
+                        key={stay.id}
+                        href={`/stays/${stay.id}`}
+                        className="relative block"
+                    >
                         <StayCard
                             imageSrc={stay.imageSrc}
                             name={stay.name}
@@ -32,6 +39,7 @@ export default async function Page() {
                             area={stay.area}
                             isNew={stay.isNew}
                         />
+                        <LinkPendingOverlay />
                     </Link>
                 ))}
             </div>

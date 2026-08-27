@@ -2,6 +2,7 @@ import { getLatestReviews, getReviewStats } from "@/features/reviews/actions";
 import Container from "@/ui/container";
 import ReviewsHeader from "@/features/reviews/components/reviews-header";
 import ReviewsPanel from "@/features/reviews/components/reviews-panel";
+import Skeleton from "@/ui/skeleton";
 
 /**
  * Guest reviews on the landing page: a vertical carousel of the newest reviews above a row
@@ -60,7 +61,7 @@ export function ReviewsSectionFallback() {
                 <ReviewsHeader />
                 {/* Roughly matches ReviewsPanel's real height (carousel + stats row) so
                     swapping in the real content doesn't shift the page underneath it. */}
-                <div className="h-100 w-full max-w-161 mx-auto rounded-[20px] bg-black/5 animate-pulse" />
+                <Skeleton className="h-100 w-full max-w-161 mx-auto rounded-[20px]" />
             </section>
         </Container>
     );

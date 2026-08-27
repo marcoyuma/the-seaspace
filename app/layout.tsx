@@ -9,6 +9,7 @@ import Footer from "@/ui/footer";
 import ProfileIcon, { ProfileIconFallback } from "@/ui/profile-icon";
 import ChromeGate from "@/ui/chrome-gate";
 import { Analytics } from "@vercel/analytics/next";
+import PreloaderFlashGuard from "@/ui/preloader-flash-guard";
 
 export const metadata: Metadata = {
     title: {
@@ -38,6 +39,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <body
                 className={`${manrope.variable} ${josefin.variable} font-sans relative antialiased min-h-screen flex flex-col`}
             >
+                {/* First thing in the body on purpose: it decides whether `/` gets a
+                    preloader curtain, and it has to run before the header below is parsed
+                    or the header paints for a frame before the curtain drops over it.
+                    Static markup, so it does not cost the route its static shell. */}
+                <PreloaderFlashGuard />
+
                 {/* ChromeGate hides both on the routes listed in ui/chrome-gate.tsx —
                     /login owns its whole viewport. It has to be a Client Component because
                     only the client knows the current path; a layout never re-renders on
