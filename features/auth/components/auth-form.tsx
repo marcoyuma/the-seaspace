@@ -49,6 +49,17 @@ const ERROR_MESSAGES: Record<string, string> = {
  */
 const PASSWORD_RESET_AVAILABLE = false;
 
+/**
+ * Credentials the sign-in form starts with.
+ *
+ * Prefilled on purpose: the README points recruiters straight at this page, and a booking
+ * flow they cannot get into is not a demo. This is a seeded account on a demo database with
+ * simulated payments, so there is nothing behind it worth protecting. Sign-up mode never
+ * prefills — an account created with these values would collide with the demo one.
+ */
+const DEMO_EMAIL = "co@example.com";
+const DEMO_PASSWORD = "cococo";
+
 // `gap-2` is the site's icon-to-label distance on a pill; the padding either side stays
 // symmetric, since the logo carries no more optical weight than the word next to it.
 const OAUTH_BUTTON = `flex w-full items-center justify-center gap-2 rounded-full ${PILL_SIZE.md} border border-black/15 font-medium text-black transition-colors duration-300 ease-out motion-reduce:transition-none hover:border-black disabled:cursor-not-allowed disabled:opacity-40`;
@@ -141,7 +152,7 @@ export default function AuthForm({
           : null;
 
     return (
-        <div className="mx-auto w-full max-w-112">
+        <div className="mx-auto w-full max-w-md">
             <h1 className="text-[40px] font-semibold leading-none text-black">
                 {isSignUp ? "Create an account" : "Welcome back"}
             </h1>
@@ -200,7 +211,12 @@ export default function AuthForm({
                     type="email"
                     required
                     autoComplete="email"
-                    defaultValue={state?.values?.email}
+                    // A rejected attempt's own value wins over the demo one, so a guest who
+                    // typed their address does not get it swapped back out under them.
+                    defaultValue={
+                        state?.values?.email ??
+                        (isSignUp ? undefined : DEMO_EMAIL)
+                    }
                     error={state?.errors?.email}
                 />
 
@@ -213,8 +229,13 @@ export default function AuthForm({
                         autoComplete={
                             isSignUp ? "new-password" : "current-password"
                         }
+                        defaultValue={isSignUp ? undefined : DEMO_PASSWORD}
                         error={state?.errors?.password}
-                        hint={isSignUp ? "At least 6 characters." : undefined}
+                        hint={
+                            isSignUp
+                                ? "At least 6 characters."
+                                : "Demo account is prefilled — clear both fields to use your own."
+                        }
                     />
 
                     {!isSignUp && PASSWORD_RESET_AVAILABLE && (

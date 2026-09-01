@@ -1,6 +1,17 @@
 import { StarIcon } from "@phosphor-icons/react/dist/ssr";
 
 /**
+ * Kept out of the base class list rather than left to a caller's `className`: that prop is
+ * concatenated, not merged, so a `text-*` passed in would clash with a baked-in one at equal
+ * specificity. Same reasoning as `SIZE` in `ui/heading.tsx`.
+ */
+const TEXT = {
+    default: "text-[16px]",
+    // Matches CHIP_SIZE's ramp, so the star line sits at the chip's own type size.
+    chip: "text-[14px] sm:text-[16px]",
+} as const;
+
+/**
  * A villa's rating as one line: a single filled star, the average, and the review count.
  *
  * Deliberately NOT five stars with a partial fill. `RatingStars` renders
@@ -15,7 +26,10 @@ import { StarIcon } from "@phosphor-icons/react/dist/ssr";
  * @param total - How many reviews the average is over. Omit to print the rating alone,
  *   which is what the landing-page preview card does.
  * @param size - Star size in px. 20 pairs with 16-20px text; the review cards use
- *   `RatingStars` at 24 instead.
+ *   `RatingStars` at 24 instead. Not responsive — `size` becomes an SVG width/height
+ *   attribute, and a 16px star still balances 14px text.
+ * @param textScale - `"chip"` shrinks the line on phones for the overlay chip on
+ *   `StayCardPreview`; see `TEXT`.
  *
  * @example
  * <RatingSummary average={4.66} total={25} />  // ★ 4.66 · 25 reviews
@@ -25,11 +39,13 @@ export default function RatingSummary({
     average,
     total,
     size = 20,
+    textScale = "default",
     className = "",
 }: {
     average: number;
     total?: number;
     size?: number;
+    textScale?: keyof typeof TEXT;
     className?: string;
 }) {
     // Locale pinned rather than left to the runtime, the same reason ReviewsPanel pins it:
@@ -42,7 +58,7 @@ export default function RatingSummary({
 
     return (
         <p
-            className={`flex items-center gap-1.5 text-[16px] font-semibold text-black ${className}`}
+            className={`flex items-center gap-1.5 ${TEXT[textScale]} font-semibold text-black ${className}`}
         >
             {/* Same fill as RatingStars, so the site has one star colour rather than two. */}
             <StarIcon weight="fill" fill="#FFC533" size={size} aria-hidden />

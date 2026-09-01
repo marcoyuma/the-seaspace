@@ -1,13 +1,44 @@
+/**
+ * The type scale for section headings.
+ *
+ * Font size and leading live here rather than in the base class list because
+ * `className` is concatenated, not merged: a size passed by a caller would sit at
+ * the same specificity as a baked-in one, and the winner would be decided by
+ * Tailwind's generation order rather than by the caller. Keeping the scale in one
+ * map means no caller ever has to fight the base — and nothing needs `!`.
+ *
+ * `footer` is the only heading that scales per breakpoint; every other section on
+ * the site is pinned to a flat 36px (see RESPONSIVE-AUDIT.md Bagian F).
+ */
+const SIZE = {
+    section: "text-[36px] leading-none",
+    footer: "text-[28px] sm:text-[34px] md:text-[40px] lg:text-[48px] leading-tight sm:leading-none",
+} as const;
+
+/**
+ * A section heading (`<h2>`).
+ *
+ * @param variant - `"white"` for headings on a dark surface. Defaults to black.
+ * @param size - Type scale; see `SIZE`. Defaults to `"section"`.
+ * @param className - Layout only (`text-center`, margins). Do not pass type-scale
+ *   utilities here — add a `SIZE` entry instead, or they will clash with this one.
+ * @param id - Target for a section's `aria-labelledby`.
+ *
+ * @example
+ * <Heading className="text-center">Your Wonders</Heading>
+ * <Heading size="footer">Unforgettable stays by the sea.</Heading>
+ */
 export default function Heading({
     children,
     variant,
-    classname = "",
+    size = "section",
+    className = "",
     id,
 }: {
     children: React.ReactNode;
     variant?: "white";
-    classname?: string;
-    /** Target for a section's `aria-labelledby`. */
+    size?: keyof typeof SIZE;
+    className?: string;
     id?: string;
 }) {
     return (
@@ -27,11 +58,11 @@ export default function Heading({
             // container's real width so text wraps normally again. It does
             // NOT default to `text-center`: some callers (StaysPreviewSection,
             // Footer) are intentionally left-aligned; callers that relied on
-            // the old shrink-wrap-to-center trick pass `classname="text-center"`
+            // the old shrink-wrap-to-center trick pass `className="text-center"`
             // explicitly instead.
-            className={`w-full font-semibold text-[48px] leading-none ${
+            className={`w-full font-semibold ${SIZE[size]} ${
                 variant === "white" ? "text-white" : "text-black"
-            } ${classname}`}
+            } ${className}`}
         >
             {children}
         </h2>

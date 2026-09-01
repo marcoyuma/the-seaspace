@@ -11,6 +11,12 @@ import { STAYS_CACHE_TAG } from "@/lib/supabase";
  * supabase/migrations/0017_stays_revalidate_webhook.sql, which fires on every write to
  * `stays`, `stay_images`, `amenities` and `stay_amenities`.
  *
+ * What still depends on this: the prerendered villa detail page (`getStay()`), the reviews
+ * aggregates that ride on the same tag, and generateStaticParams(). The /stays grid and the
+ * landing preview no longer do — they read uncached and are current by construction. Narrower
+ * than before, but not optional: without this, a corrected price sits stale on the detail page
+ * for up to an hour, which is exactly the page a guest books from.
+ *
  * A Route Handler rather than a Server Action: the caller is another application over
  * plain HTTP, and `updateTag` — the read-your-own-writes counterpart — may only be called
  * from a Server Action in this same app.

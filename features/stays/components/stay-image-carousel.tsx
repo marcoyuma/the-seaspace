@@ -33,11 +33,11 @@ const GAP = 24;
 /** Viewport/frame height per breakpoint. No inline style anymore — media queries need
  * real classes. Steps down from RAIL_HEIGHT at `lg` so a 600px-tall rail does not eat
  * most of a phone's viewport. */
-const FRAME_HEIGHT_CLASSES = "h-70 sm:h-85 md:h-105 lg:h-150";
+export const FRAME_HEIGHT_CLASSES = "h-70 sm:h-85 md:h-105 lg:h-150";
 /** Frame width per breakpoint, aspect-matched to FRAME_HEIGHT_CLASSES (~0.88, the same
  * ratio as the original fixed 526×600). The peek (PEEK_RATIO) scales with this
  * automatically since it is derived from the measured frame width, not a fixed px. */
-const FRAME_WIDTH_CLASSES = "w-61.5 sm:w-74.5 md:w-92 lg:w-131.5";
+export const FRAME_WIDTH_CLASSES = "w-61.5 sm:w-74.5 md:w-92 lg:w-131.5";
 
 /** `object-cover` paints `RAIL_HEIGHT × aspect` wide, not FRAME_WIDTH, so `sizes` must
  * describe that or the browser under-fetches. 1.5 is the widest villa aspect. */

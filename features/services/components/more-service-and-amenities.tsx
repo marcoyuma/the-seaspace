@@ -94,30 +94,40 @@ export default function MoreServiceAndAmenities() {
                     `mb-5` (20px) is the heading-to-content gap, a bit more
                     room than the 12px used within a full intro block — see
                     RESPONSIVE-AUDIT.md Bagian F. */}
-                <Heading
-                    variant="white"
-                    classname="!text-[36px] text-center mb-5"
-                >
+                <Heading variant="white" className="text-center mb-5">
                     And so much more
                 </Heading>
 
-                {/* Render each service row from SERVICE_ROWS. */}
-                {SERVICE_ROWS.map((row, rowIndex) => (
-                    // Use the index as the key because the row order is static—it is not reordered.
-                    <div
-                        key={rowIndex}
-                        className="flex flex-row flex-wrap justify-center gap-2.5 mb-5.75"
-                    >
-                        {row.map((service) => (
-                            // Use `text` for the key because it is unique per item and stable across renders.
-                            <AmenityBadge
-                                key={service.text}
-                                icon={service.icon}
-                                text={service.text}
-                            />
-                        ))}
-                    </div>
-                ))}
+                {/*
+                    <md: one single wrap container holding all badges, so the
+                    row grouping is dropped (see `contents` below) and every
+                    gap — horizontal and vertical — is the same 10px.
+                    >=md: turns into a column whose `gap-5.75` (23px) is the
+                    spacing between the pyramid's rows.
+                */}
+                <div className="flex flex-row flex-wrap justify-center gap-2.5 md:flex-col md:flex-nowrap md:gap-5.75">
+                    {SERVICE_ROWS.map((row, rowIndex) => (
+                        // `display:contents` drops this row box below md: the
+                        // 4-3-2 pyramid can't survive a narrow viewport anyway,
+                        // and keeping the rows there mixed two vertical rhythms
+                        // — flex `gap` applies to BOTH axes, so wrapped badges
+                        // sat 10px apart while the row groups sat 23px apart.
+                        // Use the index as the key because the row order is static—it is not reordered.
+                        <div
+                            key={rowIndex}
+                            className="contents md:flex md:flex-row md:flex-wrap md:justify-center md:gap-x-2.5 md:gap-y-5.75"
+                        >
+                            {row.map((service) => (
+                                // Use `text` for the key because it is unique per item and stable across renders.
+                                <AmenityBadge
+                                    key={service.text}
+                                    icon={service.icon}
+                                    text={service.text}
+                                />
+                            ))}
+                        </div>
+                    ))}
+                </div>
             </div>
         </section>
     );

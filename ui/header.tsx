@@ -34,10 +34,23 @@ function subscribeToViewport(onChange: () => void) {
     };
 }
 
-// The hero occupies exactly one viewport (`h-dvh`), so by the time we've
-// scrolled ~that far the background image is 100% covered. The small offset
-// makes the pill start widening right as the sweep finishes behind it.
+// Mirrors Tailwind's `lg` (64rem). `window.innerWidth` and a CSS media query
+// both measure the viewport including the scrollbar, so the two agree.
+const HERO_SWEEP_MIN_WIDTH = 1024;
+
+// The sweep only exists from `lg` up: features/home/components/hero.tsx puts
+// the full-viewport fixed background behind `hidden lg:block` and stacks a
+// photo band over a blue panel in normal flow below that. So under `lg` there
+// is no background being covered, and the threshold below — calibrated
+// against the desktop hero, and reading an `innerHeight` that itself shifts
+// as the mobile URL bar collapses — just snapped the bar to full width at an
+// arbitrary scroll position. Return `false` there and the bar stays a pill.
+//
+// Above `lg` the hero occupies exactly one viewport (`h-dvh`), so by the time
+// we've scrolled ~that far the background image is 100% covered. The small
+// offset makes the pill start widening right as the sweep finishes behind it.
 function getHeroSweptSnapshot() {
+    if (window.innerWidth < HERO_SWEEP_MIN_WIDTH) return false;
     return window.scrollY >= window.innerHeight - 100;
 }
 
@@ -74,13 +87,18 @@ function Header({ profileSlot }: { profileSlot: ReactNode }) {
             // BACKGROUND stretches to the full viewport width and sits flush
             // against the top edge — only the inner content (below) stays inset
             // to line up with the stays/services sections.
+            // `max-lg:shadow-*` on the collapsed branch: under `lg` the pill
+            // never expands (see getHeroSweptSnapshot), so it now floats over
+            // the white sections too — where a white pill with a transparent
+            // border would otherwise have no visible edge at all. Desktop keeps
+            // the flat pill it has always had.
             className={`${isHome ? "fixed" : "relative border-none"} left-1/2 z-20 -translate-x-1/2
                         h-14 bg-white text-black
                         border-b border-black/10
                         transition-[width,top,border-radius,border-color] duration-500 ease-in-out motion-reduce:transition-none
                         ${
                             !expanded
-                                ? "top-10 w-190 max-w-[calc(100%-48px)] rounded-full border-transparent"
+                                ? "top-10 w-190 max-w-[calc(100%-48px)] rounded-full border-transparent max-lg:shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
                                 : "h-20 top-0 w-screen rounded-none border-black/10"
                         }`}
         >

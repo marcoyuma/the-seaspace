@@ -81,7 +81,7 @@ export default function MonthCalendar({
                     </button>
                 )}
 
-                <h3 className="flex-1 text-center text-[18px] font-semibold text-black">
+                <h3 className="flex-1 text-center text-[16px] font-semibold text-black">
                     {formatMonthYear(monthStart)}
                 </h3>
 

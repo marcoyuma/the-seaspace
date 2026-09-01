@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Tailwind v4 scans every non-ignored file, .md included, so a class quoted in
+   prose emits a real rule into the bundle. AGENTS.md and RESPONSIVE-AUDIT.md both
+   quote classes as examples — AGENTS.md's rule against the `!` modifier names the
+   very class it forbids, which put a live `!important` back in the CSS. Docs are
+   never a source of classes; keep them out of the scan. */
+@source not "../../**/*.md";
+
 @media (prefers-reduced-motion: no-preference) {
     html {
         scroll-behavior: smooth;

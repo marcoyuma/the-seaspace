@@ -53,9 +53,7 @@ export default function ServiceCard({
                 fill
                 // Without `sizes`, a `fill` image defaults to 100vw and the
                 // browser downloads a far larger source than the card needs.
-                sizes={
-                    fluid ? "50vw" : "(min-width: 768px) 385px, 100vw"
-                }
+                sizes={fluid ? "50vw" : "(min-width: 768px) 385px, 100vw"}
                 alt={`${serviceName} service preview`}
             />
 
@@ -63,13 +61,15 @@ export default function ServiceCard({
                 `h-12` (not `min-h-12`) is load-bearing: the two layouts
                 inside are `absolute inset-0` and roll vertically, so the
                 pill needs a fixed height for `translate-y-full` to resolve
-                against and for `overflow-hidden` to actually clip the roll. */}
-            <div className="absolute inset-x-3 bottom-3 h-12 overflow-hidden rounded-[20px] bg-white">
+                against and for `overflow-hidden` to actually clip the roll.
+                40 → 48px is the same ramp as `CHIP_SIZE.md`, which this bar can't use
+                directly: its children are `absolute`, so padding wouldn't set its height. */}
+            <div className="absolute inset-x-3 bottom-3 h-10 overflow-hidden rounded-[20px] bg-white sm:h-12">
                 {/* Rest state: just the service name, centred. This is
                     also the permanent state below `md`, where there's no
                     hover to trigger the roll — it simply never translates. */}
                 <div className="absolute inset-0 flex items-center justify-center px-4 transition-transform duration-300 ease-out md:group-hover:-translate-y-full motion-reduce:transition-none">
-                    <p className="text-black font-medium text-[18px] tracking-normal">
+                    <p className="text-black font-medium text-[14px] tracking-normal sm:text-[16px]">
                         {serviceName}
                     </p>
                 </div>
@@ -85,10 +85,12 @@ export default function ServiceCard({
                     aria-hidden
                     className="absolute inset-0 flex translate-y-full items-center justify-between gap-x-3 py-1 pl-4 pr-2 transition-transform duration-300 ease-out md:group-hover:translate-y-0 motion-reduce:transition-none"
                 >
-                    <p className="text-black font-medium text-[18px] tracking-normal">
+                    <p className="text-black font-medium text-[14px] tracking-normal sm:text-[16px]">
                         {bookButtonText}
                     </p>
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-black text-black">
+                    {/* 32px inside a 40px bar would overflow, but this layer only rolls in
+                        from `md` up (see `md:group-hover` above), where the bar is 48px. */}
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-black text-black">
                         <ArrowRightIcon size={16} weight="bold" />
                     </span>
                 </div>

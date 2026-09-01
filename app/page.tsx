@@ -26,16 +26,6 @@ export default function Page() {
 
             <Hero />
 
-            {/* 
-              NOTE: empty spacer div used purely for layout gap.
-              Consider replacing with margin/padding on the adjacent element instead,
-              since an empty div carries no semantic meaning and is harder to maintain.
-
-              WARNING: `h-25` is not a default Tailwind spacing class (default scale jumps
-              from h-24 to h-28). Verify this exists in tailwind.config, otherwise it has no effect.
-            */}
-            {/* <div className="h-25" /> */}
-
             <div className="relative bg-white">
                 <ScrollRunningText />
 

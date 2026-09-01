@@ -47,10 +47,7 @@ export default function FaqSection() {
                 larger) gap from this block to the FAQ list below. */}
             <div className="flex flex-col justify-center items-center gap-3">
                 <OverlineText>{"FAQ's"}</OverlineText>
-                {/* Landing-page headings are pinned to 36px instead of
-                    `ui/heading.tsx`'s default 48px — see
-                    RESPONSIVE-AUDIT.md Bagian F. */}
-                <Heading classname="!text-[36px] text-center">
+                <Heading className="text-center">
                     Your Wonders
                 </Heading>
                 <Text>Answers for most wonderer wonders</Text>
@@ -106,7 +103,7 @@ function Question({
                 }`}
             >
                 <div className="overflow-hidden">
-                    <Text classname="pt-3 !font-normal text-black/60">
+                    <Text weight="normal" className="pt-3">
                         {answer}
                     </Text>
                 </div>

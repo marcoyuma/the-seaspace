@@ -121,12 +121,11 @@ function queryFailed(what: string, error: { message: string; code?: string }): E
     });
 }
 
-/** Whole catalogue, in the order the /stays grid renders. */
-export async function getStays(): Promise<Stay[]> {
-    "use cache";
-    cacheTag(STAYS_CACHE_TAG);
-    cacheLife(STAYS_CACHE_PROFILE);
-
+/**
+ * Whole catalogue, in the order the /stays grid renders. No cache policy of its own —
+ * the two exports below decide that, so the query itself lives in exactly one place.
+ */
+async function fetchStays(): Promise<Stay[]> {
     const { data, error } = await supabase
         .from("stays")
         .select(STAY_SELECT)
@@ -134,6 +133,32 @@ export async function getStays(): Promise<Stay[]> {
 
     if (error) throw queryFailed("stays", error);
     return (data as unknown as StayRow[]).map(toStay);
+}
+
+/**
+ * Cached catalogue. For readers that run away from a request and cannot stream a fallback:
+ * generateStaticParams() on /stays/[stayId], which runs at build time. Kept on the shared
+ * tag so the Supabase webhook still clears it — see app/api/revalidate/stays/route.ts.
+ */
+export async function getStays(): Promise<Stay[]> {
+    "use cache";
+    cacheTag(STAYS_CACHE_TAG);
+    cacheLife(STAYS_CACHE_PROFILE);
+
+    return fetchStays();
+}
+
+/**
+ * Uncached catalogue: one round trip per request, always current.
+ *
+ * The /stays grid reads this instead of getStays(). Under `cacheComponents` that costs the
+ * page nothing visible — the heading and layout around it are still lifted into the static
+ * shell, and only the grid streams in behind its <Suspense> boundary. Freshness matters more
+ * here than a cache hit: this is the page a guest lands on right after a villa is added or
+ * repriced in the admin panel, and an hour-stale list is the one thing they would notice.
+ */
+export async function getStaysFresh(): Promise<Stay[]> {
+    return fetchStays();
 }
 
 /** A single stay by slug. `undefined` means "no such stay" — the caller renders notFound(). */
@@ -156,18 +181,14 @@ export async function getStay(slug: string): Promise<Stay | undefined> {
  * Stays flagged for the landing-page preview.
  *
  * Reuses the full select even though the preview card only needs cover, name and location.
- * A leaner query would save a few kilobytes on two rows once an hour — not worth a second
- * mapper and a second row type that could drift out of step with this one.
+ * A leaner query would save a few kilobytes on two rows — not worth a second mapper and a
+ * second row type that could drift out of step with this one.
  *
  * Returns whatever is flagged, with no fallback to "first N": substituting other villas
  * would make an empty `is_featured` set look like a working feature instead of a
  * misconfiguration.
  */
-export async function getFeaturedStays(): Promise<Stay[]> {
-    "use cache";
-    cacheTag(STAYS_CACHE_TAG);
-    cacheLife(STAYS_CACHE_PROFILE);
-
+async function fetchFeaturedStays(): Promise<Stay[]> {
     const { data, error } = await supabase
         .from("stays")
         .select(STAY_SELECT)
@@ -176,4 +197,22 @@ export async function getFeaturedStays(): Promise<Stay[]> {
 
     if (error) throw queryFailed("featured stays", error);
     return (data as unknown as StayRow[]).map(toStay);
+}
+
+/** Cached featured set. No reader today; kept as the counterpart to getStays(). */
+export async function getFeaturedStays(): Promise<Stay[]> {
+    "use cache";
+    cacheTag(STAYS_CACHE_TAG);
+    cacheLife(STAYS_CACHE_PROFILE);
+
+    return fetchFeaturedStays();
+}
+
+/**
+ * Uncached featured set, read by the landing preview. Same reasoning as getStaysFresh():
+ * the section already streams inside a <Suspense> boundary, so a live query buys freshness
+ * without holding up the static shell around it.
+ */
+export async function getFeaturedStaysFresh(): Promise<Stay[]> {
+    return fetchFeaturedStays();
 }

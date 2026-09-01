@@ -11,6 +11,7 @@ import {
 
 import type { AppImage } from "@/features/stays/types";
 import { idr } from "@/lib/format";
+import { CHIP_SIZE } from "@/ui/pill-styles";
 
 interface StayCardProps {
     /** Cover image. `AppImage` rather than `StaticImageData` so the source can be a
@@ -48,7 +49,7 @@ export default function StayCard({
     return (
         <div className="w-full cursor-pointer group">
             {/* Image wrapper is `relative` so <Image fill> can size to it. */}
-            <div className="relative aspect-[3/2] w-full overflow-hidden rounded-[20px]">
+            <div className="relative aspect-3/2 w-full overflow-hidden rounded-[20px]">
                 <Image
                     className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                     src={imageSrc.src}
@@ -67,7 +68,11 @@ export default function StayCard({
                 />
 
                 {isNew && (
-                    <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-[14px] bg-white px-4 py-2 text-[15px] font-semibold text-black">
+                    // Radius and geometry match the chips on StayCardPreview so the two
+                    // cards read as one language.
+                    <div
+                        className={`absolute bottom-4 left-4 flex items-center gap-2 rounded-[20px] bg-white font-semibold text-black ${CHIP_SIZE.sm}`}
+                    >
                         New
                         <span className="h-2 w-2 rounded-full bg-[#2c8de2]" />
                     </div>
