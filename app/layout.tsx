@@ -28,8 +28,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
     return (
+        // The flash guard in the body stamps `data-preloader-active` on <html> before React
+        // hydrates, so this element's attributes legitimately differ from the server's. The
+        // warning is dev-only and React never patches the attribute anyway; the flag is scoped
+        // to <html> itself, so real mismatches in the tree below still surface.
         <html
             lang="en"
+            suppressHydrationWarning
             style={{ overscrollBehavior: "none", overflowX: "hidden" }}
             data-scroll-behavior="smooth"
         >
