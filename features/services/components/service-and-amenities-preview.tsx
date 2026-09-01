@@ -108,13 +108,7 @@ export default function ServiceAndAmenitiesPreview({
                     }`}
                 >
                     <OverlineText>{overline}</OverlineText>
-                    {/* Landing-page headings are pinned to a single 36px
-                        instead of `ui/heading.tsx`'s default 48px — see
-                        RESPONSIVE-AUDIT.md Bagian F. */}
-                    <Heading
-                        id="services-preview-heading"
-                        classname="!text-[36px]"
-                    >
+                    <Heading id="services-preview-heading">
                         {heading}
                     </Heading>
                     <Text>{description}</Text>

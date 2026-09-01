@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { getCheckInInvite } from "@/features/booking/actions";
 import CheckInButton from "@/features/booking/components/check-in-button";
 import { formatFullDate } from "@/features/booking/lib/dates";
+import OverlineText from "@/ui/overline-text";
 
 export const metadata: Metadata = {
     title: "Check in",
@@ -38,9 +39,7 @@ export default function CheckInPage({
 }) {
     return (
         <div className="mx-auto flex w-full max-w-2xl flex-col px-6 py-24">
-            <p className="text-[18px] font-medium text-[#0F677D]">
-                The Seaspace
-            </p>
+            <OverlineText>The Seaspace</OverlineText>
 
             <Suspense fallback={<InviteFallback />}>
                 <Invite params={params} />

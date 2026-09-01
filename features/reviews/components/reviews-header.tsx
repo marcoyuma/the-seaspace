@@ -15,10 +15,7 @@ export default function ReviewsHeader() {
         // block itself — see RESPONSIVE-AUDIT.md Bagian F.
         <div className="flex flex-col justify-center items-center gap-3 mb-5">
             <OverlineText>Reviews</OverlineText>
-            {/* Landing-page headings are pinned to 36px instead of
-                `ui/heading.tsx`'s default 48px — see
-                RESPONSIVE-AUDIT.md Bagian F. */}
-            <Heading id="reviews-heading" classname="!text-[36px] text-center">
+            <Heading id="reviews-heading" className="text-center">
                 Read our guests thought
             </Heading>
         </div>

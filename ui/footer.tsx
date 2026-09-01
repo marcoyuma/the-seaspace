@@ -31,10 +31,10 @@ export default function Footer() {
                     Single column on mobile: Sitemap/Amenities are hidden
                     below `sm`, so only Heading + Contact remain, stacked. */}
                 <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr] gap-x-16 gap-y-8 sm:gap-y-0">
-                    {/* Left: Heading — sized down on narrow screens like other
-                        section headings (e.g. FamilyHistorySection), since the
-                        default Heading text-[48px] is fixed and doesn't scale. */}
-                    <Heading classname="!text-[28px] sm:!text-[34px] md:!text-[40px] lg:!text-[48px] leading-tight sm:leading-none">
+                    {/* Left: Heading — the one heading on the site that scales
+                        per breakpoint rather than sitting at a flat 36px, so it
+                        can fill this column without wrapping awkwardly. */}
+                    <Heading size="footer">
                         Unforgettable stays by the sea.
                     </Heading>
 

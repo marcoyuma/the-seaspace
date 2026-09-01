@@ -11,7 +11,8 @@ import { pillClasses, PillContents, type PillVariant } from "@/ui/pill-styles";
  * middle-click/new-tab behaviour for free.
  * @param variant - `gradient` fades its navy fill into the site's blue gradient;
  * `outline` fades from a black hairline to a solid black fill.
- * @param className - Layout only (margins, `shrink-0`). Merged last so it wins.
+ * @param className - Layout only (margins, `shrink-0`); see `pillClasses` for why it
+ * must not carry utilities that clash with the pill's own.
  *
  * @example
  * <PillLink href="/stays" variant="gradient">Book room</PillLink>

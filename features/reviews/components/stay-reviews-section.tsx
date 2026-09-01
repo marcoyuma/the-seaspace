@@ -49,10 +49,7 @@ export default function StayReviewsSection({
             <div className="flex flex-col gap-3">
                 <OverlineText>Reviews</OverlineText>
 
-                {/* Pinned to 36px like every other section heading outside the villa's own
-                    h1 — see RESPONSIVE-AUDIT.md Bagian F. `!` is needed because
-                    ui/heading.tsx's 48px default is a same-specificity utility clash. */}
-                <Heading id="stay-reviews-heading" classname="!text-[36px]">
+                <Heading id="stay-reviews-heading">
                     What guests said
                 </Heading>
 

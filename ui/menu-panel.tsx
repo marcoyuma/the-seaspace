@@ -96,7 +96,7 @@ function PanelRow({
     onNavigate: () => void;
 }) {
     const className =
-        "flex items-center gap-3 border-b border-white/25 py-4 text-[18px] font-medium transition-opacity hover:opacity-80";
+        "flex items-center gap-3 border-b border-white/25 py-4 text-[16px] font-medium transition-opacity hover:opacity-80";
 
     // mailto:/https: targets bypass the router — Link would prefetch a route
     // that doesn't exist.
@@ -266,7 +266,7 @@ export default function MenuPanel({
                         nesting an anchor inside `PanelRow`'s own anchor
                         would be invalid HTML. Its own icon carries
                         `currentColor`, so it inherits this row's white. */}
-                    <div className="flex items-center gap-3 border-b border-white/25 py-4 text-[18px] font-medium text-white transition-opacity hover:opacity-80">
+                    <div className="flex items-center gap-3 border-b border-white/25 py-4 text-[16px] font-medium text-white transition-opacity hover:opacity-80">
                         {profileSlot}
                     </div>
                 </div>

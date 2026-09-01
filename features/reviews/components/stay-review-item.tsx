@@ -15,8 +15,9 @@ import ReviewContent from "@/features/reviews/components/review-content";
  *
  * No `"use client"`: no state, no handlers.
  *
- * @param className - Layout only (the caller's own padding/dividers). Merged last so it
- *   wins, following ui/pill-button.tsx.
+ * @param className - Layout only (the caller's own padding/dividers). Appended after the
+ *   base classes; that only works while it stays layout-only, since concatenation cannot
+ *   resolve a clash with a base utility (see `ui/pill-styles.tsx`).
  */
 export default function StayReviewItem({
     review,

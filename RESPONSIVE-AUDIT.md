@@ -249,29 +249,33 @@ bukan restrukturisasi grid/flex struktural):
 - **Heading-only cluster** (tanpa OverlineText/Text, mis. `MoreServiceAndAmenities`): gap ke
   konten juga **`mb-5`** (20px), bukan `mb-3`, samakan dengan aturan di atas — walau tidak ada
   intra-cluster gap untuk dibedakan di sini.
-- **Ukuran heading**: semua `<Heading>` di section landing page di-pin ke `!text-[36px]`
-  (override default `ui/heading.tsx` yang `text-[48px]`), fixed di semua breakpoint — tidak ada
-  scaling per-breakpoint lagi. `ui/heading.tsx` sendiri **tidak diubah** (dipakai juga di luar
-  landing page) — override selalu di className pemanggil, pola yang sama dengan `!` override
-  lain yang sudah ada di codebase ini.
+- **Ukuran heading**: semua `<Heading>` di section landing page dipakai pada ukuran 36px fixed
+  di semua breakpoint — tidak ada scaling per-breakpoint lagi.
+
+  > **Sudah digantikan.** Waktu pass ini ditulis, ukurannya ditembak dari className pemanggil
+  > memakai modifier `!` untuk mengalahkan default 48px di `ui/heading.tsx`. Cara itu sudah
+  > tidak dipakai: ukuran sekarang jadi milik primitifnya lewat prop `size`, dengan
+  > `size="section"` (36px) sebagai default. Pemanggil tidak menulis ukuran sama sekali, dan
+  > tidak ada lagi modifier `!` di codebase ini — lihat "Tailwind: jangan pakai `!`" di
+  > `AGENTS.md`.
 - Gap yang BUKAN bagian dari heading cluster (mis. gap grid kartu antar-kartu, gap antar item
   FAQ, gap Text↔PillLink di dalam intro block) **tidak disentuh**.
 
 ### F.2 — File yang diupdate
 - `features/stays/components/stays-preview-section.tsx` — OverlineText/Heading/div(Text+PillLink)
   dibungkus wrapper `gap-3`; section sendiri pakai `gap-5` antara wrapper itu dan grid kartu.
-  Heading: scaling 4-breakpoint diganti `!text-[36px]` fixed.
+  Heading: scaling 4-breakpoint diganti 36px fixed.
 - `features/services/components/service-and-amenities-preview.tsx` — OverlineText/Heading/Text
-  dibungkus wrapper `gap-3`; section pakai `gap-5` ke grid kartu. Heading: `!text-[36px]`.
+  dibungkus wrapper `gap-3`; section pakai `gap-5` ke grid kartu. Heading: 36px fixed.
 - `features/home/components/gallery.tsx` — wrapper cluster tetap `gap-3` (OverlineText/Heading/
-  Text), wrapper luar (cluster → track gambar) naik ke `gap-5`. Heading: `!text-[36px]`.
+  Text), wrapper luar (cluster → track gambar) naik ke `gap-5`. Heading: 36px fixed.
 - `features/home/components/faq-section.tsx` — wrapper cluster tetap `gap-3`, wrapper luar
-  (cluster → daftar FAQ) naik ke `gap-5`. Heading: `!text-[36px]`.
+  (cluster → daftar FAQ) naik ke `gap-5`. Heading: 36px fixed.
 - `features/reviews/components/reviews-header.tsx` — `gap-3` tetap (OverlineText↔Heading,
   cluster ini tidak punya Text), `mb-3` → `mb-5` (heading → `ReviewsPanel` yang jadi sibling
-  di `reviews-section.tsx`). Heading: `!text-[36px]`.
+  di `reviews-section.tsx`). Heading: 36px fixed.
 - `features/services/components/more-service-and-amenities.tsx` — heading-only (tanpa
-  OverlineText/Text), `mb-3` → `mb-5` (heading → grid badge amenities). Heading: `!text-[36px]`.
+  OverlineText/Text), `mb-3` → `mb-5` (heading → grid badge amenities). Heading: 36px fixed.
 
 ### F.3 — Dikecualikan dari Bagian F (didokumentasikan, sengaja tidak disentuh)
 - `features/home/components/hero.tsx` — `<h1>` custom dengan `clamp()`, sama sekali tidak pakai
@@ -283,7 +287,7 @@ bukan restrukturisasi grid/flex struktural):
 - `ui/heading.tsx` sendiri tidak diubah defaultnya — lihat F.1.
 
 ### F.4 — Cakupan
-- Perubahan murni: gap (`gap-*`/`mb-*`) dan font-size Heading (`!text-[36px]`). Tidak ada
+- Perubahan murni: gap (`gap-*`/`mb-*`) dan font-size Heading (36px fixed). Tidak ada
   className struktural lain (grid-cols, flex-direction, width/height) yang diubah di pass ini.
 - `npx tsc --noEmit` bersih setelah seluruh perubahan diterapkan.
 
