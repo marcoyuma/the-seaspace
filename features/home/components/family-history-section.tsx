@@ -10,46 +10,48 @@ import Image from "next/image";
 const HEADING_TEXT =
     "Two family sanctuaries where beachfront paradise meets tropical highlands. welcoming guests since 1962.";
 
-// Batch 1 (images 1 & 2, rendered on the sides).
-const sideImages = [
+type SideImage = {
+    src: string;
+    alt: string;
+    variant: "wide" | "slim";
+};
+
+// Array order IS the on-screen order inside the flex row (left → right). The
+// old `position: "left" | "right"` field is gone along with the per-image
+// `left-*`/`right-*` anchors it fed.
+const sideImages: SideImage[] = [
     {
         src: "/family-section-images/familyS2.jpg",
         alt: "empty space photo 1",
-        position: "left" as const,
-        variant: "slim" as const,
+        variant: "slim",
     },
     {
         src: "/family-section-images/familyS1.jpg",
         alt: "empty space photo 2",
-        position: "right" as const,
-        variant: "wide" as const,
+        variant: "wide",
     },
 ];
 
-// Batch 1's top/center image (image 3).
 const topImage = {
     src: "/family-section-images/familyS5.jpg",
     alt: "empty space photo 3",
 };
 
-// Batch 2 (images 4 & 5). Reuses the same src as batch 1 (no new assets
-// yet), but these are separate DOM elements/refs, so they animate
-// independently from batch 1.
-const sideImages2 = [
+// Batch 2 reuses the same sources as batch 1 (no new assets yet) but is a
+// separate row in the reel, so it passes the heading as its own beat.
+const sideImages2: SideImage[] = [
     {
         src: "/family-section-images/familyS4.jpg",
         alt: "empty space photo 1 (batch 2)",
-        position: "left" as const,
-        variant: "wide" as const,
+        variant: "wide",
     },
     {
         src: "/family-section-images/familyS3.jpg",
         alt: "empty space photo 2 (batch 2)",
-        position: "right" as const,
-        variant: "slim" as const,
+        variant: "slim",
     },
 ];
-// Batch 2's top/center image (image 6).
+
 const topImage2 = {
     src: "/family-section-images/familyS6.jpg",
     alt: "empty space photo 3 (batch 2)",
@@ -59,58 +61,82 @@ const topImage2 = {
 // the heading tween's `from` — must match or the fade jumps on frame 1.
 const HEADING_DIM_OPACITY = 0.1;
 
-// How far images travel off-screen (in viewport height units).
-const TRAVEL = {
-    hiddenBelow: "90vh", // starting position: below the viewport
-    hiddenAbove: "-90vh", // ending position: above the viewport
-};
+// Per-letter delay of the heading fade-in.
+const HEADING_STAGGER_EACH = 0.015;
 
-// Scales sideDuration/topDuration AND the pin's scroll `end` together (see
-// below), so images get more scroll-distance per pixel of travel (slower)
-// without stealing scroll budget from other phases on the shared timeline.
-// Scaling only duration would compress everything else; scaling only `end`
-// would slow every phase uniformly. Position params like "<50%" stay correct
-// since they're percentages of a tween's OWN duration, not absolute values.
-const SLOWDOWN_FACTOR = 2.5;
+/**
+ * Where the reel parks before the pin engages, as a fraction of the stage's
+ * height: 0.9 puts the first row's centre 90% of a viewport BELOW its resting
+ * spot, i.e. just off the bottom edge. Carried over unchanged from the old
+ * `TRAVEL.hiddenBelow` of 90vh so entry timing is untouched.
+ */
+const REEL_START_OFFSET = 0.9;
 
-const TIMING = {
-    textStaggerEach: 0.015,
-    // Absolute start time of the side images on the timeline. "0" = the very
-    // beginning, so they move from the first frame of the pin.
-    sideStart: "0",
-    sideDuration: 3.0 * SLOWDOWN_FACTOR,
-    // Feed "<X%" position params: "<" anchors to the previous tween's START,
-    // "X%" is a percentage of that tween's OWN duration (not absolute) — so
-    // these stay correct as SLOWDOWN_FACTOR scales durations.
-    topOverlapPercent: 50, // side batch → that batch's top image (both batches)
-    batch2OverlapPercent: 30, // batch 1's top image → side batch 2
-    // 50% = the exact midpoint of topEl2's OWN symmetric travel
-    // (TRAVEL.hiddenBelow 90vh → TRAVEL.hiddenAbove -90vh), i.e. the instant
-    // it's sitting at y:0 — its resting position over the heading. Freezing
-    // the pin any earlier (this used to be 42%) leaves topEl2 still short of
-    // that resting spot, which only mattered visually once the heading
-    // stopped being hidden via opacity on mobile/tablet (see isDesktop
-    // below) — the heading's top lines poked out above the not-yet-arrived
-    // image.
-    textVanishPercent: 50, // batch 2's top image → heading snaps out
-    topDuration: 3.0 * SLOWDOWN_FACTOR,
-};
+/**
+ * Scroll distance granted per pixel the reel travels. Below 1 the images move
+ * FASTER than the page scrolls, which is the pacing this section has always
+ * had — the value is that pacing recovered from the constants it replaces:
+ * the old pin ran (150 × 2.5) / 17.25 × 13.5 = 293.5% of viewport height while
+ * the images covered 90vh + 234vh = 324% of it, and 293.5 / 324 = 0.906.
+ */
+const SCROLL_PER_TRAVEL = 0.906;
 
-// "none" = linear easing. Keeps movement speed proportional 1:1 to scroll
-// speed at any point in the tween, so overlapping images don't feel like
-// they have mismatched speed (which happens with GSAP's default ease,
-// power1.out, since overlapping tweens would sit at different points on
-// that ease curve at the same scroll position).
-const TRAVEL_EASE = "none";
+/**
+ * Vertical gap below each reel row — the ONLY place the spacing between
+ * batches is expressed now. It used to be split between GSAP timeline offsets
+ * (`topOverlapPercent` and friends, in % of a tween's duration) and per-image
+ * CSS anchors, two units that had to be reconciled by hand for every tweak.
+ *
+ * Below `lg` every gap is a flat 60px: the mobile frames are only 111–190px
+ * tall, so the old viewport-derived spacing had rows overlapping each other
+ * and the heading. The `lg` values reproduce the previous desktop composition
+ * EXACTLY, at any window height — they are the old centre-to-centre distances
+ * (52vh + 144px, 92vh − 144px, 90vh) minus half the height of each of the two
+ * rows a gap sits between (side rows 376px, top image 288px, top image 2
+ * 412px). The stray 144px is half of the top image's height, and comes from
+ * `top-[12%]` having been the one anchor that was not centred.
+ *
+ * The last row needs no margin, hence three values for four rows.
+ */
+const ROW_SPACING = [
+    "mb-15 lg:mb-[calc(52vh_-_188px)]",
+    "mb-15 lg:mb-[calc(92vh_-_476px)]",
+    "mb-15 lg:mb-[calc(90vh_-_394px)]",
+] as const;
+
+// Frame sizes and their matching `sizes` hints. Unchanged from before the
+// reel refactor — only where they are mounted in the DOM moved.
+const SIDE_FRAME = {
+    wide: "w-30 h-27.75 md:w-56 md:h-49 lg:w-84 lg:h-74",
+    slim: "w-30 h-47.5 md:w-44 md:h-64 lg:w-64 lg:h-94",
+} as const;
+
+const SIDE_SIZES = {
+    wide: "(min-width: 1024px) 336px, (min-width: 768px) 224px, 120px",
+    slim: "(min-width: 1024px) 256px, (min-width: 768px) 176px, 120px",
+} as const;
+
+const TOP_FRAME = "w-37.5 h-33.25 md:w-84 md:h-49 lg:w-122 lg:h-72";
+const TOP_SIZES = "(min-width: 1024px) 488px, (min-width: 768px) 336px, 150px";
+
+// Batch 2's closing image stays deliberately larger than the heading's own box
+// at every breakpoint: on `lg` the heading is snapped invisible the moment this
+// image reaches its resting position, and that "cover" illusion only reads if
+// the image is at least as big as the text it replaces. Below `lg` the heading
+// is not hidden at all, so this same oversizing is what covers it, purely by
+// stacking over it.
+const TOP2_FRAME =
+    "w-76 h-72 sm:w-116 sm:h-90 md:w-124 md:h-92 lg:w-140 lg:h-103";
+const TOP2_SIZES =
+    "(min-width: 1024px) 560px, (min-width: 768px) 496px, (min-width: 640px) 464px, 352px";
 
 export default function FamilyHistorySection() {
     const containerRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLHeadingElement>(null);
-    const sideImageRefs = useRef<Array<HTMLDivElement | null>>([]);
-    const topImageRef = useRef<HTMLDivElement>(null);
-    const sideImageRefs2 = useRef<Array<HTMLDivElement | null>>([]);
-    const topImageRef2 = useRef<HTMLDivElement>(null);
+    // One ref for the whole reel: every image moves at the same speed, so they
+    // are one rigid body and GSAP only ever has to translate this element.
+    const reelRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
         let cancelled = false;
@@ -125,207 +151,146 @@ export default function FamilyHistorySection() {
                 if (cancelled) return;
                 gsap.registerPlugin(ScrollTrigger);
 
-                // gsap.context() scopes all animations/ScrollTriggers created inside
-                // it to this component, so ctx.revert() below can clean everything
-                // up automatically when the component unmounts (prevents leaks).
-                const ctx = gsap.context(() => {
-                    const container = containerRef.current;
-                    const stage = stageRef.current;
-                    const text = textRef.current;
-                    // Filter out any refs that haven't attached yet (still null).
-                    const sideEls = sideImageRefs.current.filter(
-                        (el): el is HTMLDivElement => el !== null,
-                    );
-                    const topEl = topImageRef.current;
-                    const sideEls2 = sideImageRefs2.current.filter(
-                        (el): el is HTMLDivElement => el !== null,
-                    );
-                    const topEl2 = topImageRef2.current;
+                const container = containerRef.current;
+                const stage = stageRef.current;
+                const text = textRef.current;
+                const reel = reelRef.current;
 
-                    // Bail out early if any required element isn't mounted yet, to
-                    // avoid animating undefined targets.
-                    if (!container || !stage || !text || !topEl || !topEl2) return;
+                if (!container || !stage || !text || !reel) return;
 
-                    // Only desktop's topImage2 is sized large enough to fully cover
-                    // the heading's bounding box (see the width/height classes on
-                    // topImage2 below). On mobile/tablet the heading wraps into more
-                    // lines and topImage2 can't grow enough to cover it without
-                    // dwarfing the layout, so the vanish-text step below is skipped
-                    // there — see its own comment for what that changes.
-                    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+                /**
+                 * `matchMedia` rather than a one-off `window.matchMedia` sample:
+                 * crossing 1024px now reverts and rebuilds the whole setup, so the
+                 * heading-vanish branch below follows a resize instead of needing a
+                 * reload. It keeps every `gsap.context()` cleanup guarantee (kills
+                 * tweens/ScrollTriggers, removes the pin-spacer, restores inline
+                 * styles), which React Strict Mode's double mount depends on.
+                 */
+                const mm = gsap.matchMedia();
+                mm.add(
+                    {
+                        isDesktop: "(min-width: 1024px)",
+                        isMobile: "(max-width: 1023px)",
+                    },
+                    (context) => {
+                        const { isDesktop } = context.conditions as {
+                            isDesktop: boolean;
+                        };
 
-                    // Grab every individual letter span (see JSX below) so they can
-                    // be animated one by one.
-                    const charEls =
-                        text.querySelectorAll<HTMLSpanElement>("[data-char]");
+                        // Grab every individual letter span (see JSX below) so they
+                        // can be animated one by one.
+                        const charEls =
+                            text.querySelectorAll<HTMLSpanElement>(
+                                "[data-char]",
+                            );
 
-                    // Initial states run BEFORE any tween is created, so the first
-                    // painted frame is already correct (useLayoutEffect runs ahead of
-                    // paint). Order matters — see the immediateRender note below.
+                        // Initial states run BEFORE any tween is created, so the first
+                        // painted frame is already correct (useLayoutEffect runs ahead
+                        // of paint).
+                        gsap.set(charEls, { opacity: HEADING_DIM_OPACITY });
+                        // Reveals the reel, which the markup paints `invisible` — see
+                        // the note on its class list for why.
+                        gsap.set(reel, { autoAlpha: 1 });
 
-                    // Letters start mostly transparent.
-                    gsap.set(charEls, { opacity: HEADING_DIM_OPACITY });
+                        // Heading fade: its OWN ScrollTrigger, separate from the pin
+                        // timeline below, so it starts as soon as barely visible
+                        // ("top 70%") and finishes ("top top") right as the pin begins.
+                        //
+                        // fromTo + immediateRender:false is load-bearing: a plain .to()
+                        // reads its start value off the DOM at init time, and a scrubbed
+                        // tween's init moment isn't deterministic — reloading mid-scroll
+                        // can fire `scroll` before DOMContentLoaded, initing the tween
+                        // while letters are still at their SSR opacity of 1, recording
+                        // 1 → 1 (heading never visibly fades). fromTo hardcodes both
+                        // ends so the DOM is never sampled; immediateRender:false stops
+                        // the `from` being slammed on at creation, which would otherwise
+                        // fight the gsap.set above.
+                        gsap.fromTo(
+                            charEls,
+                            { opacity: HEADING_DIM_OPACITY },
+                            {
+                                opacity: 1,
+                                immediateRender: false,
+                                stagger: {
+                                    each: HEADING_STAGGER_EACH,
+                                    from: "start",
+                                },
+                                scrollTrigger: {
+                                    trigger: container,
+                                    start: "top 70%",
+                                    end: "top top",
+                                    scrub: 1,
+                                },
+                            },
+                        );
 
-                    // All six images: hidden below the viewport, visible/interactable
-                    // via autoAlpha, waiting to be animated upward by the timeline.
-                    gsap.set([...sideEls, topEl, ...sideEls2, topEl2], {
-                        autoAlpha: 1,
-                        y: TRAVEL.hiddenBelow,
-                    });
+                        /**
+                         * Everything below is measured from the rendered reel, which is
+                         * what makes the CSS gaps above the single source of truth for
+                         * spacing: change a `mb-*` and the travel distance, the pin
+                         * length and the resting positions all follow on the next
+                         * refresh. No number is stated twice.
+                         */
+                        const rows = gsap.utils.toArray<HTMLElement>(
+                            reel.children,
+                        );
+                        const firstRow = rows[0];
+                        const lastRow = rows[rows.length - 1];
 
-                    // Heading fade: its OWN ScrollTrigger, separate from the pin
-                    // timeline below, so it starts as soon as barely visible
-                    // ("top 70%") and finishes ("top top") right as the pin begins.
-                    //
-                    // fromTo + immediateRender:false is load-bearing: a plain .to()
-                    // reads its start value off the DOM at init time, and a scrubbed
-                    // tween's init moment isn't deterministic — reloading mid-scroll
-                    // can fire `scroll` before DOMContentLoaded, initing the tween
-                    // while letters are still at their SSR opacity of 1, recording
-                    // 1 → 1 (heading never visibly fades). fromTo hardcodes both
-                    // ends so the DOM is never sampled; immediateRender:false stops
-                    // the `from` being slammed on at creation, which would otherwise
-                    // fight the gsap.set above.
-                    gsap.fromTo(
-                        charEls,
-                        { opacity: HEADING_DIM_OPACITY },
-                        {
-                            opacity: 1,
-                            immediateRender: false,
-                            stagger: { each: TIMING.textStaggerEach, from: "start" },
+                        // Distance from the reel's top edge to a row's middle. The reel
+                        // is absolutely positioned, so it is the rows' offsetParent.
+                        const centerOf = (row: HTMLElement) =>
+                            row.offsetTop + row.offsetHeight / 2;
+
+                        // The reel's own top edge sits at 50% of the stage (see its
+                        // class list), so cancelling a row's centre offset parks THAT
+                        // row dead centre. Start: first row one screen below that.
+                        // End: last row on it, which is the moment it covers the
+                        // heading and the pin lets go.
+                        const startY = () =>
+                            REEL_START_OFFSET * stage.offsetHeight -
+                            centerOf(firstRow);
+                        const endY = () => -centerOf(lastRow);
+
+                        const timeline = gsap.timeline({
                             scrollTrigger: {
                                 trigger: container,
-                                start: "top 70%",
-                                end: "top top",
+                                start: "top top",
+                                // Pin exactly as long as the reel needs to travel,
+                                // scaled by the pacing constant. Function-based so a
+                                // resize or a font/image reflow re-measures it.
+                                end: () =>
+                                    `+=${
+                                        (startY() - endY()) * SCROLL_PER_TRAVEL
+                                    }`,
                                 scrub: 1,
+                                pin: stage,
+                                pinSpacing: true,
+                                invalidateOnRefresh: true,
                             },
-                        },
-                    );
+                        });
 
-                    // Main timeline: drives every image/text phase. Because they all
-                    // share this one timeline, changing any timing value here
-                    // (duration, position params) affects every phase's relative
-                    // timing, not just the one you edited.
-                    //
-                    // `paused: true` is REQUIRED here: a GSAP timeline auto-plays on
-                    // the global ticker the moment it's created. We don't want that —
-                    // this timeline's playhead is driven manually from scroll position
-                    // in the ScrollTrigger.onUpdate below, so it must start paused and
-                    // never advance on its own.
-                    const tl = gsap.timeline({ paused: true });
+                        // The whole choreography: one linear translation of one
+                        // element. `ease: "none"` keeps motion proportional to scroll
+                        // speed at every point, which is what scrubbed animations need.
+                        timeline.fromTo(
+                            reel,
+                            { y: () => startY() },
+                            { y: () => endY(), ease: "none", duration: 1 },
+                        );
 
-                    // Heading opacity is deliberately NOT animated here — that's the
-                    // fromTo/ScrollTrigger above. Two scrubbed animations writing the
-                    // same property would race (last one to render wins, and it'd
-                    // sample its start value from whatever the first just wrote).
-
-                    // --- PHASE 1: side images (1 & 2) move from hiddenBelow to
-                    // hiddenAbove, from the first frame of the pin ---
-                    tl.to(
-                        sideEls,
-                        {
-                            y: TRAVEL.hiddenAbove,
-                            duration: TIMING.sideDuration,
-                            ease: TRAVEL_EASE,
-                        },
-                        TIMING.sideStart,
-                    );
-
-                    // --- PHASE 2: top image (3) starts once Phase 1 has played
-                    // topOverlapPercent% of its own duration — i.e. overlapping
-                    // with Phase 1 instead of waiting for it to fully finish ---
-                    tl.to(
-                        topEl,
-                        {
-                            y: TRAVEL.hiddenAbove,
-                            duration: TIMING.topDuration,
-                            ease: TRAVEL_EASE,
-                        },
-                        `<${TIMING.topOverlapPercent}%`,
-                    );
-
-                    // --- PHASE 3: side images batch 2 (4 & 5). Same style/duration/
-                    // ease as Phase 1 — only the target elements differ ---
-                    tl.to(
-                        sideEls2,
-                        {
-                            y: TRAVEL.hiddenAbove,
-                            duration: TIMING.sideDuration,
-                            ease: TRAVEL_EASE,
-                        },
-                        `<${TIMING.batch2OverlapPercent}%`,
-                    );
-
-                    // --- PHASE 4: top image batch 2 (6). Same style/duration/ease
-                    // as Phase 2, overlapping with Phase 3 ---
-                    tl.to(
-                        topEl2,
-                        {
-                            y: TRAVEL.hiddenAbove,
-                            duration: TIMING.topDuration,
-                            ease: TRAVEL_EASE,
-                        },
-                        `<${TIMING.topOverlapPercent}%`,
-                    );
-
-                    // Marks the moment topEl2 reaches its resting position over the
-                    // heading — landing where it would need to cover the h2.
-                    // Positioned relative to Phase 4's start, as a percentage of
-                    // topEl2's own travel. Added as a label (not derived from a
-                    // .set() below) so the pin-release math further down stays
-                    // identical whether or not the heading actually vanishes here.
-                    tl.addLabel("textGone", `<${TIMING.textVanishPercent}%`);
-
-                    // Heading disappears INSTANTLY (not a fade), desktop-only. .set()
-                    // rather than .to() because we want a hard snap with no duration.
-                    // Only lg's topImage2 is sized to fully cover the heading's box
-                    // (see its width/height classes below); at mobile/tablet widths
-                    // the heading wraps into more lines than topImage2 can cover
-                    // without oversizing it, so forcing autoAlpha:0 there left a bare
-                    // gap where the text used to be. Keep it visible on those
-                    // breakpoints instead — it scrolls away naturally once the pin
-                    // releases.
-                    if (isDesktop) {
-                        tl.set(text, { autoAlpha: 0 }, "textGone");
-                    }
-
-                    // Pin wiring: release the pin at the EXACT instant the heading
-                    // disappears, instead of holding through topEl2's remaining exit.
-                    //
-                    // Can't just shorten `end` on a normal `animation: tl` trigger —
-                    // a scrubbed ScrollTrigger always maps start→end onto the FULL
-                    // tl.duration(), so shrinking `end` only compresses the sequence
-                    // (topEl2 still fully exits, just faster), it never stops partway.
-                    //
-                    // Instead the playhead is driven manually and clamped to the
-                    // "textGone" moment: `self.progress` (0→1, scrub-smoothed) is
-                    // scaled to the [0, textGone] slice and written via tl.time().
-                    // Past `end`, the pin releases with topEl2 frozen mid-cover;
-                    // its unplayed tail never runs on-screen.
-                    //
-                    // `scrollPerTimeUnit` recovers the original pacing as a rate — the
-                    // prior design scrolled (150 * SLOWDOWN_FACTOR)% of viewport height
-                    // across the full tl.duration(). Applying that rate to just the
-                    // kept `textGone` slice gives the pin's scroll length at the same
-                    // image speed. Derived at runtime so it stays correct if
-                    // TIMING/SLOWDOWN_FACTOR change later.
-                    const textGoneTime = tl.labels.textGone;
-                    const scrollPerTimeUnit = (150 * SLOWDOWN_FACTOR) / tl.duration();
-                    const pinDistancePercent = scrollPerTimeUnit * textGoneTime;
-
-                    ScrollTrigger.create({
-                        trigger: container,
-                        start: "top top", // pin activates once container's top hits viewport top
-                        end: `+=${pinDistancePercent}%`, // scroll length of the [0, textGone] slice at original pacing
-                        scrub: 1, // smooth the scroll→progress mapping (1s catch-up)
-                        pin: stage, // the element that stays fixed on screen while pinned
-                        pinSpacing: true, // ScrollTrigger inserts a spacer exactly as tall as the pin duration, so no dead blank scroll trails the animation
-                        // Map smoothed scroll progress onto ONLY the first `textGone`
-                        // seconds of the timeline. This is what freezes topEl2 over the
-                        // heading at release instead of playing its exit.
-                        onUpdate: (self) => tl.time(self.progress * textGoneTime),
-                    });
-                }, containerRef);
+                        // Heading disappears INSTANTLY (not a fade) as the last image
+                        // lands on it — desktop only, because only there is that image
+                        // big enough to cover the heading's box. Below `lg` the heading
+                        // wraps into more lines than the image can hide, so removing it
+                        // would leave a bare gap; it stays visible and simply scrolls
+                        // away once the pin releases.
+                        if (isDesktop) {
+                            timeline.set(text, { autoAlpha: 0 });
+                        }
+                    },
+                    container,
+                );
 
                 // The measurements above ran before the Manrope webfont swapped in
                 // and before images decoded — both reflow the page afterwards and
@@ -350,7 +315,7 @@ export default function FamilyHistorySection() {
                 teardown = () => {
                     if (!alreadyLoaded)
                         window.removeEventListener("load", refresh);
-                    ctx.revert();
+                    mm.revert();
                 };
             },
         );
@@ -364,7 +329,7 @@ export default function FamilyHistorySection() {
     return (
         <div ref={containerRef} className="relative mb-25">
             {/* This is the element that gets pinned — stays fixed on screen
-                for the whole scroll range defined by tl's ScrollTrigger. */}
+                for the whole scroll range defined by the ScrollTrigger above. */}
             <div
                 ref={stageRef}
                 className="relative h-dvh w-full flex justify-center items-center overflow-hidden"
@@ -385,11 +350,6 @@ export default function FamilyHistorySection() {
                     // every viewport — mobile gets its OWN (smaller) cap
                     // instead of stretching to the full viewport width,
                     // which read as oversized/overflowing text edge-to-edge.
-                    // Font size is scaled down to match: at 48px on a
-                    // ~280px-wide mobile box the heading would wrap into a
-                    // tall column that no image could visually "cover" (see
-                    // topImage2 below, which the vanish tween relies on
-                    // landing on top of this text).
                     className="w-full max-w-70 sm:max-w-100 md:max-w-115 lg:max-w-133 text-black font-semibold text-[28px] sm:text-[34px] md:text-[40px] lg:text-[48px] leading-tight text-center relative z-1"
                 >
                     {HEADING_TEXT.split(" ").map((word, wi, arr) => (
@@ -420,135 +380,105 @@ export default function FamilyHistorySection() {
                     ))}
                 </h2>
 
-                {/* Batch 1 side images (1 & 2) */}
-                {sideImages.map((image, index) => (
-                    <div
-                        key={image.src}
-                        ref={(el) => {
-                            sideImageRefs.current[index] = el;
-                        }}
-                        className={[
-                            "absolute top-1/2 -translate-y-1/2 z-10 shrink-0",
-                            // Travel distance is in `vh` (see TRAVEL above),
-                            // independent of the element's own box size, so
-                            // shrinking these per breakpoint doesn't touch
-                            // the GSAP math — same pattern as gallery.tsx's
-                            // frame resize.
-                            image.variant === "wide"
-                                ? "w-40 h-34 sm:w-40 sm:h-35 md:w-56 md:h-49 lg:w-84 lg:h-74"
-                                : "w-28 h-42 sm:w-32 sm:h-46 md:w-44 md:h-64 lg:w-64 lg:h-94",
-                            // Outer-edge inset matches Container's `mx-30`
-                            // (120px) so these images line up vertically with
-                            // StaysPreviewSection's content edges below. Kept as
-                            // an `lg:` offset (mobile falls back to `left-8`)
-                            // to avoid over-insetting on narrow viewports.
-                            image.position === "left"
-                                ? "left-8 md:left-16 lg:left-30"
-                                : "right-8 md:right-16 lg:right-30",
-                        ].join(" ")}
-                    >
-                        <Image
-                            src={image.src}
-                            alt={image.alt}
-                            fill
-                            // Matches this div's width classes above (wide:
-                            // 160/160/224/336px, slim: 112/128/176/256px) so
-                            // the browser doesn't fetch an oversized source.
-                            sizes={
-                                image.variant === "wide"
-                                    ? "(min-width: 1024px) 336px, (min-width: 768px) 224px, 160px"
-                                    : "(min-width: 1024px) 256px, (min-width: 768px) 176px, (min-width: 640px) 128px, 112px"
-                            }
-                            className="object-cover rounded-2xl"
-                        />
-                    </div>
-                ))}
+                {/* The reel: every image in one column, translated as a single
+                    element. It has to stay absolutely positioned — the images
+                    must pass OVER the heading (`z-30` against the h2's `z-1`),
+                    and normal flow cannot overlap. But the spacing INSIDE it is
+                    ordinary flex layout, which is why `ROW_SPACING` is now the
+                    only place vertical distance is expressed.
 
-                {/* Batch 1 top/center image (3) */}
+                    `top-1/2` (no vertical centring translate) puts the reel's
+                    top edge on the stage's middle, so the GSAP math can park any
+                    row dead centre just by cancelling that row's own centre
+                    offset. A translate here would collide with the `y` GSAP
+                    writes.
+
+                    `invisible` is undone by `gsap.set(reel, {autoAlpha: 1})`
+                    once the deferred GSAP chunk lands. Without it the reel
+                    paints at rest — the first row sitting squarely on the
+                    heading — for as long as that import takes. */}
                 <div
-                    ref={topImageRef}
-                    className="absolute top-[12%] left-1/2 -translate-x-1/2 w-56 h-34 sm:w-56 sm:h-33 md:w-84 md:h-49 lg:w-122 lg:h-72 z-30"
+                    ref={reelRef}
+                    className="invisible absolute top-1/2 inset-x-0 z-30 flex flex-col"
+                >
+                    <SideRow images={sideImages} className={ROW_SPACING[0]} />
+                    <CenterRow
+                        image={topImage}
+                        frame={TOP_FRAME}
+                        sizes={TOP_SIZES}
+                        className={ROW_SPACING[1]}
+                    />
+                    <SideRow images={sideImages2} className={ROW_SPACING[2]} />
+                    <CenterRow
+                        image={topImage2}
+                        frame={TOP2_FRAME}
+                        sizes={TOP2_SIZES}
+                        className=""
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * One reel row holding the two edge images. `justify-between` plus the
+ * horizontal padding reproduces the old `left-8`/`right-8` insets (`lg:px-30`
+ * matches Container's `mx-30`, so these line up with the section below);
+ * `items-center` keeps the two differently sized frames on one axis, as their
+ * shared `top-1/2` anchor used to.
+ */
+function SideRow({
+    images,
+    className,
+}: {
+    images: SideImage[];
+    className: string;
+}) {
+    return (
+        <div
+            className={`flex items-center justify-between px-8 md:px-16 lg:px-30 ${className}`}
+        >
+            {images.map((image) => (
+                <div
+                    key={image.src}
+                    className={`relative shrink-0 ${SIDE_FRAME[image.variant]}`}
                 >
                     <Image
-                        src={topImage.src}
-                        alt={topImage.alt}
+                        src={image.src}
+                        alt={image.alt}
                         fill
-                        // Matches this div's width classes above (224/224/336/488px).
-                        sizes="(min-width: 1024px) 488px, (min-width: 768px) 336px, 224px"
+                        sizes={SIDE_SIZES[image.variant]}
                         className="object-cover rounded-2xl"
                     />
                 </div>
+            ))}
+        </div>
+    );
+}
 
-                {/* Batch 2 side images (4 & 5) — same layout/size classes as
-                    batch 1, only the ref array (sideImageRefs2) differs */}
-                {sideImages2.map((image, index) => (
-                    <div
-                        key={`batch2-${image.src}-${index}`}
-                        ref={(el) => {
-                            sideImageRefs2.current[index] = el;
-                        }}
-                        className={[
-                            "absolute top-1/2 -translate-y-1/2 z-10 shrink-0",
-                            image.variant === "wide"
-                                ? "w-40 h-34 sm:w-40 sm:h-35 md:w-56 md:h-49 lg:w-84 lg:h-74"
-                                : "w-28 h-42 sm:w-32 sm:h-46 md:w-44 md:h-64 lg:w-64 lg:h-94",
-                            // Outer-edge inset matches Container's `mx-30`
-                            // (120px) so these images line up vertically with
-                            // StaysPreviewSection's content edges below. Kept as
-                            // an `lg:` offset (mobile falls back to `left-8`)
-                            // to avoid over-insetting on narrow viewports.
-                            image.position === "left"
-                                ? "left-8 md:left-16 lg:left-30"
-                                : "right-8 md:right-16 lg:right-30",
-                        ].join(" ")}
-                    >
-                        <Image
-                            src={image.src}
-                            alt={image.alt}
-                            fill
-                            // Matches this div's width classes above (wide:
-                            // 160/160/224/336px, slim: 112/128/176/256px) so
-                            // the browser doesn't fetch an oversized source.
-                            sizes={
-                                image.variant === "wide"
-                                    ? "(min-width: 1024px) 336px, (min-width: 768px) 224px, 160px"
-                                    : "(min-width: 1024px) 256px, (min-width: 768px) 176px, (min-width: 640px) 128px, 112px"
-                            }
-                            className="object-cover rounded-2xl"
-                        />
-                    </div>
-                ))}
-
-                {/* Batch 2 top/center image (6) — same z-index as batch 1's
-                    top image, only the ref and vertical anchor differ.
-                    Anchored top-1/2 (not top-[12%] like the others) so it's
-                    centred on the SAME axis as the heading (also centred via
-                    the stage's items-center) instead of sitting near the top
-                    of the viewport — with a top-[12%] anchor the image and
-                    the multi-line heading only overlapped at their top edge,
-                    leaving the heading's lower lines exposed below it. Sized
-                    larger than the heading's own box at every breakpoint on
-                    purpose: on lg, the vanish tween above snaps the heading
-                    invisible right as this image reaches its resting
-                    position over it, and that "cover" illusion only reads
-                    if the image's box is at least as big as the text it's
-                    supposed to be covering. On mobile/tablet the heading
-                    isn't hidden via opacity (see isDesktop above), so this
-                    same oversizing is what visually covers it instead,
-                    purely through z-30 stacking over the heading's z-1. */}
-                <div
-                    ref={topImageRef2}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-84 h-80 sm:w-108 sm:h-84 md:w-124 md:h-92 lg:w-140 lg:h-103 z-30 shrink-0"
-                >
-                    <Image
-                        src={topImage2.src}
-                        alt={topImage2.alt}
-                        fill
-                        // Matches this div's width classes above (336/432/496/560px).
-                        sizes="(min-width: 1024px) 560px, (min-width: 768px) 496px, (min-width: 640px) 432px, 336px"
-                        className="object-cover rounded-2xl"
-                    />
-                </div>
+/** A reel row holding a single centred image. */
+function CenterRow({
+    image,
+    frame,
+    sizes,
+    className,
+}: {
+    image: { src: string; alt: string };
+    frame: string;
+    sizes: string;
+    className: string;
+}) {
+    return (
+        <div className={`flex justify-center ${className}`}>
+            <div className={`relative shrink-0 ${frame}`}>
+                <Image
+                    src={image.src}
+                    alt={image.alt}
+                    fill
+                    sizes={sizes}
+                    className="object-cover rounded-2xl"
+                />
             </div>
         </div>
     );
