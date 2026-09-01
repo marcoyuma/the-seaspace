@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
@@ -8,7 +9,11 @@ import {
     getStayReviews,
 } from "@/features/reviews/actions";
 import Container from "@/ui/container";
-import StayImageCarousel from "@/features/stays/components/stay-image-carousel";
+import Skeleton from "@/ui/skeleton";
+import StayImageCarousel, {
+    FRAME_HEIGHT_CLASSES,
+    FRAME_WIDTH_CLASSES,
+} from "@/features/stays/components/stay-image-carousel";
 import StayInfoSection from "@/features/stays/components/stay-info-section";
 import StayLocationSection from "@/features/stays/components/stay-location-section";
 import StayReviewsSection from "@/features/reviews/components/stay-reviews-section";
@@ -20,7 +25,7 @@ import StayReviewsSection from "@/features/reviews/components/stay-reviews-secti
  * the "show all" dialog, so one fetch serves both. The seed averages 25 per villa, which
  * leaves real headroom.
  *
- * ⚠️ Past this number the dialog stops being "all reviews". `get_stay_reviews` already takes
+ * Past this number the dialog stops being "all reviews". `get_stay_reviews` already takes
  * an offset for that day; the honest fix then is pagination inside the dialog, not a bigger
  * constant here.
  */
@@ -48,11 +53,65 @@ export async function generateMetadata({
     };
 }
 
-export default async function Page({
+/**
+ * Stands in for the whole villa while it loads: an image rail and the first rows of the
+ * block beneath it. Mirrors the carousel's own frame sizing so the swap does not shift.
+ */
+function StayDetailFallback() {
+    return (
+        <>
+            <div className={`relative w-full overflow-hidden ${FRAME_HEIGHT_CLASSES}`}>
+                {/* Three frames, same as the carousel's internal placeholder — enough to
+                    read as a rail without outrunning the viewport. */}
+                <div className="flex h-full w-max gap-6">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                        <Skeleton
+                            key={index}
+                            className={`h-full ${FRAME_WIDTH_CLASSES} shrink-0 rounded-xl`}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            <Container>
+                {/* Matches StayInfoSection's two-column grid and its spacing, so the
+                    headline lands where the placeholder put it. */}
+                <div className="grid grid-cols-1 gap-x-16 gap-y-10 pt-10 lg:grid-cols-2">
+                    <div className="flex flex-col gap-4">
+                        <Skeleton className="h-5 w-48 rounded-full" />
+                        <Skeleton className="h-12 w-full max-w-140 rounded-lg" />
+                        <Skeleton className="h-24 w-full rounded-lg" />
+                    </div>
+                    <Skeleton className="h-64 w-full rounded-2xl" />
+                </div>
+            </Container>
+        </>
+    );
+}
+
+/**
+ * Sync on purpose, and it does NOT await `params`.
+ *
+ * `generateStaticParams()` below only covers the villas that existed at build time, so a
+ * newer slug makes `params` request-time data. Under `cacheComponents` awaiting it here
+ * would put a runtime read above every boundary and block the whole document — the
+ * "Runtime data was accessed outside of <Suspense>" error. Passing the promise down
+ * un-awaited keeps the shell prerenderable, the same shape `book/page.tsx` uses.
+ */
+export default function Page({
     params,
 }: {
     params: Promise<{ stayId: string }>;
 }) {
+    return (
+        <Suspense fallback={<StayDetailFallback />}>
+            <StayDetail params={params} />
+        </Suspense>
+    );
+}
+
+/** The villa itself: every read this route makes, and everything they render. */
+async function StayDetail({ params }: { params: Promise<{ stayId: string }> }) {
     // `params` is a Promise in Next 16 — synchronous access was removed.
     const { stayId } = await params;
 

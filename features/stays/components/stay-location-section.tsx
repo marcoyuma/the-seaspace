@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
     AirplaneTiltIcon,
     CarProfileIcon,
@@ -6,6 +7,11 @@ import {
 import type { Stay } from "@/features/stays/types";
 import StayMap from "@/features/stays/components/stay-map";
 import TravelOptionCard from "@/features/stays/components/travel-option-card";
+
+/** Mirrors StayMap's own skeleton colour, so the swap never flashes or shifts. */
+function MapFallback() {
+    return <div className="h-full w-full bg-[#EEF1F3]" />;
+}
 
 /**
  * "How to get here": a pinned map of the stay plus ways to reach it.
@@ -27,12 +33,19 @@ export default function StayLocationSection({ stay }: { stay: Stay }) {
     return (
         <div className="rounded-[20px] bg-[#F7F8F9] p-3 mt-24">
             <div className="h-105 w-full overflow-hidden rounded-2xl">
-                <StayMap
-                    lat={lat}
-                    lng={lng}
-                    label={`${stay.name}, ${stay.location}`}
-                    stayId={stay.id}
-                />
+                {/* The map is the only purely client-side part of this page, so
+                    it is also the only place likely to touch a browser API. The
+                    boundary keeps the rest of the route prerenderable if it
+                    does — under `cacheComponents` an unguarded clock read in a
+                    Client Component costs the whole page its static shell. */}
+                <Suspense fallback={<MapFallback />}>
+                    <StayMap
+                        lat={lat}
+                        lng={lng}
+                        label={`${stay.name}, ${stay.location}`}
+                        stayId={stay.id}
+                    />
+                </Suspense>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -36,6 +36,12 @@ export const STAYS_CACHE_TAG = "stays";
 /**
  * Cache profile for the catalogue. One hour in production, one second in development.
  *
+ * Scope note: this governs only the CACHED readers — `getStay()` behind the prerendered villa
+ * detail page, `getStays()` behind generateStaticParams(), and the reviews aggregates. The
+ * /stays grid and the landing preview do not go through it at all: they call the uncached
+ * `*Fresh` variants in features/stays/actions.ts and stream inside a <Suspense> boundary, so
+ * no interval applies to them.
+ *
  * In production the tag above is invalidated on demand by the Supabase Database Webhook
  * that POSTs to app/api/revalidate/stays/route.ts, and the hourly interval is the safety
  * net behind it: pg_net is fire-and-forget, so a webhook that never arrives would

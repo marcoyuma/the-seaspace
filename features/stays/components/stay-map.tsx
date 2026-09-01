@@ -47,8 +47,6 @@ export default function StayMap({
     label: string;
     stayId: string;
 }) {
-    console.log(lat, lng, label, stayId);
-
     // Watches the skeleton, since the map it decides to load doesn't exist yet.
     const containerRef = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(false);

@@ -3,6 +3,7 @@ import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
 
 import type { AppImage } from "@/features/stays/types";
 import RatingSummary from "@/features/reviews/components/rating-summary";
+import { CHIP_SIZE } from "@/ui/pill-styles";
 
 interface StayCardPreviewProps {
     imageSrc: AppImage;
@@ -18,9 +19,12 @@ interface StayCardPreviewProps {
 
 /**
  * Preview card for a single stay/villa, used in `StaysPreviewSection`.
- * Displays a full-bleed image with a floating info pill (name + location)
- * anchored to the bottom, and a subtle zoom-on-hover effect to signal
- * interactivity before navigation/booking flow is wired up.
+ * Displays a full-bleed image with floating info anchored to the bottom, and a
+ * subtle zoom-on-hover effect to signal interactivity.
+ *
+ * The bottom overlay has two mutually exclusive forms: two separate chips below
+ * `md`, one wide bar with hover-driven roll animations from `md` up. See the
+ * comments on each block.
  */
 export default function StayCardPreview({
     imageSrc,
@@ -30,17 +34,13 @@ export default function StayCardPreview({
 }: StayCardPreviewProps) {
     return (
         <div
-            // Was a fixed 600x570 inline style — the root cause of the
-            // "hero image tidak tercrop" bug: two 600px cards need a
-            // >=1200px container, so anything narrower (including this
-            // grid's own `md:grid-cols-2` columns) got silently clipped.
-            // `w-full` + `aspect-[600/570]` keeps the exact 600:570 photo
-            // proportions from the original design while letting the grid
-            // column (1 col mobile, 2 col md+) drive the actual width.
-            className="relative w-full aspect-600/570 overflow-hidden cursor-pointer rounded-[20px] group"
+            // `aspect-3/2` is deliberately the same ratio as stay-card.tsx: the same villa
+            // photo appears on the landing page and in /stays, and a different ratio meant
+            // the two pages cropped it differently.
+            className="relative w-full aspect-3/2 overflow-hidden cursor-pointer rounded-[20px] group"
         >
             <Image
-                className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+                className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                 src={imageSrc.src}
                 placeholder="blur"
                 // Remote sources have no auto-generated blur — it comes from the database.
@@ -50,61 +50,101 @@ export default function StayCardPreview({
                 // `priority` is deprecated as of Next 16; `preload` is the replacement.
                 preload
                 fill
-                // `villaNameText` already conveys the subject visually adjacent
-                // to this image; alt text is kept descriptive for screen readers
-                // independent of the rendered overlay text.
+                // Same grid breakpoint as stay-card.tsx — one column, then two from `md`.
+                // Without this, `fill` defaults to 100vw and pulls a ~2x oversized file
+                // once the grid is two columns wide.
+                sizes="(max-width: 768px) 100vw, 50vw"
+                // Carries the villa name at every breakpoint, including the mobile overlay
+                // below where only the location is printed.
                 alt={`${villaNameText} in ${locationText}`}
             />
 
-            {/* Rating chip, mirroring the info pill at the opposite corner.
+            {/* Rating chip, mirroring the label at the opposite corner.
 
-                Deliberately NOT a third slot inside that pill: the pill runs two separate
-                roll animations (name→location on the left, location→arrow on the right),
-                and both size themselves from a grid whose cell is shared by two stacked
-                lines. Adding content there changes the widths those rolls are measured
-                against.
+                Deliberately NOT a third slot inside the bar below: that bar runs two
+                separate roll animations (name→location on the left, location→arrow on the
+                right), and both size themselves from a grid whose cell is shared by two
+                stacked lines. Adding content there changes the widths those rolls are
+                measured against.
 
                 `top-3 left-3` rather than `inset-x-3`, so the chip is as wide as its own
-                content instead of stretching across the card. `bg-white` and
-                `rounded-[20px]` are copied from the pill below so the two read as one
-                language — the same trick `stay-card.tsx` uses for its "New" badge.
+                content instead of stretching across the card.
 
                 No review count here: at this size the average alone is the useful half, and
-                the pill already owns the card's text budget. */}
+                the label already owns the card's text budget. */}
             {ratingAverage !== undefined && (
-                <div className="absolute top-3 left-3 rounded-[20px] bg-white px-3 py-1.5">
-                    <RatingSummary average={ratingAverage} size={16} />
+                <div
+                    className={`absolute top-3 left-3 rounded-[20px] bg-white ${CHIP_SIZE.sm}`}
+                >
+                    <RatingSummary
+                        average={ratingAverage}
+                        size={16}
+                        textScale="chip"
+                    />
                 </div>
             )}
 
-            {/* Floating info pill anchored to the bottom edge of the card.
-                Positioned with explicit offsets (not inset-0) so the height
-                stays driven by `min-h-12` rather than being stretched to
-                fill the parent. */}
-            <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-x-3 bg-white min-h-12 rounded-[20px] pl-4 pr-2 py-1">
+            {/* Mobile overlay: two separate chips pushed to opposite edges.
+
+                A 3/2 card is short — a single full-width white bar would eat roughly a
+                third of it at phone widths. Splitting it lets the photo breathe. Only the
+                location is printed: the villa name at this width forced a truncation that
+                cut the name mid-word, and the name is already in the image's alt text and
+                on the /stays card this links to. The roll animations are dropped rather
+                than reimplemented — without hover there is nothing to trigger them.
+
+                `hidden` (not opacity/visibility) is what keeps this from being announced
+                twice — the `md` block below is display:none at these widths, so only one
+                of the two is ever in the accessibility tree. */}
+            <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-x-3 md:hidden">
+                {/* Text size comes from CHIP_SIZE, not from the <p> — a `text-*` here would
+                    collide with the token's at equal specificity. See AGENTS.md. */}
+                <div
+                    className={`flex min-w-0 items-center rounded-[20px] bg-white ${CHIP_SIZE.md}`}
+                >
+                    <p className="truncate text-black font-medium tracking-normal">
+                        {locationText}
+                    </p>
+                </div>
+
+                {/* Sized to match the chip beside it so the two sit on one line. Decorative
+                    — the whole card is already wrapped in a <Link> by StaysPreviewSection,
+                    so this must not read as a second target. */}
+                <span
+                    aria-hidden
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white text-black sm:size-12"
+                >
+                    <ArrowRightIcon size={16} weight="bold" />
+                </span>
+            </div>
+
+            {/* Desktop overlay (`md` and up): the original single floating bar.
+
+                Not on CHIP_SIZE: its height comes from `min-h-12` and the 32px arrow it
+                hosts, not from `2 × py + leading`, so the token's padding rule doesn't
+                describe it. The asymmetric `pl-4 pr-2` is what keeps that arrow inset from
+                the right edge by the same optical amount as the text on the left. */}
+            <div className="absolute inset-x-3 bottom-3 hidden items-center justify-between gap-x-3 bg-white min-h-12 rounded-[20px] pl-4 pr-2 py-1 md:flex">
                 {/* Rolling label, same trick as `RollingNavLink` in
                     menu-panel.tsx: the villa name and the location sit
                     stacked one line-height apart inside a clipped box, and
                     the whole stack shifts up on hover so the location
-                    takes over the name's exact position and styling. */}
-                <div className="grid h-5.75 overflow-hidden">
+                    takes over the name's exact position and styling.
+
+                    `h-6` must stay equal to `leading-6` below: a shorter clip shaves the
+                    descender on "Twilight", a taller one lets the next line peek in. */}
+                <div className="grid h-6 overflow-hidden">
                     {/* Both lines share the same grid cell (`col-start-1
                         row-start-1`) so the container's width tracks
                         whichever text is longer — an `absolute` overlay
                         would size to the first line only and clip the
-                        other.
-
-                        Below `md` there's no hover to trigger the roll, so
-                        the layout starts already in the "post-hover" state
-                        (location showing, name rolled away) and only
-                        reverts to name-first + becomes hover-driven at
-                        `md` and up. */}
-                    <p className="col-start-1 row-start-1 -translate-y-full text-black font-medium text-[18px] leading-5.75 tracking-normal transition-transform duration-300 ease-out md:translate-y-0 md:group-hover:-translate-y-full motion-reduce:transition-none">
+                        other. */}
+                    <p className="col-start-1 row-start-1 translate-y-0 text-black font-medium text-[16px] leading-6 tracking-normal transition-transform duration-300 ease-out group-hover:-translate-y-full motion-reduce:transition-none">
                         {villaNameText}
                     </p>
                     <p
                         aria-hidden
-                        className="col-start-1 row-start-1 translate-y-0 text-black font-medium text-[18px] leading-5.75 tracking-normal transition-transform duration-300 ease-out md:translate-y-full md:group-hover:translate-y-0 motion-reduce:transition-none"
+                        className="col-start-1 row-start-1 translate-y-full text-black font-medium text-[16px] leading-6 tracking-normal transition-transform duration-300 ease-out group-hover:translate-y-0 motion-reduce:transition-none"
                     >
                         {locationText}
                     </p>
@@ -118,16 +158,12 @@ export default function StayCardPreview({
                     is driven by the wider of the two — the 32px circle
                     never clips the text. */}
                 <div className="grid h-8 shrink-0 items-center justify-items-end overflow-hidden">
-                    {/* Same mobile-first "already rolled" logic as the label:
-                        the arrow sits in place below `md`, and only becomes
-                        hover-driven (arrow rolls in, text rolls out) from
-                        `md` up where hover actually exists. */}
-                    <p className="col-start-1 row-start-1 -translate-y-full text-black/60 font-medium text-[16px] tracking-normal transition-transform duration-300 ease-out md:translate-y-0 md:group-hover:-translate-y-full motion-reduce:transition-none">
+                    <p className="col-start-1 row-start-1 translate-y-0 text-black/60 font-medium text-[16px] tracking-normal transition-transform duration-300 ease-out group-hover:-translate-y-full motion-reduce:transition-none">
                         {locationText}
                     </p>
                     <span
                         aria-hidden
-                        className="col-start-1 row-start-1 flex h-8 w-8 translate-y-0 items-center justify-center rounded-full border border-black text-black transition-transform duration-300 ease-out md:translate-y-full md:group-hover:translate-y-0 motion-reduce:transition-none"
+                        className="col-start-1 row-start-1 flex size-8 translate-y-full items-center justify-center rounded-full border border-black text-black transition-transform duration-300 ease-out group-hover:translate-y-0 motion-reduce:transition-none"
                     >
                         <ArrowRightIcon size={16} weight="bold" />
                     </span>

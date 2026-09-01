@@ -222,6 +222,19 @@ reached late in a page's render can't be a real HTTP redirect anymore — Next f
 visible one-second `<meta refresh>` stall. That's why auth redirects live in `proxy.ts`
 (optimistic, pre-filtering) *and* on the page (authoritative) rather than only on the page.
 
+The same flag is what makes it possible to stop arguing about SSG vs SSR per route. Under
+Cache Components every route is dynamic and the prerenderer lifts out whatever is static on
+its own, so freshness becomes a per-function call rather than a per-page mode. `/stays` is
+where that pays off: the grid used to `await` a `"use cache"` query with an hour-long profile,
+which meant a villa added in the admin panel could be missing from the catalogue for an hour
+*and* the page's heading waited on Supabase before anything rendered. It now reads an uncached
+`getStaysFresh()` inside a `<Suspense>` boundary — heading and layout flush immediately as
+static HTML, six `StayCardSkeleton`s hold the exact geometry of the real cards, and the list
+streams in current. `features/stays/actions.ts` keeps one private `fetchStays()` under two
+thin exports (cached and fresh) so the query is not duplicated to get two policies. The villa
+detail page deliberately keeps the cached path: it is prerendered via `generateStaticParams()`,
+and the Supabase webhook in `app/api/revalidate/stays/route.ts` is what keeps it honest.
+
 **Reconciling exclusive-end-date date-range semantics across a calendar UI, a database
 constraint, and a plain-language "free cancellation" policy** without re-deriving the same
 subtraction in three places. `bookings.end_date` is checkout day, not last night — a stay of

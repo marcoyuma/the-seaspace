@@ -6,7 +6,7 @@ import OverlineText from "@/ui/overline-text";
 import PillLink from "@/ui/pill-link";
 import StayCardPreview from "@/features/stays/components/stay-card-preview";
 import Text from "@/ui/text";
-import { getFeaturedStays } from "@/features/stays/actions";
+import { getFeaturedStaysFresh } from "@/features/stays/actions";
 import { getStayRatingSummaries } from "@/features/reviews/actions";
 import LinkPendingOverlay from "@/ui/link-pending-overlay";
 import Skeleton from "@/ui/skeleton";
@@ -23,20 +23,18 @@ const STAYS_PAGE_PATH = "/stays";
  * labelled "Tuscan Twilight Villa" while showing photos of two different villas. Reading
  * from the same source as /stays removes that failure mode entirely.
  *
- * Async Server Component: the query is cached and revalidated by the shared policy in
- * lib/supabase.ts, so this costs the landing page nothing per request.
- *
- * Still needs a <Suspense> boundary in app/page.tsx despite that caching: `"use cache"` lives
- * on `getFeaturedStays()`, not on this component, so from the prerenderer's point of view this
- * is an ordinary async component awaiting a promise — not something it can inline into the
- * static shell on its own.
+ * Async Server Component reading the UNCACHED featured query, so the strip always reflects
+ * what is flagged in the database right now — a villa featured this morning shows up on the
+ * next request, not on the next cache expiry. The <Suspense> boundary in app/page.tsx is what
+ * makes that free: the rest of the landing page is still prerendered as a static shell, and
+ * only this section waits on Supabase.
  */
 export default async function StaysPreviewSection() {
-    // Parallel: neither read depends on the other. The ratings call returns every villa in
-    // one round trip rather than one per card, and it is the same cached entry the stay
-    // detail page reads — so on a warm cache this section adds nothing.
+    // Parallel: neither read depends on the other. Ratings stay cached — they are an
+    // aggregate that only moves when someone posts a review, and that write path already
+    // invalidates the tag — while the featured list is read live.
     const [featuredStays, ratingSummaries] = await Promise.all([
-        getFeaturedStays(),
+        getFeaturedStaysFresh(),
         getStayRatingSummaries(),
     ]);
 
@@ -62,26 +60,13 @@ export default async function StaysPreviewSection() {
                     the card grid, not the spacing within this block. */}
                 <div className="w-full flex flex-col items-center gap-3 md:items-start">
                     <OverlineText>Rooms and suites</OverlineText>
-                    {/* `ui/heading.tsx`'s default `text-[48px]` is flat across
-                        every breakpoint. Landing-page headings are pinned to a
-                        single 36px instead of scaling per breakpoint — see
-                        RESPONSIVE-AUDIT.md Bagian F. `!` forces this to win over
-                        that default (same-specificity utility clashes are
-                        otherwise decided by Tailwind's generation order, not
-                        source position — see `faq-section.tsx`'s `!font-normal`
-                        for the same pattern already in use elsewhere). */}
-                    <Heading classname="!text-[36px]">Sea Escape</Heading>
+                    <Heading>Sea Escape</Heading>
 
                     <div className="w-full flex flex-col items-center gap-6 md:flex-row md:items-start md:justify-between">
-                        {/* `ui/text.tsx`'s default `max-w-128.25` (513px) never
-                            binds below that width, so on mobile this paragraph
-                            just wraps at whatever width `Container` leaves —
-                            i.e. it "follows" the container instead of having a
-                            width of its own. Every `<Text>` needs a DIFFERENT
-                            cap depending on its own copy length, so this can't
-                            live in the shared default; `!` overrides it here
-                            for this specific paragraph. */}
-                        <Text classname="!max-w-70 sm:!max-w-96 md:!max-w-105 lg:!max-w-128.25">
+                        {/* `width="narrow"`: the default 513px cap never binds on
+                            mobile, so this paragraph would just follow the
+                            container instead of holding a measure of its own. */}
+                        <Text width="narrow">
                             Each stay is crafted with intention, finished with
                             elegance, and designed to feel like a home away from
                             home surrounded by ocean breeze.
@@ -157,10 +142,10 @@ export function StaysPreviewSectionFallback() {
             >
                 <div className="w-full flex flex-col items-center gap-3 md:items-start">
                     <OverlineText>Rooms and suites</OverlineText>
-                    <Heading classname="!text-[36px]">Sea Escape</Heading>
+                    <Heading>Sea Escape</Heading>
 
                     <div className="w-full flex flex-col items-center gap-6 md:flex-row md:items-start md:justify-between">
-                        <Text classname="!max-w-70 sm:!max-w-96 md:!max-w-105 lg:!max-w-128.25">
+                        <Text width="narrow">
                             Each stay is crafted with intention, finished with
                             elegance, and designed to feel like a home away from
                             home surrounded by ocean breeze.
@@ -176,14 +161,23 @@ export function StaysPreviewSectionFallback() {
                     </div>
                 </div>
 
-                {/* Two placeholder cards, same aspect ratio as StayCardPreview, so the grid
-                    doesn't jump in height once real cards stream in. */}
+                {/* Two placeholder cards, same `aspect-3/2` as StayCardPreview, so the grid
+                    doesn't jump in height once real cards stream in. The inner blocks stand
+                    in for the card's floating info overlay, mirroring both of its forms:
+                    two separate pills below `md`, one wide bar from `md` up. Keep these in
+                    sync with stay-card-preview.tsx. */}
                 <div className="w-full grid grid-cols-1 gap-6 md:grid-cols-2">
                     {Array.from({ length: 2 }).map((_, index) => (
-                        <Skeleton
-                            key={index}
-                            className="w-full aspect-600/570 rounded-[20px]"
-                        />
+                        <div key={index} className="relative w-full aspect-3/2">
+                            <Skeleton className="h-full w-full rounded-[20px]" />
+
+                            <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-x-3 md:hidden">
+                                <div className="h-10 w-3/5 rounded-[20px] bg-white sm:h-12" />
+                                <div className="size-10 shrink-0 rounded-full bg-white sm:size-12" />
+                            </div>
+
+                            <div className="absolute inset-x-3 bottom-3 hidden min-h-12 rounded-[20px] bg-white md:block" />
+                        </div>
                     ))}
                 </div>
             </section>
