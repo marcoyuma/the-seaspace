@@ -104,6 +104,13 @@ export interface GuestBooking {
     /** ISO timestamp of when the reservation was made, not of the stay itself. */
     createdAt: string;
     guestNotes: string | null;
+    /**
+     * When the guest cancelled. `null` on cancellations the system made for them — a
+     * declined payment, the 0013 sweeper, or a seeded row.
+     */
+    cancelledAt: string | null;
+    /** The refund receipt, e.g. `DEMO-REFUND-GOPAY-3F7K2Q`. `null` when nothing was owed. */
+    refundReference: string | null;
 }
 
 /**
@@ -139,6 +146,15 @@ export interface CheckInInvite {
  */
 export type CheckInFormState =
     | { ok: true; bookingId: number }
+    | { ok: false; message: string }
+    | undefined;
+
+/**
+ * What the cancellation dialog gets back. `refunded` is `cancel_booking()`'s own return
+ * value rather than the action's arithmetic — the database owns the deadline rule.
+ */
+export type CancelFormState =
+    | { ok: true; refunded: boolean }
     | { ok: false; message: string }
     | undefined;
 

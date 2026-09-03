@@ -8,12 +8,21 @@ import { supabase, BOOKINGS_CACHE_TAG } from "@/lib/supabase";
 import { getAuthUser } from "@/features/auth/actions";
 import { getStay } from "@/features/stays/actions";
 import { buildCheckoutUrl } from "@/features/booking/lib/checkout-params";
-import { chargeDemoPayment } from "@/features/booking/lib/payment-gateway";
+import {
+    chargeDemoPayment,
+    refundDemoPayment,
+} from "@/features/booking/lib/payment-gateway";
 import { isPaymentMethod } from "@/features/booking/lib/payment-methods";
 import { isCheckInMethod } from "@/features/booking/lib/check-in-methods";
-import { nightsBetween } from "@/features/booking/lib/dates";
+import {
+    nightsBetween,
+    propertyTodayISO,
+    withinFreeCancellation,
+} from "@/features/booking/lib/dates";
+import { getGuestBooking } from "@/features/booking/actions";
 import {
     guestsBooked,
+    type CancelFormState,
     type CheckInFormState,
     type CheckoutFormState,
 } from "@/features/booking/types";
@@ -282,4 +291,95 @@ export async function checkIn(
     revalidatePath(`/account/trips/${bookingId}`);
 
     return { ok: true, bookingId };
+}
+
+// ---------------------------------------------------------------------------
+// Changing your mind
+// ---------------------------------------------------------------------------
+
+/** Custom SQLSTATEs raised by `cancel_booking`. See supabase/migrations/0019 §2. */
+const CANCEL_BOOKING_ERRORS: Record<string, string> = {
+    SB006: "That reservation is not yours, or no longer exists.",
+    SB019: "This reservation is not in a state that can be cancelled. Reload the page to see where it stands.",
+    // Either direction of the refund mismatch, and neither is the guest's doing.
+    SB020: "The refund for this reservation could not be worked out. Nothing was cancelled — reload and try again.",
+    SB021: "Your arrival day has passed, so this reservation can no longer be cancelled.",
+};
+
+/**
+ * Cancels a reservation, refunding it when the policy says so. README §11 has the rules.
+ *
+ * Shaped for `useActionState`. Never redirects — the guest stays on the reservation.
+ */
+export async function cancelBooking(
+    _prevState: CancelFormState,
+    formData: FormData,
+): Promise<CancelFormState> {
+    const bookingId = Number(readString(formData, "bookingId"));
+
+    if (!Number.isInteger(bookingId) || bookingId < 1) {
+        return { ok: false, message: "That reservation could not be found." };
+    }
+
+    const user = await getAuthUser();
+    if (!user) {
+        redirect(`/login?next=/account/trips/${bookingId}`);
+    }
+
+    // Ownership is the RLS policy behind this read, not a check written here.
+    const booking = await getGuestBooking(bookingId);
+    if (!booking) {
+        return { ok: false, message: CANCEL_BOOKING_ERRORS.SB006 };
+    }
+
+    if (booking.status !== "confirmed") {
+        return { ok: false, message: CANCEL_BOOKING_ERRORS.SB019 };
+    }
+
+    const today = propertyTodayISO();
+    if (booking.checkIn < today) {
+        return { ok: false, message: CANCEL_BOOKING_ERRORS.SB021 };
+    }
+
+    // Both halves of what `cancel_booking` calls `v_owed`: inside the free window, and
+    // actually charged. An unpaid hold has nothing to give back whatever the calendar says.
+    const owed =
+        Boolean(booking.paidAt) &&
+        withinFreeCancellation(booking.checkIn, today);
+
+    const refundReference =
+        owed && booking.paymentMethod
+            ? await refundDemoPayment({ method: booking.paymentMethod })
+            : null;
+
+    const supabaseWithSession = await createClient();
+
+    const { data: refunded, error } = await supabaseWithSession.rpc(
+        "cancel_booking",
+        { p_booking_id: bookingId, p_refund_reference: refundReference },
+    );
+
+    if (error || typeof refunded !== "boolean") {
+        const known = error && CANCEL_BOOKING_ERRORS[error.code];
+        if (!known) {
+            console.error(
+                `[booking:cancel] booking=${bookingId} code=${error?.code ?? "none"} ${error?.message ?? "no outcome returned"}`,
+            );
+        }
+
+        return {
+            ok: false,
+            message:
+                known ??
+                "The reservation could not be cancelled just now. Reload the page and try again.",
+        };
+    }
+
+    // The nights are back on the market and the guest may look straight at that calendar,
+    // so `updateTag` rather than `revalidateTag` — same case as `payAndBook()` above.
+    updateTag(`${BOOKINGS_CACHE_TAG}:${booking.staySlug}`);
+    revalidatePath("/account/trips");
+    revalidatePath(`/account/trips/${bookingId}`);
+
+    return { ok: true, refunded };
 }

@@ -22,6 +22,7 @@ import type { PaymentMethodId } from "@/features/booking/lib/payment-methods";
  * | The call is slow and can fail | `SETTLEMENT_DELAY_MS`, and a decline path |
  * | Success returns an opaque reference | `DEMO-…` reference |
  * | Settlement is a second step | `settle_booking_payment()` |
+ * | Refunding a settled charge is a separate call | `refundDemoPayment()` |
  *
  * So swapping this file for Stripe is: replace `chargeDemoPayment()` with a call that
  * creates a PaymentIntent, and move the `settle_booking_payment()` call into a webhook
@@ -92,12 +93,32 @@ export async function chargeDemoPayment({
 }
 
 /**
- * An opaque-looking receipt id, e.g. `DEMO-GOPAY-3F7K2Q`.
+ * "Refunds" a settled charge, returning the receipt — e.g. `DEMO-REFUND-GOPAY-3F7K2Q`.
+ * A bare string, not a `PaymentOutcome`: a settled charge is not declined on the way back.
+ *
+ * @param method The method the original charge went through.
+ *
+ * @example
+ * const reference = await refundDemoPayment({ method: "gopay" });
+ */
+export async function refundDemoPayment({
+    method,
+}: {
+    method: PaymentMethodId;
+}): Promise<string> {
+    await new Promise((resolve) => setTimeout(resolve, SETTLEMENT_DELAY_MS));
+
+    return demoReference(method, "REFUND");
+}
+
+/**
+ * An opaque-looking receipt id, e.g. `DEMO-GOPAY-3F7K2Q` or `DEMO-REFUND-GOPAY-3F7K2Q`.
  *
  * `DEMO-` is not decoration: this string is the only thing a guest could ever mistake for
  * proof of payment, so it says what it is in the first five characters.
  */
-function demoReference(method: PaymentMethodId): string {
+function demoReference(method: PaymentMethodId, kind?: "REFUND"): string {
     const random = Math.random().toString(36).slice(2, 8).toUpperCase();
-    return `DEMO-${method.toUpperCase().replace("-", "")}-${random}`;
+    const prefix = kind ? `DEMO-${kind}` : "DEMO";
+    return `${prefix}-${method.toUpperCase().replace("-", "")}-${random}`;
 }

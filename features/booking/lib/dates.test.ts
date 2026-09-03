@@ -21,6 +21,7 @@ import {
     startOfMonth,
     toISO,
     todayISO,
+    withinFreeCancellation,
 } from "@/features/booking/lib/dates";
 
 /**
@@ -364,6 +365,31 @@ describe("freeCancellationDeadline", () => {
 
     it("crosses a month boundary", () => {
         expect(freeCancellationDeadline("2026-08-01")).toBe("2026-07-31");
+    });
+});
+
+describe("withinFreeCancellation", () => {
+    const checkIn = "2026-08-18";
+
+    it("is true up to the day before the deadline", () => {
+        expect(withinFreeCancellation(checkIn, "2026-08-16")).toBe(true);
+        expect(withinFreeCancellation(checkIn, "2026-07-01")).toBe(true);
+    });
+
+    it("is false on the deadline day itself", () => {
+        // The load-bearing case. Strict `<`, so Aug 17 is already outside the window —
+        // the rounding must never promise a refund Airbnb's 3:00 PM rule would refuse.
+        expect(withinFreeCancellation(checkIn, "2026-08-17")).toBe(false);
+    });
+
+    it("is false on the check-in day, which is still cancellable", () => {
+        // No refund, but cancelling is still allowed here — the two rules are separate.
+        expect(withinFreeCancellation(checkIn, "2026-08-18")).toBe(false);
+    });
+
+    it("crosses a month boundary", () => {
+        expect(withinFreeCancellation("2026-08-01", "2026-07-30")).toBe(true);
+        expect(withinFreeCancellation("2026-08-01", "2026-07-31")).toBe(false);
     });
 });
 

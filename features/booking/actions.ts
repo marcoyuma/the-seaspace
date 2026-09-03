@@ -106,6 +106,7 @@ const GUEST_BOOKING_SELECT = `
     id, start_date, end_date, num_nights, num_guests,
     unit_price_per_night, discount_per_night, total_price,
     status, paid_at, created_at, guest_notes,
+    cancelled_at, refund_reference,
     check_in_method, access_code, payment_method, payment_reference,
     stays ( slug, name, location,
             stay_images ( storage_path, alt, blur_data_url, sort_order ) )
@@ -124,6 +125,9 @@ interface GuestBookingRow {
     paid_at: string | null;
     created_at: string;
     guest_notes: string | null;
+    // Both null unless the guest cancelled it themselves — see 0019's constraints.
+    cancelled_at: string | null;
+    refund_reference: string | null;
     // All four are null on the 140 seeded rows, which predate arrival methods and the
     // payment record entirely. See supabase/migrations/0012.
     check_in_method: CheckInMethodId | null;
@@ -172,6 +176,8 @@ function toGuestBooking(row: GuestBookingRow): GuestBooking {
         paidAt: row.paid_at,
         createdAt: row.created_at,
         guestNotes: row.guest_notes,
+        cancelledAt: row.cancelled_at,
+        refundReference: row.refund_reference,
         checkInMethod: row.check_in_method,
         accessCode: row.access_code,
         paymentMethod: row.payment_method,
