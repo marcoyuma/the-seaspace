@@ -10,6 +10,10 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { getAuthUser } from "@/features/auth/actions";
 import { MAX_BYTES as AVATAR_MAX_BYTES } from "@/features/auth/oauth-avatar";
 import {
+    MAX_UPLOAD_BYTES,
+    TOO_LARGE_MESSAGE,
+} from "@/features/auth/avatar-limits";
+import {
     OAUTH_NEXT_COOKIE,
     OAUTH_NEXT_MAX_AGE,
     safeNextPath,
@@ -528,9 +532,6 @@ export async function updateProfile(
     return { ok: true, message: "Saved." };
 }
 
-/** Sanity ceiling on the *original* upload, checked before it ever reaches `sharp`. */
-const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
-
 /**
  * Replaces the signed-in guest's avatar.
  *
@@ -554,7 +555,7 @@ export async function uploadAvatar(
         return { message: "Choose a photo first." };
     }
     if (file.size > MAX_UPLOAD_BYTES) {
-        return { message: "That photo is too large. Try one under 8 MB." };
+        return { message: TOO_LARGE_MESSAGE };
     }
 
     // Dynamic, not module-level: this file is "use server", so every export shares one
