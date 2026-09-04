@@ -973,10 +973,23 @@ What genuinely remains:
      not work in Postgres when a table-level grant exists, so the whole grant went and the
      reads became functions. Anything new that reads reviews must add an RPC, not a
      `.select()`. Full reasoning in `features/reviews/README.md` §2.
-4. **Cancelling a booking.** The refund policy is written down
-   (`features/booking/README.md` §11) and the `cancelled` status has existed since `0009`,
-   but a guest cannot trigger it. It is its own phase: a refund rule is a decision, not a
-   button.
+4. **`revoke … from public` does not keep `anon` out of a function.** Found while validating
+   `0019`: `anon` can invoke `cancel_booking`, `create_booking` and `settle_booking_payment`
+   alike. Supabase's default privileges grant `EXECUTE` to `anon` **explicitly**, and revoking
+   from `PUBLIC` leaves an explicit role grant in place — so the sentence `0010` writes, and
+   every migration since repeats, is wrong. Closing it needs
+   `revoke all on function … from anon`.
+
+   ⚠️ **Nothing is exposed today, which is why this is an item and not an incident.** All three
+   functions key off `auth.uid()`, NULL for `anon`, so the call bounces at `SB003` or `SB006`
+   before touching a row — verified against all three. The fix is its own change: it touches
+   the grants in `0011`, `0012` and `0019`, and the claim in `0010` has to be corrected with
+   them.
+
+> **Step 22 closed a third item.** Guests can now cancel their own bookings —
+> `cancel_booking()` in `0019`, with `cancelled_at` and `refund_reference` beside it. The
+> refund rule that used to make this "a decision, not a button" is written into the function
+> itself, which rejects a refund mismatch in either direction.
 
 > **Steps 15–21 closed the two items that used to sit here.** Bookings are read and written
 > by the application now — see `features/booking/README.md` for the whole path. One rule from

@@ -9,13 +9,15 @@ import { getOwnBookingReview } from "@/features/reviews/actions";
 import ReviewPrompt from "@/features/reviews/components/review-prompt";
 import ArrivalInstructions from "@/features/booking/components/arrival-instructions";
 import BookingStatusBadge from "@/features/booking/components/booking-status-badge";
+import CancelBookingDialog from "@/features/booking/components/cancel-booking-dialog";
 import { paymentMethodLabel } from "@/features/booking/lib/payment-methods";
-import type { BookingStatus } from "@/features/booking/types";
+import type { BookingStatus, GuestBooking } from "@/features/booking/types";
 import {
     formatDayMonth,
     formatFullDate,
     freeCancellationDeadline,
     propertyTodayISO,
+    withinFreeCancellation,
 } from "@/features/booking/lib/dates";
 import { idr } from "@/lib/format";
 import HorizontalLine from "@/ui/horizontal-line";
@@ -35,6 +37,24 @@ const HEADINGS: Record<BookingStatus, string> = {
     cancelled: "Reservation cancelled",
     no_show: "This stay went unused",
 };
+
+/**
+ * What cancelling this reservation costs, as one sentence for the dialog.
+ *
+ * Formatted here rather than in the dialog so no money formatter reaches the browser —
+ * the same reason `ReviewPrompt` is handed an already-formatted date range.
+ */
+function cancelConsequence(booking: GuestBooking, isRefundable: boolean): string {
+    if (!booking.paidAt) {
+        return "Nothing was charged for this reservation, so there is nothing to refund. The nights go back on the market straight away.";
+    }
+
+    if (!isRefundable) {
+        return "This is inside 24 hours of check-in, so there is no refund. The nights still go back on the market.";
+    }
+
+    return `Cancelling now refunds the full ${idr.format(booking.totalPrice)}. The nights go back on the market straight away.`;
+}
 
 /** A label/value line, same typography as the booking summary on the stay page. */
 function Row({ label, value }: { label: string; value: string }) {
@@ -110,8 +130,14 @@ async function TripDetail({
 
     const nightlyAfterDiscount =
         booking.pricePerNight - booking.discountPerNight;
-    const isUpcoming =
-        booking.status === "confirmed" && booking.checkIn > propertyTodayISO();
+
+    // Two different windows, and they close on different days. `start_date < today` is this
+    // codebase's definition of "past", so the arrival day itself is still cancellable.
+    const today = propertyTodayISO();
+    const isCancellable =
+        booking.status === "confirmed" && booking.checkIn >= today;
+    const isRefundable =
+        isCancellable && withinFreeCancellation(booking.checkIn, today);
 
     // Only a completed stay may be reviewed, and 'checked_out' is the one status that means
     // it: 0013's hourly job writes it, and that job is forbidden from writing 'checked_in'
@@ -254,6 +280,20 @@ async function TripDetail({
                                 value={booking.paymentReference}
                             />
                         )}
+                        {booking.cancelledAt && (
+                            <Row
+                                label="Cancelled on"
+                                value={formatFullDate(
+                                    booking.cancelledAt.slice(0, 10),
+                                )}
+                            />
+                        )}
+                        {booking.refundReference && (
+                            <Row
+                                label="Refund reference"
+                                value={booking.refundReference}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -264,6 +304,29 @@ async function TripDetail({
                     rate on the day you booked. This was a simulated payment —
                     no money moved.
                 </p>
+
+                {/* Absent rather than disabled once the window closes, for the same reason
+                    the review prompt below is: the badge already says where this stands. */}
+                {isCancellable && (
+                    <div className="mt-6 border-t border-black/10 pt-6">
+                        <CancelBookingDialog
+                            bookingId={booking.id}
+                            consequence={cancelConsequence(
+                                booking,
+                                isRefundable,
+                            )}
+                            deadlineNote={
+                                isRefundable
+                                    ? `Free cancellation applies before ${formatDayMonth(
+                                          freeCancellationDeadline(
+                                              booking.checkIn,
+                                          ),
+                                      )}.`
+                                    : null
+                            }
+                        />
+                    </div>
+                )}
             </section>
 
             <ArrivalInstructions booking={booking} />
@@ -304,14 +367,14 @@ async function TripDetail({
             <p className="mt-8 text-[16px] font-medium text-black/60">
                 Booking #{booking.id}, made on{" "}
                 {formatFullDate(booking.createdAt.slice(0, 10))}.
-                {isUpcoming && (
+                {isRefundable && (
                     <>
                         {" "}
-                        Free cancellation until{" "}
+                        Free cancellation before{" "}
                         {formatDayMonth(
                             freeCancellationDeadline(booking.checkIn),
-                        )}{" "}
-                        — though cancelling is not built yet.
+                        )}
+                        .
                     </>
                 )}
             </p>

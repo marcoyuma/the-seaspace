@@ -243,7 +243,9 @@ this exclusive representation happens in exactly one function, `expandBlockedDay
 `features/booking/lib/dates.ts`, and every other consumer (the exclusion constraint's
 `daterange(..., '[)')`, the calendar's `checkoutOnlyDay` handling of same-day turnover, the
 door code's `today >= end_date` check) is built to agree with that single definition rather
-than reimplementing it.
+than reimplementing it. Cancellation joined that set in `0019`: `withinFreeCancellation()` and
+`cancel_booking()`'s `start_date - 1` are the same comparison on both sides of the wire, and
+the function rejects a refund that disagrees with it in either direction.
 
 **Diagnosing a live SMTP failure with no working error surface**, documented in
 `features/auth/README.md`'s "Email delivery: what was tried" section — three mail providers

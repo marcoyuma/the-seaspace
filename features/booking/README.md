@@ -383,8 +383,21 @@ Airbnb measures the 24 hours against the 3:00 PM local check-in time. This site 
 before arrival — the same answer for every hour a guest would realistically cancel at, and
 never more generous than the rule it is adapting.
 
-⚠️ **Cancelling is still not built.** The date is shown because it is part of what a guest
-is agreeing to; the trip page says plainly that the action does not exist yet.
+**Cancelling late is allowed, and costs the refund.** Closing the window at the deadline
+would hold dates nobody is coming for — a villa released the day before arrival can still be
+sold. So there are two outcomes, and the dialog names which one applies before the guest
+commits. Only `confirmed` bookings, and only while the arrival day has not passed: the door
+opens *on* `start_date`, so the check-in day still belongs to the booking.
+
+`withinFreeCancellation()` is the comparison, and it is **strict** — the deadline day is
+already outside the window. `cancel_booking()` mirrors it in SQL and rejects a mismatch in
+either direction, so neither an unearned refund nor a missed one can be written.
+
+⚠️ [`0019_booking_cancellation.sql`](../../supabase/migrations/0019_booking_cancellation.sql)
+is where the reasoning lives: the two columns and why each constraint is one-directional, the
+three SQLSTATEs, the four precedents behind the arrival-day boundary, and who decides the
+refund. `cancelBooking()` in [`server-actions.ts`](server-actions.ts) writes last rather than
+first — the reverse of `payAndBook()` §6 — because the safe failure here is "still booked".
 
 ## 12. Two clocks, and which one wins
 
@@ -436,7 +449,7 @@ a real checkout flow"*; that database now exists.
 | File | Role |
 |---|---|
 | [`actions.ts`](actions.ts) | Reads. `getStayBookedRanges()` (cached, anonymous client), `getGuestBookings()` / `getGuestBooking()` (**never** cached, session client), `getCheckInInvite()` (never cached, anonymous by necessity) |
-| [`server-actions.ts`](server-actions.ts) | The mutations: `payAndBook()` and `checkIn()` |
+| [`server-actions.ts`](server-actions.ts) | The mutations: `payAndBook()`, `checkIn()` and `cancelBooking()` |
 | [`types.ts`](types.ts) | `BookedRange`, `GuestCounts`, `DateSelection`, `BookingStatus`, `GuestBooking`, `CheckInInvite`, `guestsBooked()` |
 | [`lib/dates.ts`](lib/dates.ts) | All calendar arithmetic. No dependency — see below |
 | [`lib/checkout-params.ts`](lib/checkout-params.ts) | Builds and re-parses the checkout URL |
@@ -501,8 +514,6 @@ prepare a villa are **the villa team**, and guest notes are addressed to them.
 
 ## 15. Still ahead
 
-- [ ] **Cancelling a booking.** The policy is written (§11) and the status value exists; the
-      action does not. Its own phase, because a refund rule is a decision, not a button.
 - [ ] **Nothing tells a guest their stay was marked `no_show`.** The trips page states it
       plainly if they look, but a booking that quietly went unused is exactly the kind of
       thing an email exists for — and this project has no working mail sender

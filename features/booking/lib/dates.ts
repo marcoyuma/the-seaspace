@@ -275,7 +275,8 @@ export function parseUsDate(value: string): string | null {
 }
 
 /**
- * The last day a guest can cancel and still be refunded in full.
+ * The day the free-cancellation window runs out. Cancelling must happen BEFORE it, which
+ * `withinFreeCancellation()` below is the check for.
  *
  * Airbnb's "Flexible" policy: a full refund if the guest cancels at least 24 hours
  * before check-in. Airbnb measures that against the 3:00 PM local check-in time; this
@@ -285,4 +286,12 @@ export function parseUsDate(value: string): string | null {
  */
 export function freeCancellationDeadline(checkIn: string): string {
     return addDays(checkIn, -1);
+}
+
+/**
+ * Whether a cancellation made on `today` is still inside the free window. Strict `<`: the
+ * deadline day is already outside it, and `cancel_booking()` in 0019 mirrors that exactly.
+ */
+export function withinFreeCancellation(checkIn: string, today: string): boolean {
+    return today < freeCancellationDeadline(checkIn);
 }
