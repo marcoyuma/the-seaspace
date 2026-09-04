@@ -7,6 +7,10 @@ import Image from "next/image";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/ssr";
 
 import { uploadAvatar } from "@/features/auth/server-actions";
+import {
+    MAX_UPLOAD_BYTES,
+    TOO_LARGE_MESSAGE,
+} from "@/features/auth/avatar-limits";
 import { publicStorageUrl } from "@/lib/supabase";
 import { FormBanner } from "@/features/auth/components/form-primitives";
 import { PILL_SIZE } from "@/ui/pill-styles";
@@ -29,6 +33,9 @@ export default function AvatarUpload({
     const [state, action, pending] = useActionState(uploadAvatar, undefined);
     const formRef = useRef<HTMLFormElement>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    // A file turned away here never reaches the action, so `state` stays empty — without its
+    // own slot the rejection would be invisible, which is exactly how this used to fail.
+    const [rejection, setRejection] = useState<string | null>(null);
 
     // Cleanup-only: revokes the *previous* blob once a new one replaces it, and the last one
     // on unmount. Derived during render (below) rather than cleared here, so this effect never
@@ -52,8 +59,12 @@ export default function AvatarUpload({
 
     return (
         <form ref={formRef} action={action} className="flex flex-col gap-4">
-            {state?.message && (
-                <FormBanner message={state.message} ok={state.ok} />
+            {rejection ? (
+                <FormBanner message={rejection} />
+            ) : (
+                state?.message && (
+                    <FormBanner message={state.message} ok={state.ok} />
+                )
             )}
 
             <div className="flex items-center gap-6">
@@ -101,11 +112,13 @@ export default function AvatarUpload({
 
                         // Purely a size hint before the round-trip — sharp on the server is
                         // the real check, this just avoids uploading something doomed to fail.
-                        if (file.size > 8 * 1024 * 1024) {
+                        if (file.size > MAX_UPLOAD_BYTES) {
                             event.target.value = "";
+                            setRejection(TOO_LARGE_MESSAGE);
                             return;
                         }
 
+                        setRejection(null);
                         setPreviewUrl(URL.createObjectURL(file));
                         formRef.current?.requestSubmit();
                     }}

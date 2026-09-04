@@ -43,7 +43,17 @@ const nextConfig: NextConfig = {
             ),
         ],
     },
-    experimental: { optimizePackageImports: ["@phosphor-icons/react"] },
+    experimental: {
+        optimizePackageImports: ["@phosphor-icons/react"],
+
+        // Avatar uploads travel through a Server Action, and the default body cap is 1 MB —
+        // small enough that an ordinary phone photo was rejected before uploadAvatar ever ran.
+        // 4 MB, not more: Vercel caps a serverless request body at 4.5 MB, so a larger number
+        // here would just move the same silent failure to a boundary we do not control.
+        // MAX_UPLOAD_BYTES in features/auth/avatar-limits.ts sits a megabyte below this on
+        // purpose — see the comment there.
+        serverActions: { bodySizeLimit: "4mb" },
+    },
 };
 
 export default nextConfig;

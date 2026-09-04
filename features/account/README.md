@@ -34,7 +34,9 @@ Auth itself — sign-in, sessions, `proxy.ts`, OAuth — is documented in
 
 The avatar write goes through `uploadAvatar` in `features/auth/server-actions.ts`, next to
 `updateProfile` — same ownership model, same file. `oauth-avatar.ts`'s `ACCEPTED_TYPES` and
-`MAX_BYTES` are exported and reused there rather than duplicated.
+`MAX_BYTES` are exported and reused there rather than duplicated, and `avatar-limits.ts` does
+the same for the ceiling on the way *in* — that one has to be readable from the browser too,
+which is why it sits in a module of its own with no imports.
 
 The write goes through `updateProfile` in `features/auth/server-actions.ts`. No ownership
 check is written in application code, and none belongs there: the RLS policy
@@ -174,6 +176,23 @@ the re-encoded `webp` output never carries EXIF forward, because `sharp` only co
 when `.withMetadata()` is called. The client-side size check in `avatar-upload.tsx` is
 deliberately just a fast-fail before the round-trip — the 512 KB ceiling is enforced by
 `sharp`'s output size and by the bucket itself, not by the browser.
+
+### Three ceilings, and why they differ
+
+| Ceiling | Value | Enforced by |
+|---|---|---|
+| Request body | 4 MB | `serverActions.bodySizeLimit` in `next.config.ts` |
+| Upload going in | 3 MB | `MAX_UPLOAD_BYTES` in `avatar-limits.ts`, checked on both sides |
+| Stored file coming out | 512 KB | `sharp`'s output plus the bucket's own limit |
+
+The body cap exists because Next's default is **1 MB**, which quietly rejected any ordinary
+phone photo *before* `uploadAvatar` ran — no log, no message, nothing for the guest to act on.
+4 MB rather than more: Vercel caps a serverless request body at 4.5 MB.
+
+The upload ceiling sits a megabyte under the body cap on purpose. Next measures the whole
+multipart body rather than the file, so setting the two equal would let a file slip past our
+check and die at the framework instead — and a framework rejection cannot be turned into a
+sentence anyone can read. The gap is what guarantees every refusal comes from our own code.
 
 ### Prerequisites — all met
 
