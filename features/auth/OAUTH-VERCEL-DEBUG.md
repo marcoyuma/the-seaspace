@@ -1,7 +1,8 @@
 # Debugging: login gagal total di Vercel, jalan normal di lokal
 
-**Status: root cause terkonfirmasi lewat Vercel Function Logs. Fix dynamic import sudah
-diterapkan di `server-actions.ts`, menunggu deploy ulang untuk verifikasi di production.**
+**Status: root cause terkonfirmasi lewat Vercel Function Logs dan sudah dibereskan sampai ke
+akarnya (versi `sharp` disamakan). Lolos verifikasi lokal, menunggu verifikasi di preview
+deployment PR sebelum masuk production.**
 
 Dokumen kerja terpisah dari [README.md](README.md) — README itu dokumen "status: built and
 working" untuk keadaan normal, dan ada bagian di sana yang klaim OAuth "proven working end to
@@ -63,9 +64,25 @@ Components secara default (`serverExternalPackages` bawaan — dicek langsung di
 `sharp` ada di daftarnya). Jadi ini bukan soal `next.config.ts` kurang konfigurasi — dugaannya
 lebih ke sisi install/tracing binary native di build Vercel.
 
-**Petunjuk pendukung, belum konklusif:** `pnpm-lock.yaml` mencantumkan entri untuk dua versi
-sharp (`0.34.5` dan `0.35.3`) padahal `package.json` cuma minta `^0.35.3`. Bukan bukti
-langsung, tapi konsisten dengan resolusi dependency `sharp` yang agak tidak bersih.
+## Akar masalahnya: dua versi `sharp` hidup bareng
+
+Dugaan "lockfile agak kotor" ternyata bukan petunjuk sampingan — itu penyebabnya. `pnpm why
+sharp` menunjukkan dua versi ter-install sekaligus:
+
+| Versi | Dari mana | Butuh libvips |
+|---|---|---|
+| `sharp@0.34.5` | optional dependency bawaan `next@16.2.3` sendiri | `1.2.4` |
+| `sharp@0.35.3` | `package.json` kita | `1.3.2` → **`libvips-cpp.so.8.18.3`** |
+
+File tracing Vercel (`@vercel/nft`) punya penanganan khusus untuk `sharp`, ditulis mengikuti
+versi yang dibawa Next sendiri (0.34.x). Versi 0.35 mengubah bentuk dependency-nya — libvips
+naik ke 1.3.x dan muncul paket baru `@img/colour` — sehingga `.node`-nya ikut ter-copy ke
+lambda tapi `libvips-cpp.so.8.18.3` yang dibutuhkannya **tidak**. Persis bunyi errornya.
+
+Perbaikannya: samakan versi kita ke `^0.34.5`, supaya cuma ada satu sharp dan satu libvips —
+versi yang memang sudah dikenal tracing-nya Next. Aman karena `sharp` cuma dipakai di satu
+tempat di seluruh repo (`uploadAvatar`), dan API yang dipakai (`.resize()`, `.webp()`,
+`.toBuffer()`) identik di 0.34 dan 0.35.
 
 ## Dugaan sekunder: config OAuth belum diupdate untuk domain Vercel
 
@@ -93,27 +110,31 @@ dan independen**, yang baru kelihatan lagi setelah `sharp` (dugaan utama) beres.
 
       Native binary `sharp` gagal dimuat di runtime Vercel — root cause terkonfirmasi, bukan
       lagi dugaan.
-- [x] **2. Fix diterapkan:** `import sharp from "sharp"` di level modul `server-actions.ts`
-      dihapus, diganti dynamic import (`const { default: sharp } = await import("sharp")`)
-      di dalam `try` block `uploadAvatar` saja. Sekarang kegagalan load `sharp` tertangkap
-      lokal di fungsi itu ("That file isn't a photo Seaspace can read.") dan tidak lagi
-      menjatuhkan `signIn`, `signUp`, `signInWithProvider`, dst. `npx tsc --noEmit` bersih.
-      **Belum di-deploy ulang ke Vercel untuk verifikasi end-to-end.**
-- [ ] **3. Kalau log TIDAK menyebut `sharp`:** *(tidak perlu — sudah terbukti `sharp`)*.
-- [ ] **4. Setelah email/password jalan lagi di Vercel:** cek Supabase Dashboard →
-      Authentication → URL Configuration — Site URL & Redirect URLs sudah mencakup domain
-      production Vercel (bukan cuma `localhost`).
-- [ ] **5. Cek Google Cloud Console → Authorized JavaScript origins** sudah mencakup domain
+- [x] **2. Isolasi kegagalan:** `import sharp from "sharp"` di level modul `server-actions.ts`
+      dihapus, diganti dynamic import di dalam `uploadAvatar`. Kegagalan load `sharp` sekarang
+      tertangkap lokal di fungsi itu dan tidak lagi menjatuhkan `signIn`, `signUp`,
+      `signInWithProvider`, dst.
+- [x] **3. Akar masalah dibereskan:** `sharp` di `package.json` diturunkan `^0.35.3` →
+      `^0.34.5`, menyamai versi yang sudah dibawa `next@16.2.3` sendiri. `pnpm why sharp`
+      sekarang menjawab "Found 1 version of sharp", dan `libvips-linux-x64@1.3.2` (yang
+      `.so`-nya hilang di Vercel) sudah tidak ada lagi di lockfile.
+- [x] **4. Pesan gagal dibikin jujur:** load `sharp` dipisah dari blok decode. Kalau modulnya
+      yang tidak bisa dimuat, dicatat lewat `logAuthError("uploadAvatar:sharp", ...)` dan tamu
+      dapat pesan "Photo uploads are unavailable right now" — bukan lagi dituduh menaruh file
+      yang bukan foto.
+- [x] **5. Verifikasi lokal:** `tsc --noEmit` bersih, `pnpm build` sukses (semua route tetap
+      `◐ Partial Prerender`), `pnpm test` 135/135 lolos, dan re-encode nyata pakai sharp 0.34.5
+      diuji langsung lewat Node — `mod.default` terbukti callable, bukan namespace.
+- [ ] **6. Verifikasi di preview deployment PR** (bukan production): login email/password,
+      login GitHub + Google, ganti foto profil di `/account`, lalu
+      `vercel logs --environment preview --level error` harus bersih dari `ERR_DLOPEN_FAILED`.
+- [ ] **7. Setelah PR di-merge:** ulangi verifikasi di production
+      (`the-seaspace-seven.vercel.app`).
+- [ ] **8. Cek Supabase Dashboard → Authentication → URL Configuration** — Site URL & Redirect
+      URLs sudah mencakup domain production Vercel (bukan cuma `localhost`). **Belum pernah
+      dicek** dan bisa bikin OAuth gagal secara terpisah walaupun `sharp` sudah beres.
+- [ ] **9. Cek Google Cloud Console → Authorized JavaScript origins** sudah mencakup domain
       production Vercel juga.
-- [ ] **6. Follow-up terpisah, belum digarap:** `pnpm why sharp` menunjukkan **dua sharp
-      ter-install bersamaan** — `sharp@0.34.5` (optional dependency bawaan `next@16.2.3`
-      sendiri, dipakai internal untuk Image Optimization) dan `sharp@0.35.3` (punya kita,
-      lewat `package.json`). Ini kemungkinan penyebab libvips versi yang salah yang
-      ke-trace ke output Vercel (`libvips-cpp.so.8.18.3` tidak ketemu). Dynamic import di
-      langkah #2 sudah bikin `uploadAvatar` gagal dengan aman kalau ini masih terjadi, tapi
-      **fitur ganti avatar manual bisa saja masih rusak di production** sampai duplikasi
-      versi ini dibereskan (opsi: pin `sharp` ke versi yang sama dengan yang diminta
-      `next`, atau pakai `pnpm.overrides`). Perlu diuji manual di production setelah deploy.
 
 ## Tabel tracking perubahan
 
@@ -121,6 +142,10 @@ dan independen**, yang baru kelihatan lagi setelah `sharp` (dugaan utama) beres.
 |---|---|---|---|
 | 2026-09-04 | Analisis awal dari baca kode (tanpa eksekusi) | Hipotesis utama: `import sharp` di `server-actions.ts:8` meracuni seluruh file di runtime Vercel | Belum diverifikasi lewat log — lihat checklist di atas |
 | 2026-09-04 | Login & link `vercel` CLI, tarik `vercel logs --environment production --status-code 500` | **Terkonfirmasi**: `POST /login` gagal karena `ERR_DLOPEN_FAILED: libvips-cpp.so.8.18.3` saat load `sharp` | Root cause fix, bukan lagi dugaan |
+| 2026-09-04 | Merge PR #3 lalu rebuild production, error masih sama | Yang ter-merge itu `feat/landing-preloader`, **bukan** branch fix-nya — `origin/main` masih punya `import sharp` di baris 8 | Bukan fix yang gagal, tapi fix yang belum pernah ikut ter-deploy |
+| 2026-09-04 | `package.json`: `sharp` `^0.35.3` → `^0.34.5`, regenerasi lockfile | `pnpm why sharp` jadi "Found 1 version"; libvips `1.3.2` hilang dari lockfile | Menyamai versi yang dibawa `next` sendiri, yang dikenal file-tracing Vercel |
+| 2026-09-04 | Pisahkan gagal-load dari gagal-decode di `uploadAvatar`, pakai `logAuthError` | Kegagalan infra sekarang kelihatan di log, pesan ke tamu tidak lagi menyesatkan | — |
+| 2026-09-04 | `tsc --noEmit`, `pnpm build`, `pnpm test`, uji re-encode langsung via Node | Semua lolos; 135/135 test, build semua route tetap `◐ Partial Prerender` | Siap di-push sebagai PR untuk diverifikasi di preview deployment |
 | 2026-09-04 | Edit `features/auth/server-actions.ts`: `import sharp` di level modul → dynamic `import("sharp")` di dalam `uploadAvatar` | `npx tsc --noEmit` bersih | Belum di-deploy ulang ke Vercel untuk verifikasi live |
 | 2026-09-04 | `pnpm why sharp` | Ketemu 2 versi sharp ter-install: `0.34.5` (bawaan `next`) dan `0.35.3` (punya kita) | Dicatat sebagai follow-up #6 — kemungkinan penyebab libvips versi salah yang ke-trace, avatar upload bisa masih rusak di production sampai ini dibereskan |
 

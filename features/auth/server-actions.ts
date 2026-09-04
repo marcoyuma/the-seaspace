@@ -557,11 +557,22 @@ export async function uploadAvatar(
         return { message: "That photo is too large. Try one under 8 MB." };
     }
 
+    // Dynamic, not module-level: this file is "use server", so every export shares one
+    // bundle — a native-binary load failure here must not take every auth action down.
+    let sharp: typeof import("sharp");
+    try {
+        ({ default: sharp } = await import("sharp"));
+    } catch (error) {
+        // Deliberately not folded into the decode failure below: this one means sharp itself
+        // is unusable on this host, which is ours to fix and invisible without a log.
+        logAuthError("uploadAvatar:sharp", {
+            message: error instanceof Error ? error.message : String(error),
+        });
+        return { message: "Photo uploads are unavailable right now. Try again later." };
+    }
+
     let resized: Buffer;
     try {
-        // Dynamic, not module-level: this file is "use server", so every export shares one
-        // bundle — a native-binary load failure here must not take every auth action down.
-        const { default: sharp } = await import("sharp");
         const original = Buffer.from(await file.arrayBuffer());
         resized = await sharp(original)
             .resize(256, 256, { fit: "cover" })
