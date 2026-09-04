@@ -125,9 +125,16 @@ dan independen**, yang baru kelihatan lagi setelah `sharp` (dugaan utama) beres.
 - [x] **5. Verifikasi lokal:** `tsc --noEmit` bersih, `pnpm build` sukses (semua route tetap
       `◐ Partial Prerender`), `pnpm test` 135/135 lolos, dan re-encode nyata pakai sharp 0.34.5
       diuji langsung lewat Node — `mod.default` terbukti callable, bukan namespace.
-- [ ] **6. Verifikasi di preview deployment PR** (bukan production): login email/password,
-      login GitHub + Google, ganti foto profil di `/account`, lalu
-      `vercel logs --environment preview --level error` harus bersih dari `ERR_DLOPEN_FAILED`.
+- [x] **6. Verifikasi di preview deployment.** Login email/password, GitHub, dan Google
+      semuanya jalan; upload foto profil berhasil; `vercel logs --environment preview --level
+      error` bersih. Fix `sharp` terbukti tuntas.
+- [x] **6b. Bug batas ukuran upload, ditemukan saat verifikasi #6.** Upload <1 MB berhasil tapi
+      ≥1 MB gagal diam-diam — ternyata `serverActions.bodySizeLimit` bawaan Next memang 1 MB,
+      sementara kode menjanjikan 8 MB. Diperbaiki di branch terpisah
+      `fix/avatar-upload-size-limit`: body cap dinaikkan ke 4 MB, batas upload jadi 3 MB
+      (sengaja diberi jarak), angka + teksnya dijadikan satu sumber di `avatar-limits.ts`, dan
+      penolakan di browser sekarang memunculkan pesan. Terverifikasi di preview `8r2676fgo`:
+      file >1 MB berhasil diupload dan validasinya muncul.
 - [ ] **7. Setelah PR di-merge:** ulangi verifikasi di production
       (`the-seaspace-seven.vercel.app`).
 - [ ] **8. Cek Supabase Dashboard → Authentication → URL Configuration** — Site URL & Redirect
@@ -146,6 +153,9 @@ dan independen**, yang baru kelihatan lagi setelah `sharp` (dugaan utama) beres.
 | 2026-09-04 | `package.json`: `sharp` `^0.35.3` → `^0.34.5`, regenerasi lockfile | `pnpm why sharp` jadi "Found 1 version"; libvips `1.3.2` hilang dari lockfile | Menyamai versi yang dibawa `next` sendiri, yang dikenal file-tracing Vercel |
 | 2026-09-04 | Pisahkan gagal-load dari gagal-decode di `uploadAvatar`, pakai `logAuthError` | Kegagalan infra sekarang kelihatan di log, pesan ke tamu tidak lagi menyesatkan | — |
 | 2026-09-04 | `tsc --noEmit`, `pnpm build`, `pnpm test`, uji re-encode langsung via Node | Semua lolos; 135/135 test, build semua route tetap `◐ Partial Prerender` | Siap di-push sebagai PR untuk diverifikasi di preview deployment |
+| 2026-09-04 | Verifikasi manual di preview `jggs9djd9` | Login email/password, GitHub, Google **jalan semua**; log nol error | Fix `sharp` tuntas — bug utama beres |
+| 2026-09-04 | Tes upload avatar di preview yang sama | <1 MB berhasil, ≥1 MB gagal diam-diam | Bug terpisah: `bodySizeLimit` bawaan Next 1 MB vs janji 8 MB di kode |
+| 2026-09-04 | Branch `fix/avatar-upload-size-limit`: body cap → 4 MB, batas upload → 3 MB, angka disatukan di `avatar-limits.ts`, pesan penolakan di browser | Terverifikasi di preview `8r2676fgo`: file >1 MB berhasil, validasi muncul, log bersih | PR kedua, di atas PR `sharp` |
 | 2026-09-04 | Edit `features/auth/server-actions.ts`: `import sharp` di level modul → dynamic `import("sharp")` di dalam `uploadAvatar` | `npx tsc --noEmit` bersih | Belum di-deploy ulang ke Vercel untuk verifikasi live |
 | 2026-09-04 | `pnpm why sharp` | Ketemu 2 versi sharp ter-install: `0.34.5` (bawaan `next`) dan `0.35.3` (punya kita) | Dicatat sebagai follow-up #6 — kemungkinan penyebab libvips versi salah yang ke-trace, avatar upload bisa masih rusak di production sampai ini dibereskan |
 
