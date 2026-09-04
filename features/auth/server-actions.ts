@@ -5,8 +5,6 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import type { Provider } from "@supabase/supabase-js";
 
-import sharp from "sharp";
-
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { getAuthUser } from "@/features/auth/actions";
@@ -561,6 +559,9 @@ export async function uploadAvatar(
 
     let resized: Buffer;
     try {
+        // Dynamic, not module-level: this file is "use server", so every export shares one
+        // bundle — a native-binary load failure here must not take every auth action down.
+        const { default: sharp } = await import("sharp");
         const original = Buffer.from(await file.arrayBuffer());
         resized = await sharp(original)
             .resize(256, 256, { fit: "cover" })
