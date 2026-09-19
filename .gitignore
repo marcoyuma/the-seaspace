@@ -43,7 +43,7 @@ next-env.d.ts
 # editor
 .vscode/
 
-# dokumen analisis internal (rujukan pribadi, tidak untuk repo)
+# internal analysis docs (personal reference, not for the repo)
 analisis-codebase-and-asset-management.md
 unused-and-duplicate-assets-report.md
 
@@ -51,28 +51,33 @@ unused-and-duplicate-assets-report.md
 ARCHITECTURE.md
 DATA-LAYER.md
 ACCOUNT-DELETION-POLICY.md 
-# Ditulis untuk repo admin panel, yang pembacanya justru dinyatakan tidak punya
-# akses ke repo ini — jadi menyimpannya di sini melawan tujuannya sendiri.
-# Isinya sekarang milik repo itu . Versi terakhir di sini masih bisa diambil
-# dengan `git show <commit pencabutan>~1:ADMIN-PANEL-CONTEXT.md`.
+# Written for the admin panel repo, whose readers are explicitly stated to have
+# no access to this repo — so keeping it here defeats its own purpose.
+# Its content now belongs to that repo. The last version here can still be
+# retrieved with `git show <removal commit>~1:ADMIN-PANEL-CONTEXT.md`.
 ADMIN-PANEL-CONTEXT.md
 
-# image lokal yang nanti kemungkinan dipake
-#
-# Catatan: menambahkan nama file di sini TIDAK cukup kalau file-nya sudah
-# terlanjur ter-commit — .gitignore hanya berlaku untuk file yang belum tracked.
-# Untuk file yang sudah masuk git, jalankan juga:
-#     git rm --cached <path>
-# File tetap ada di disk, hanya berhenti ikut ter-push.
-#
-# Konsekuensinya: file-file di bawah ini TIDAK ikut saat repo di-clone. Kalau
-# salah satunya nanti benar-benar dipakai di halaman, cabut entrinya lalu
-# `git add` — kalau lupa, build gagal karena import @/public/... tidak resolve.
+# temporary working notes for the map bug on the villa page. Remove it along
+# with this entry once its verification checklist passes twice in a row.
+BUG-STAY-MAP-REMOUNT.md
 
-# bg yang tadinya dijadikan opsi kedua
+# local images that may be used later
+#
+# Note: adding a filename here is NOT enough if the file has already been
+# committed — .gitignore only applies to untracked files.
+# For files already in git, also run:
+#     git rm --cached <path>
+# The file stays on disk, it just stops being pushed.
+#
+# Consequence: the files below are NOT included when the repo is cloned. If
+# one of them ends up actually used on a page, remove its entry and then
+# `git add` it — if you forget, the build fails because the @/public/... import
+# won't resolve.
+
+# background that was previously a second option
 bg-1.jpg
 
-# kandidat halaman gym/fitness
+# candidate for the gym/fitness page
 gym.png
 
 # private beach slim
