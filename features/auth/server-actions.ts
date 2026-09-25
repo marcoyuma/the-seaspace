@@ -1,10 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { cookies, headers } from "next/headers";
 import type { Provider } from "@supabase/supabase-js";
 
+import { REVIEWS_CACHE_TAG } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { getAuthUser } from "@/features/auth/actions";
@@ -237,8 +238,10 @@ export async function signIn(
     }
 
     // Layouts do not re-render on client-side navigation, so the header would keep showing
-    // the signed-out icon without this.
-    revalidatePath("/", "layout");
+    // the signed-out icon without this. `refresh()`, not `revalidatePath("/", "layout")`: the
+    // session only lives in dynamic holes, and purging every static shell on each sign-in left
+    // Vercel serving a `/` shell whose sections failed to resume ("Connection closed.").
+    refresh();
     redirect(next);
 }
 
@@ -338,7 +341,7 @@ export async function signUp(
         };
     }
 
-    revalidatePath("/", "layout");
+    refresh();
     redirect(next);
 }
 
@@ -484,7 +487,7 @@ export async function signOut(): Promise<void> {
     const supabase = await createClient();
     await supabase.auth.signOut();
 
-    revalidatePath("/", "layout");
+    refresh();
     redirect("/");
 }
 
@@ -528,7 +531,7 @@ export async function updateProfile(
     }
 
     // The header renders display_name and the avatar, so it has to re-read.
-    revalidatePath("/", "layout");
+    refresh();
     return { ok: true, message: "Saved." };
 }
 
@@ -628,7 +631,7 @@ export async function uploadAvatar(
 
     // Same reasoning as updateProfile: the header renders the avatar on every route, so the
     // Router Cache has to be told, not just the current page's data.
-    revalidatePath("/", "layout");
+    refresh();
     return { ok: true, message: "Saved." };
 }
 
@@ -734,6 +737,9 @@ export async function deleteAccount(
     // the same way signOut() does rather than leaving a dead session behind.
     await supabase.auth.signOut();
 
-    revalidatePath("/", "layout");
+    // Their reviews were just anonymised or erased, so the cached review reads are wrong
+    // now; the header only needs the client refresh, same as signOut().
+    updateTag(REVIEWS_CACHE_TAG);
+    refresh();
     redirect("/");
 }
