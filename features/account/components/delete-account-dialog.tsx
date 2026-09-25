@@ -3,7 +3,11 @@
 import { useActionState, useState } from "react";
 
 import { deleteAccount } from "@/features/auth/server-actions";
-import { ERROR, INPUT, LABEL } from "@/features/auth/components/form-primitives";
+import {
+    ERROR,
+    INPUT,
+    LABEL,
+} from "@/features/auth/components/form-primitives";
 import Modal from "@/ui/modal";
 import { PILL_SIZE } from "@/ui/pill-styles";
 
@@ -24,7 +28,7 @@ function ReviewOptionCard({
     note?: string;
 }) {
     return (
-        <label className="flex cursor-pointer flex-col gap-2 rounded-[16px] border border-black/15 p-5 transition-colors duration-300 ease-out has-checked:border-black has-checked:bg-black/[0.03] motion-reduce:transition-none">
+        <label className="flex cursor-pointer flex-col gap-2 rounded-2xl border border-black/15 p-5 transition-colors duration-300 ease-out has-checked:border-black has-checked:bg-black/3 motion-reduce:transition-none">
             <div className="flex items-start gap-3">
                 <input
                     type="radio"
@@ -36,15 +40,15 @@ function ReviewOptionCard({
                     required
                 />
                 <div>
-                    <p className="text-[16px] font-semibold text-black">{title}</p>
+                    <p className="text-[16px] font-semibold text-black">
+                        {title}
+                    </p>
                     <p className="mt-1 text-[16px] font-medium text-black/60">
                         {description}
                     </p>
                 </div>
             </div>
-            {note && (
-                <p className="ml-7 text-[13px] text-black/40">{note}</p>
-            )}
+            {note && <p className="ml-7 text-[13px] text-black/40">{note}</p>}
         </label>
     );
 }
@@ -156,7 +160,9 @@ export default function DeleteAccountDialog({
                             disabled={pending}
                             className={`rounded-full ${PILL_SIZE.md} bg-red-700 font-medium text-white transition-opacity duration-300 ease-out motion-reduce:transition-none hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40`}
                         >
-                            {pending ? "Deleting…" : "Permanently delete account"}
+                            {pending
+                                ? "Deleting…"
+                                : "Permanently delete account"}
                         </button>
                         <button
                             type="button"
