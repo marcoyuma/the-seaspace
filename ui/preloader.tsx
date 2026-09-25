@@ -91,7 +91,9 @@ export default function Preloader() {
     const previousOverflowRef = useRef("");
 
     useEffect(() => {
-        if (!armed) return;
+        // The hydration commit still carries the server snapshot (`true`), so this effect fires
+        // once on EVERY load. Re-read the real value, or a reload scrolls the page to the top.
+        if (!armed || !getArmedSnapshot()) return;
 
         // A reload can restore a mid-page scroll position, and a curtain lifting halfway down
         // the page reads as a bug. Reset before anything is visible.

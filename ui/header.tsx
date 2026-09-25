@@ -1,6 +1,11 @@
 "use client";
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import {
+    useEffect,
+    useState,
+    useSyncExternalStore,
+    type ReactNode,
+} from "react";
 import { usePathname } from "next/navigation";
 import Logo from "@/ui/logo";
 import MenuPanel from "@/ui/menu-panel";
@@ -76,6 +81,15 @@ function Header({ profileSlot }: { profileSlot: ReactNode }) {
         () => false,
     );
 
+    // A reload restores a mid-page scroll, so hydration flips the server's
+    // `false` snapshot to `true`. Transitions stay off until the frame after
+    // mount so that correction snaps instead of animating as a flicker.
+    const [readyForTransition, setReadyForTransition] = useState(false);
+    useEffect(() => {
+        const id = requestAnimationFrame(() => setReadyForTransition(true));
+        return () => cancelAnimationFrame(id);
+    }, []);
+
     // Only the homepage has a hero to sweep past; every other route starts
     // (and stays) in the widened state.
     const expanded = !isHome || heroSwept;
@@ -95,7 +109,7 @@ function Header({ profileSlot }: { profileSlot: ReactNode }) {
             className={`${isHome ? "fixed" : "relative border-none"} left-1/2 z-20 -translate-x-1/2
                         h-14 bg-white text-black
                         border-b border-black/10
-                        transition-[width,top,border-radius,border-color] duration-500 ease-in-out motion-reduce:transition-none
+                        ${readyForTransition ? "transition-[width,top,border-radius,border-color] duration-500 ease-in-out motion-reduce:transition-none" : ""}
                         ${
                             !expanded
                                 ? "top-10 w-190 max-w-[calc(100%-48px)] rounded-full border-transparent max-lg:shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
@@ -112,12 +126,10 @@ function Header({ profileSlot }: { profileSlot: ReactNode }) {
                 // Side columns share equal `1fr` so the `auto` center column
                 // (the nav) stays geometrically centered between logo and
                 // account regardless of their differing widths.
-                //     className={`mx-auto grid h-full grid-cols-[1fr_auto_1fr] items-center
-                //                 transition-[width,padding] duration-500 ease-in-out motion-reduce:transition-none
-                //                 ${expanded ? "w-[calc(100%-240px)] px-0" : "w-full px-4"}`}
-                // >
+                // Same transition gate as the bar: without it the inset
+                // still animates in after every reload.
                 className={`mx-auto flex h-full justify-between items-center
-                            transition-[width,padding] duration-500 ease-in-out motion-reduce:transition-none
+                            ${readyForTransition ? "transition-[width,padding] duration-500 ease-in-out motion-reduce:transition-none" : ""}
                             ${
                                 expanded
                                     ? "w-[calc(100%-48px)] px-0 sm:w-[calc(100%-64px)] md:w-[calc(100%-128px)] lg:w-[calc(100%-240px)]"
