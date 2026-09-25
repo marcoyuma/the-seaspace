@@ -13,11 +13,17 @@ export const PRELOADER_SESSION_KEY = "seaspace:preloader-seen";
 /**
  * Set on <html> by the flash guard. CSS keeps the overlay `display:none` until it appears, so
  * a browser without JS — or a crawler that never runs it — never sees a curtain it cannot lift.
+ *
+ * The overlay removes it once the curtain lifts: the guard only runs while the document is
+ * parsed, so a flag left behind would re-arm on every soft navigation back to `/`.
  */
 export const PRELOADER_ACTIVE_ATTR = "data-preloader-active";
 
 /** Marks the overlay element for the CSS rules above. */
 export const PRELOADER_ROOT_ATTR = "data-preloader";
+
+/** Top stop of `--background-image-blue-gradient`, inlined so the ground is painted without CSS. */
+export const PRELOADER_GROUND = "#2c8de2";
 
 /**
  * Marks the <img> elements the curtain waits on. Value is descriptive only (`hero`, `gallery`);

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
     PRELOADER_ACTIVE_ATTR,
     PRELOADER_GATE_ATTR,
+    PRELOADER_GROUND,
     PRELOADER_MAX_WAIT_MS,
     PRELOADER_MIN_VISIBLE_MS,
     PRELOADER_ROOT_ATTR,
@@ -34,16 +35,24 @@ const LIFT_FALLBACK_MS = 900;
 /** `idle` = curtain up, `leaving` = lift animation running, `gone` = unmounted. */
 type Phase = "idle" | "leaving" | "gone";
 
-/**
- * The arming flag is written once by `ui/preloader-flash-guard.tsx` before hydration and never
- * changes afterwards, so there is genuinely nothing to subscribe to.
- */
-function subscribeToArmedFlag() {
-    return () => {};
+/** Latched once per document, not per mount — a soft nav back to `/` re-runs no guard script. */
+let armedLatch: boolean | null = null;
+const armedListeners = new Set<() => void>();
+
+function subscribeToArmedFlag(onStoreChange: () => void) {
+    armedListeners.add(onStoreChange);
+    return () => {
+        armedListeners.delete(onStoreChange);
+    };
 }
 
 function getArmedSnapshot() {
-    return document.documentElement.hasAttribute(PRELOADER_ACTIVE_ATTR);
+    if (armedLatch === null) {
+        armedLatch =
+            document.documentElement.hasAttribute(PRELOADER_ACTIVE_ATTR) &&
+            !hasSeenPreloader();
+    }
+    return armedLatch;
 }
 
 /**
@@ -53,6 +62,22 @@ function getArmedSnapshot() {
  */
 function getArmedServerSnapshot() {
     return true;
+}
+
+/** Reads throw in private modes; a throw here would arm the curtain instead of skipping it. */
+function hasSeenPreloader() {
+    try {
+        return sessionStorage.getItem(PRELOADER_SESSION_KEY) !== null;
+    } catch {
+        return false;
+    }
+}
+
+/** Drops the flag so CSS hides the overlay, then notifies — safe now that the store subscribes. */
+function disarmPreloader() {
+    armedLatch = false;
+    document.documentElement.removeAttribute(PRELOADER_ACTIVE_ATTR);
+    for (const listener of armedListeners) listener();
 }
 
 /**
@@ -228,15 +253,13 @@ export default function Preloader() {
     useEffect(() => {
         if (phase !== "gone" || !armed) return;
         document.body.style.overflow = previousOverflowRef.current;
-        // The flag deliberately stays on <html>: `getArmedSnapshot` reads it every render, and
-        // a value that changes without notifying the store is exactly the stale read
-        // useSyncExternalStore warns about. With the overlay unmounted it matches nothing.
         try {
             sessionStorage.setItem(PRELOADER_SESSION_KEY, "1");
         } catch {
             // Private modes throw on write. Worst case the curtain shows again on the next
             // load — annoying, not broken.
         }
+        disarmPreloader();
         warmDeferredImages();
     }, [phase, armed]);
 
@@ -247,7 +270,15 @@ export default function Preloader() {
             {...{ [PRELOADER_ROOT_ATTR]: "" }}
             role="status"
             aria-label="Loading"
-            className={`fixed inset-0 z-100 flex-col items-center justify-center gap-6 bg-blue-gradient ${
+            // Inline, not utilities: the element has to cover the viewport before the stylesheet
+            // is live, or it paints as a plain block with the rest of the screen left white.
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 100,
+                backgroundColor: PRELOADER_GROUND,
+            }}
+            className={`flex-col items-center justify-center gap-6 bg-blue-gradient ${
                 phase === "leaving" ? "animate-preloader-lift" : ""
             }`}
             // Only this element's own lift counts — not anything animating inside it.
