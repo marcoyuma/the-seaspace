@@ -76,8 +76,8 @@ export default function ServiceAndAmenitiesPreview({
         ? FEATURED_SERVICES.filter((service) => service.id !== excludeId)
         : FEATURED_SERVICES;
 
-    // The full trio leads the landing page (above the fold); a filtered pair
-    // only ever appears further down an interior page, so it shouldn't preload.
+    // The full trio is the landing page's row; a filtered pair is the cross-sell outro on an
+    // interior page. Drives layout only — neither is above the fold, so neither preloads.
     const isFullSet = shownServices.length === FEATURED_SERVICES.length;
 
     return (
@@ -142,7 +142,6 @@ export default function ServiceAndAmenitiesPreview({
                             serviceName={service.serviceName}
                             bookButtonText={service.bookButtonText}
                             fluid={!isFullSet}
-                            preload={isFullSet}
                         />
                     ))}
                 </div>

@@ -11,8 +11,6 @@ interface ServiceCardProps {
      * card takes half the container instead of a third.
      */
     fluid?: boolean;
-    /** Only worth preloading when the card sits above the fold. */
-    preload?: boolean;
 }
 
 /**
@@ -28,7 +26,6 @@ export default function ServiceCard({
     serviceName,
     bookButtonText,
     fluid = false,
-    preload = true,
 }: ServiceCardProps) {
     return (
         // Was a fixed 385x445 inline style on the non-`fluid` path — same
@@ -46,10 +43,8 @@ export default function ServiceCard({
                 src={imageSrc}
                 placeholder="blur"
                 quality={90}
-                // `priority` is deprecated as of Next 16 — `preload` is the
-                // direct replacement with clearer intent. See
-                // node_modules/next/dist/docs/01-app/03-api-reference/02-components/image.md
-                preload={preload}
+                // No `preload`: every call site sits below a full-viewport hero, and each hint
+                // lands in <head> ahead of the render-blocking stylesheet that gates first paint.
                 fill
                 // Without `sizes`, a `fill` image defaults to 100vw and the
                 // browser downloads a far larger source than the card needs.
