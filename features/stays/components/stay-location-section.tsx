@@ -6,6 +6,7 @@ import {
 
 import type { Stay } from "@/features/stays/types";
 import StayMap from "@/features/stays/components/stay-map";
+import StayMapBoundary from "@/features/stays/components/stay-map-boundary";
 import TravelOptionCard from "@/features/stays/components/travel-option-card";
 
 /** Mirrors StayMap's own skeleton colour, so the swap never flashes or shifts. */
@@ -39,12 +40,16 @@ export default function StayLocationSection({ stay }: { stay: Stay }) {
                     does — under `cacheComponents` an unguarded clock read in a
                     Client Component costs the whole page its static shell. */}
                 <Suspense fallback={<MapFallback />}>
-                    <StayMap
-                        lat={lat}
-                        lng={lng}
-                        label={`${stay.name}, ${stay.location}`}
-                        stayId={stay.id}
-                    />
+                    {/* And for the same reason it gets its own error boundary:
+                        a Leaflet crash should cost the map, not the villa page.
+                        Without it, the throw reached the catalogue's error.tsx. */}
+                    <StayMapBoundary directionsUrl={driveUrl}>
+                        <StayMap
+                            lat={lat}
+                            lng={lng}
+                            label={`${stay.name}, ${stay.location}`}
+                        />
+                    </StayMapBoundary>
                 </Suspense>
             </div>
 
