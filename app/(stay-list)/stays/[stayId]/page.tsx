@@ -54,7 +54,9 @@ export async function generateMetadata({
 function StayDetailFallback() {
     return (
         <>
-            <div className={`relative w-full overflow-hidden ${FRAME_HEIGHT_CLASSES}`}>
+            <div
+                className={`relative w-full overflow-hidden ${FRAME_HEIGHT_CLASSES}`}
+            >
                 {/* Three frames, same as the carousel's internal placeholder — enough to
                     read as a rail without outrunning the viewport. */}
                 <div className="flex h-full w-max gap-6">
