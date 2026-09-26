@@ -7,14 +7,8 @@ import UpdatePasswordForm from "@/features/auth/components/update-password-form"
 export const metadata = { title: "Update password" };
 
 /**
- * Chooses a new password.
- *
- * Two ways in, both legitimate: a recovery link, which app/auth/confirm/route.ts turns into
- * a session before redirecting here, or an already signed-in guest from /account.
- *
- * The form needs no server data, so it stays in the static shell. Only the session read is
- * behind <Suspense> — request-time data cannot sit outside a boundary under Cache
- * Components, and the app-wide app/loading.tsx that used to provide one is gone (aa44990).
+ * Chooses a new password — via a recovery link (app/auth/confirm makes it a session) or from
+ * /account. The form is static; only the session read sits behind <Suspense> (no app/loading.tsx).
  */
 export default function UpdatePasswordPage() {
     return (
@@ -35,11 +29,8 @@ export default function UpdatePasswordPage() {
 }
 
 /**
- * Who the new password will belong to.
- *
- * Under /account, so `PROTECTED_PREFIXES` in proxy.ts already bounces signed-out visitors
- * before anything renders. The check below is the authoritative one — Proxy also runs on
- * prefetches and must never be the only line of defence.
+ * Who the new password belongs to. proxy.ts bounces signed-out visitors first; this check is the
+ * authoritative one, since Proxy also runs on prefetches.
  */
 async function SignedInAs() {
     const user = await getAuthUser();

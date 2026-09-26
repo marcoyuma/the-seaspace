@@ -10,11 +10,8 @@ import {
 } from "@/features/auth/components/form-primitives";
 
 /**
- * Sets a new password for the current session.
- *
- * Nothing here checks how the session was obtained. A recovery link and a normal sign-in
- * produce the same thing, and Supabase scopes `updateUser` to the session's own user either
- * way — so the two cases need no separate handling.
+ * Sets a new password for the current session — recovery link or normal sign-in alike, since
+ * Supabase scopes `updateUser` to the session's own user either way.
  */
 export default function UpdatePasswordForm() {
     const [state, action, pending] = useActionState(updatePassword, undefined);

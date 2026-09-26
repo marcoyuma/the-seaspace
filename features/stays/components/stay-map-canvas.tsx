@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
 
@@ -13,14 +13,9 @@ import "leaflet/dist/leaflet.css";
 const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY;
 
 /**
- * CARTO Voyager — full-colour basemap (green parks, blue water, tinted roads)
- * in the spirit of the OSM standard style. Chosen over tile.openstreetmap.org
- * because the OSMF tile policy forbids production use, and over Google because
- * it needs no billing account (only a free key). Keyless still renders, just
- * watermarked, so a missing key never breaks the page. Swap to `light_all` for
- * the greyscale Positron variant; attribution and subdomains are shared.
- *
- * {r} is filled with "@2x" by Leaflet when `detectRetina` is on.
+ * CARTO Voyager tiles: OSMF's policy forbids production use of tile.openstreetmap.org, and Google
+ * needs billing. Keyless still renders, just watermarked, so a missing key never breaks the page.
+ * `light_all` swaps to greyscale Positron. Leaflet fills {r} with "@2x" under `detectRetina`.
  */
 const TILE_URL = `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png${
     CARTO_API_KEY ? `?key=${encodeURIComponent(CARTO_API_KEY)}` : ""
@@ -40,31 +35,27 @@ const TILE_ATTRIBUTION =
 const DEFAULT_ZOOM = 18;
 
 /**
- * The actual Leaflet map. Never import this directly — Leaflet touches the DOM
- * while the module is evaluated, so it must be reached through the `ssr: false`
- * dynamic import in app/ui/stay-map.tsx. A static import would break `pnpm
- * build`, since generateStaticParams prerenders every stay page.
+ * The Leaflet map — import only via stay-map.tsx's `ssr: false` dynamic import, as Leaflet touches
+ * the DOM at module eval. Plain Leaflet, not react-leaflet@5, whose stale ref guard broke re-attach
+ * cycles: the effect below creates and destroys in the SAME effect, so every teardown rebuilds.
  *
  * @param lat - Latitude of the stay.
  * @param lng - Longitude of the stay.
  * @param label - Human-readable "Name, Location" shown in the popup.
- * @param stayId - Used as the MapContainer key; see the comment on it below.
  */
 export default function StayMapCanvas({
     lat,
     lng,
     label,
-    stayId,
 }: {
     lat: number;
     lng: number;
     label: string;
-    stayId: string;
 }) {
-    // Leaflet's default marker resolves its icon URLs from the script location,
-    // which bundlers break (404s). A divIcon sidesteps that entirely and lets
-    // the pin follow the site's black/white palette. `className: ""` clears
-    // Leaflet's own .leaflet-div-icon white box.
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Leaflet's default marker resolves icon URLs from the script path, which bundlers break (404s).
+    // A divIcon avoids that and follows the site palette; `className: ""` drops Leaflet's white box.
     const icon = useMemo(
         () =>
             L.divIcon({
@@ -77,53 +68,60 @@ export default function StayMapCanvas({
         [],
     );
 
-    // The popup is bound by the <Popup> child, which mounts *after* the marker
-    // itself, so opening it needs the instance in state (a plain ref callback
-    // would fire too early and find nothing bound).
-    const [marker, setMarker] = useState<L.Marker | null>(null);
+    // Detached popup node, so its contents stay JSX (Tailwind classes, no escaping of the DB
+    // `label`). Touching `document` in render is safe only because of the `ssr: false` gate.
+    const popupNode = useMemo(() => document.createElement("div"), []);
 
     useEffect(() => {
-        marker?.openPopup();
-    }, [marker]);
+        const container = containerRef.current;
+        if (!container) return;
 
-    return (
-        <MapContainer
-            // Remounts the map when navigating between stays, and neutralises
-            // the double-mount that React StrictMode (on by default in the app
-            // router) would otherwise turn into "Map container is already
-            // initialized".
-            key={stayId}
-            center={[lat, lng]}
-            zoom={DEFAULT_ZOOM}
-            // MapContainer props are immutable after mount — changing `center`
-            // later has no effect; that would need useMap() instead.
-            scrollWheelZoom={false}
+        const map = L.map(container, {
             // Both of these keep the map from hijacking page scroll: no
             // wheel-zoom on desktop, no one-finger pan on touch. Zoom buttons
             // and pinch-zoom still work.
-            dragging={!L.Browser.mobile}
-            className="h-full w-full"
-        >
-            <TileLayer
-                url={TILE_URL}
-                attribution={TILE_ATTRIBUTION}
-                subdomains="abcd"
-                maxZoom={20}
-                // Doubles tile weight on retina screens but keeps the map crisp,
-                // which matters on a design this clean. Biggest lever to pull if
-                // the ~250KB of tiles ever needs trimming.
-                detectRetina
-            />
+            scrollWheelZoom: false,
+            dragging: !L.Browser.mobile,
+        }).setView([lat, lng], DEFAULT_ZOOM);
 
-            <Marker
-                ref={setMarker}
-                position={[lat, lng]}
-                icon={icon}
-                title={label}
-            >
-                {/* Stays open once the user pans or clicks elsewhere on the map;
-                    only the × button closes it. */}
-                <Popup autoClose={false} closeOnClick={false}>
+        L.tileLayer(TILE_URL, {
+            attribution: TILE_ATTRIBUTION,
+            subdomains: "abcd",
+            maxZoom: 20,
+            // Doubles tile weight on retina screens but keeps the map crisp,
+            // which matters on a design this clean. Biggest lever to pull if
+            // the ~250KB of tiles ever needs trimming.
+            detectRetina: true,
+        }).addTo(map);
+
+        // Portal children commit before this effect runs, so `popupNode` is
+        // already filled and Leaflet measures the popup at its real size.
+        L.marker([lat, lng], { icon, title: label })
+            .addTo(map)
+            .bindPopup(popupNode, {
+                // Stays open once the user pans or clicks elsewhere on the map;
+                // only the × button closes it.
+                autoClose: false,
+                closeOnClick: false,
+            })
+            .openPopup();
+
+        // The box is sized by CSS before the map mounts, but a lazily revealed
+        // one can still measure 0 on the first frame. One re-read covers that.
+        const frame = requestAnimationFrame(() => map.invalidateSize());
+
+        return () => {
+            cancelAnimationFrame(frame);
+            map.remove();
+        };
+    }, [lat, lng, label, icon, popupNode]);
+
+    // Leaflet owns everything inside this div — the portal deliberately renders
+    // nothing here, so React never competes with it for the child list.
+    return (
+        <div ref={containerRef} className="h-full w-full">
+            {createPortal(
+                <>
                     <span className="block text-[14px] font-medium text-black">
                         {label}
                     </span>
@@ -135,8 +133,9 @@ export default function StayMapCanvas({
                     >
                         Open in Google Maps
                     </a>
-                </Popup>
-            </Marker>
-        </MapContainer>
+                </>,
+                popupNode,
+            )}
+        </div>
     );
 }

@@ -8,16 +8,11 @@ import HorizontalLine from "@/ui/horizontal-line";
 import OverlineText from "@/ui/overline-text";
 
 /**
- * What guests said about one villa: a grid of the newest few, and a dialog holding the rest.
+ * A villa's reviews: a grid of the newest few plus a dialog with the rest. A pure view of props, not
+ * self-fetching like `ReviewsSection`: the prerendered page already awaits its reads together, and a
+ * nested async component would need its own <Suspense> for no gain (as with `StayInfoSection`).
  *
- * A pure view of props rather than an async component that fetches its own data — the
- * opposite of `ReviewsSection` on the landing page, and deliberately so. This route has
- * `generateStaticParams()`, so the page itself is prerendered and already awaits its reads
- * in one `Promise.all`; a nested async component would need its own `<Suspense>` boundary
- * to keep that shell, for no gain. Same reasoning `StayInfoSection` is built on.
- *
- * @param reviews - The villa's reviews, newest first. The first
- *   `STAY_REVIEWS_PREVIEW_SIZE` are shown on the page and the whole list fills the modal.
+ * @param reviews - Newest first; the first `STAY_REVIEWS_PREVIEW_SIZE` show on the page, all in the modal.
  * @param summary - The villa's aggregate rating, or `undefined` when nobody has rated it.
  */
 export default function StayReviewsSection({
@@ -87,12 +82,9 @@ export default function StayReviewsSection({
                             className="mt-2"
                         />
 
-                        {/* One column here, not two: the dialog is narrower than the page,
-                            and `ui/modal.tsx` already scrolls its own panel.
-
-                            `divide-y` rather than a <HorizontalLine> between items —
-                            StayReviewItem already renders the <li>, so wrapping it to hold
-                            a separator would nest one <li> inside another. */}
+                        {/* One column: the dialog is narrower and `ui/modal.tsx` scrolls itself.
+                            `divide-y`, not <HorizontalLine> — StayReviewItem is the <li>, so a
+                            separator wrapper would nest <li>s. */}
                         <ul className="mt-8 flex flex-col divide-y divide-black/10">
                             {reviews.map((review) => (
                                 <StayReviewItem

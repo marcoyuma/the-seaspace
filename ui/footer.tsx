@@ -37,13 +37,9 @@ export default function Footer() {
 
             {/* Main Footer Content */}
             <div className="px-6 sm:px-10 md:px-16 pt-10 sm:pt-16 pb-10 sm:pb-20">
-                {/* CSS Grid (not flex) so the tagline column gets a fixed
-                    proportional share (2fr) while the three link/contact
-                    columns split the remainder evenly — matches the
-                    asymmetric ratio in the design rather than relying on
-                    arbitrary fixed widths (`w-[420px]`) + `ml-auto`.
-                    Single column on mobile: Sitemap/Amenities are hidden
-                    below `sm`, so only Heading + Contact remain, stacked. */}
+                {/* Grid, not flex: the tagline gets a 2fr share and the other three columns
+                    split the rest, matching the design's asymmetric ratio. Mobile is one
+                    column — Sitemap/Amenities hide below `sm`, leaving Heading + Contact. */}
                 <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr] gap-x-16 gap-y-8 sm:gap-y-0">
                     {/* Left: Heading — the one heading on the site that scales
                         per breakpoint rather than sitting at a flat 36px, so it

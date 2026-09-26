@@ -5,13 +5,9 @@ const BAR_BASE =
     "absolute right-0 h-0.5 origin-right bg-black transition-transform duration-300 ease-in-out motion-reduce:transition-none";
 
 /**
- * Menu trigger glyph. Closed it's a three-step staircase; open, the top and
- * bottom bars slide onto the middle one and scale to its width, so the three
- * overlap into a single line — no bar has to be hidden to sell the effect.
- *
- * Built from positioned spans rather than `<rect>`s because SVG geometry
- * attributes (`x`/`y`/`width`) aren't portably transitionable; transforms are,
- * and they stay on the GPU.
+ * Menu trigger glyph: a three-step staircase whose outer bars, when open, slide onto the middle
+ * one and scale to its width, merging into one line. Spans rather than SVG `<rect>`s because
+ * transforms are portably transitionable (and GPU-cheap); SVG geometry attributes aren't.
  *
  * @param isOpen - Whether the menu it controls is open; drives the merge.
  */

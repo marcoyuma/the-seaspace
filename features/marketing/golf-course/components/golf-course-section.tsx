@@ -3,18 +3,14 @@ import Image from "next/image";
 import puttingGreenImg from "@/public/leisure/golf-course/golf-course2.jpg";
 
 /**
- * Wide image band followed by a two-column heading/paragraph split.
- *
- * Carries `id="the-course"`. Nothing links to it since `GolfHero` dropped its
- * secondary CTA; kept as a stable target for anyone linking in from outside.
+ * Wide image band. `id="the-course"` has no internal link since `GolfHero` dropped its secondary
+ * CTA — kept as a stable inbound target.
  */
 export default function GolfCourseSection() {
     return (
         <section id="the-course" className="scroll-mt-14 pt-6">
-            {/* Matches `GolfHero`'s single remaining image size on
-                mobile/tablet (`h-70`/`sm:h-96`) so the two images left on the
-                page read as the same size once the hero drops to one column,
-                then returns to its original `h-155` at `lg`. */}
+            {/* Matches `GolfHero`'s image size below `lg` (`h-70`/`sm:h-96`), so both images
+                read the same once the hero is one column; `h-155` at `lg`. */}
             <div className="relative h-70 w-full overflow-hidden rounded-[20px] sm:h-96 lg:h-155">
                 <Image
                     src={puttingGreenImg}

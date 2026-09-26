@@ -15,22 +15,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * What the QR on a reservation opens.
- *
- * Deliberately **outside** the `(auth)` group and outside `proxy.ts`'s protected routes:
- * whoever is standing at the door may not be signed in. The partner on the earlier flight,
- * the guest whose session expired mid-air, the friend collecting the keys — all of them
- * hold the code, and none of them can be asked to log in on a doorstep at midnight.
- *
- * The code is the credential, and what it can reach is bounded by the database rather than
- * by this page: `get_check_in_invite()` returns a villa, two dates and a boolean — its
- * return type is the allow-list — and `check_in_booking()` performs exactly one status
- * transition. Neither can see the price, the notes or the guest.
- *
- * ⚠️ **Opening this page checks nobody in.** It renders a button that POSTs to a Server
- * Action. Link prefetchers, chat previews and antivirus scanners all follow `GET`s, so a
- * URL that acted on sight would check a guest in from a WhatsApp preview of their own
- * booking — hours before they landed.
+ * What the reservation QR opens — deliberately outside `(auth)` and Proxy's protection, as whoever is
+ * at the door may be signed out; the DB bounds what the code reaches. ⚠️ **Opening this page checks
+ * nobody in**: a button POSTs, since previews and scanners follow GETs.
  */
 export default function CheckInPage({
     params,
@@ -49,12 +36,8 @@ export default function CheckInPage({
 }
 
 /**
- * The reservation the code opens.
- *
- * Behind a boundary because everything here is request-time: the route has no
- * `generateStaticParams()`, so `params` itself cannot be read during the prerender, and
- * `getCheckInInvite()` is deliberately uncached (a code's state changes the moment someone
- * checks in). The wordmark above is the whole static shell, and that is fine.
+ * The reservation the code opens — all request-time (no `generateStaticParams()`, and an uncached
+ * invite that changes at check-in), so it sits behind a boundary; the wordmark is the static shell.
  */
 async function Invite({ params }: { params: Promise<{ code: string }> }) {
     const { code } = await params;

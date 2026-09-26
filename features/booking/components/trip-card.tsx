@@ -7,11 +7,8 @@ import type { GuestBooking } from "@/features/booking/types";
 import { idr } from "@/lib/format";
 
 /**
- * One reservation in the `/account/trips` list.
- *
- * The whole card is a link to the reservation, not to the villa: from this page a guest is
- * looking for *their booking*, and the villa is one click further in. A card with two
- * competing links would make the target ambiguous for keyboard and screen-reader users.
+ * One reservation in `/account/trips`, linking as a whole to the reservation (what the guest is
+ * looking for) — two competing links would be ambiguous for keyboard and screen-reader users.
  *
  * @param booking Already scoped to the signed-in guest by RLS — see `getGuestBookings()`.
  */

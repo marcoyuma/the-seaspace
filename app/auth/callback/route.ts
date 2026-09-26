@@ -5,15 +5,8 @@ import { OAUTH_NEXT_COOKIE, safeNextPath } from "@/features/auth/next-path";
 import { adoptProviderAvatar } from "@/features/auth/oauth-avatar";
 
 /**
- * Where GitHub and Google send the guest back to, by way of Supabase.
- *
- * The provider's own callback is registered as
- * `https://<project-ref>.supabase.co/auth/v1/callback` — Supabase's URL, not ours. Supabase
- * verifies the provider's response and then redirects here with a one-time `code`, which
- * this handler trades for a session.
- *
- * A Route Handler rather than a page, for the same reason as /auth/confirm: minting a
- * session writes cookies, and Server Components may not.
+ * Where GitHub/Google return, via Supabase's own `/auth/v1/callback`, with a one-time `code` traded
+ * here for a session. A Route Handler, like /auth/confirm: minting a session writes cookies.
  */
 
 const FAILURE_PATH = "/login?error=oauth_failed";
@@ -47,12 +40,8 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // @supabase/ssr defaults to `flowType: "pkce"`, so the code verifier travelled here in a
-    // cookie written when signInWithProvider() started the flow.
-    //
-    // `flowId` selects that specific flow's verifier when several are in flight — it only
-    // arrives with the experimental `appendPkceFlowIdToRedirects` option, so this is
-    // forward-compatibility, not a requirement. Without it the most recent verifier is used.
+    // PKCE (the @supabase/ssr default): the verifier arrived in a cookie from signInWithProvider().
+    // `flowId` (only with experimental `appendPkceFlowIdToRedirects`) picks among concurrent flows.
     const flowId = searchParams.get("sb_flow_id");
     const { data, error } = await supabase.auth.exchangeCodeForSession(
         code,
@@ -61,10 +50,8 @@ export async function GET(request: NextRequest) {
 
     if (error || !data.user) return redirectTo(FAILURE_PATH);
 
-    // Downloading somebody else's CDN image should never sit between a guest and their
-    // account, so it runs after the redirect has already been sent. Reading cookies inside
-    // `after` is supported in Route Handlers specifically, which is what keeps the
-    // session-bound client usable in there.
+    // Fetching a CDN avatar must never delay sign-in, so it runs after the redirect; `after` in a
+    // Route Handler may read cookies, keeping the session client usable.
     const user = data.user;
     after(() => adoptProviderAvatar(supabase, user));
 

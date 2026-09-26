@@ -3,20 +3,14 @@ import Image from "next/image";
 import weddingImg from "@/public/leisure/event-hall/javanese-wedding.png";
 
 /**
- * Wide image band, same treatment as `GolfCourseSection` and
- * `SpaRelaxationSection` — one full-width shot, no copy underneath.
- *
- * Carries `id="the-hall"`. Nothing links to it since `EventVenueHero` has no
- * secondary CTA, same reasoning as the other two leisure pages; kept as a
- * stable target for anyone linking in from outside.
+ * Wide image band, same as `GolfCourseSection`/`SpaRelaxationSection`. `id="the-hall"` has no
+ * internal link (the hero has no secondary CTA) — kept as a stable inbound target.
  */
 export default function EventVenueSection() {
     return (
         <section id="the-hall" className="scroll-mt-14 pt-6">
-            {/* Matches `EventVenueHero`'s single image size on mobile/tablet
-                (`h-70`/`sm:h-96`) so the two images left on the page read as
-                the same size once the hero drops to one column, then returns
-                to its original `h-155` at `lg`. */}
+            {/* Matches `EventVenueHero`'s image size below `lg` (`h-70`/`sm:h-96`), so both
+                images read the same once the hero is one column; `h-155` at `lg`. */}
             <div className="relative h-70 w-full overflow-hidden rounded-[20px] sm:h-96 lg:h-155">
                 <Image
                     src={weddingImg}

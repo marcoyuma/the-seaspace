@@ -1,26 +1,15 @@
 import QRCode from "qrcode";
 
 /**
- * Renders a QR code to an inline SVG string, on the server.
- *
- * ⚠️ Server-side only. Importing this from a Client Component would ship an encoder to the
- * browser to draw a picture that never changes after render — the SVG is inlined into the
- * HTML instead, so the page costs no JavaScript and no image request at all.
- *
- * The alternative to the dependency was hand-rolling the encoder: masking, error
- * correction and Reed–Solomon arithmetic, several hundred lines nobody should have to
- * review to trust a door code.
- *
- * Error correction is deliberately `M` (~15% recoverable) rather than the default `L`. This
- * particular QR gets scanned off a phone screen in a doorway at night, at an angle, with a
- * fingerprint across it.
+ * Renders a QR to an inline SVG, ⚠️ server-only, so no encoder or image request ships. A dependency
+ * beats hand-rolling Reed–Solomon for a door code. Error correction `M` (~15%), not `L`: it's scanned
+ * off a phone in a dark doorway, at an angle, through fingerprints.
  *
  * @param value What the camera should resolve to — an absolute URL. See `checkInUrl()`.
  * @returns An `<svg>` element as a string, sized by its container rather than by pixels.
  *
  * @example
- * const svg = await accessQrSvg(checkInUrl(origin, booking.accessCode));
- * <div dangerouslySetInnerHTML={{ __html: svg }} />
+ * <div dangerouslySetInnerHTML={{ __html: await accessQrSvg(checkInUrl(origin, code)) }} />
  */
 export async function accessQrSvg(value: string): Promise<string> {
     return QRCode.toString(value, {

@@ -8,20 +8,9 @@ import { formatFullDate } from "@/features/booking/lib/dates";
 import type { GuestBooking } from "@/features/booking/types";
 
 /**
- * How this guest gets through the door.
- *
- * A Server Component, and it has to be: the QR is rendered to an SVG string here and
- * inlined into the HTML, so the browser downloads no encoder and makes no image request
- * for a picture that never changes.
- *
- * ⚠️ **Both delivery methods are always shown**, whichever one was chosen. There is a
- * single `access_code` per booking and it opens both doors — the choice made at checkout
- * decides what is emphasised, not what is permitted. A guest whose phone died at the smart
- * reader needs the keypad digits in front of them, not an explanation of why they picked
- * the wrong option two weeks ago.
- *
- * Renders nothing for a booking that has no door left to open (cancelled, completed, or a
- * no-show), or for the 140 seeded rows, which predate access codes entirely.
+ * How the guest gets through the door — a Server Component so the QR inlines as SVG (no encoder, no
+ * image request). ⚠️ **Both methods always show**: one `access_code` opens both doors, so the choice
+ * only sets emphasis. Renders nothing once no door is left to open, or for seeded rows without codes.
  *
  * @param booking The guest's own reservation, already scoped by RLS.
  */
@@ -103,10 +92,8 @@ export default async function ArrivalInstructions({
                 </div>
             </div>
 
-            {/* Only offered while there is a check-in left to make. The button is shown
-                even before the arrival day: the date rule lives in `check_in_booking()`,
-                and a refusal that names the dates is more useful than a button that is
-                mysteriously absent. */}
+            {/* Only while a check-in remains. Shown even before arrival day: `check_in_booking()`
+                refusing with the dates beats a mysteriously absent button. */}
             {booking.status === "confirmed" && booking.paidAt && (
                 <div className="mt-8 border-t border-black/10 pt-8">
                     <p className="mb-4 max-w-160 text-[16px] font-medium text-black/60">

@@ -25,27 +25,21 @@ const StayMapCanvas = dynamic(() => import("@/features/stays/components/stay-map
 const PRELOAD_MARGIN = "200px";
 
 /**
- * Lazy wrapper around the Leaflet map on the stay detail page.
- *
- * next/dynamic alone still downloads the chunk on mount, so this also gates on
- * an IntersectionObserver: the section sits well below the fold, and visitors
- * who never scroll to it shouldn't pay ~50KB of Leaflet plus ~250KB of tiles.
+ * Lazy Leaflet map for the stay page, also gated on an IntersectionObserver: next/dynamic still
+ * loads on mount, and visitors who never scroll here shouldn't pay ~50KB of JS + ~250KB of tiles.
  *
  * @param lat - Latitude of the stay.
  * @param lng - Longitude of the stay.
  * @param label - Human-readable "Name, Location" shown in the popup.
- * @param stayId - Forwarded to the map as a remount key.
  */
 export default function StayMap({
     lat,
     lng,
     label,
-    stayId,
 }: {
     lat: number;
     lng: number;
     label: string;
-    stayId: string;
 }) {
     // Watches the skeleton, since the map it decides to load doesn't exist yet.
     const containerRef = useRef<HTMLDivElement>(null);
@@ -79,12 +73,7 @@ export default function StayMap({
         // swap doesn't shift layout.
         <div ref={containerRef} className="h-full w-full">
             {isVisible ? (
-                <StayMapCanvas
-                    lat={lat}
-                    lng={lng}
-                    label={label}
-                    stayId={stayId}
-                />
+                <StayMapCanvas lat={lat} lng={lng} label={label} />
             ) : (
                 <MapSkeleton />
             )}

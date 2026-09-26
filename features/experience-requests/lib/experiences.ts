@@ -1,15 +1,9 @@
 import type { ExperienceId } from "@/features/experience-requests/types";
 
 /**
- * The copy that makes one form serve two pages.
- *
- * Golf and spa ask for the same six things; only the wording and one dropdown differ. A
- * config map rather than two components means the validation, the markup and the
- * accessibility work exist once — and a third page (`/event-venue`) becomes an entry here
- * rather than a third copy of the form.
- *
- * Shared between the server action and the client form, so it must stay free of anything
- * server-only.
+ * The copy that lets one form serve every leisure page: the six fields are shared, only wording and
+ * one dropdown differ, so validation, markup and a11y exist once. Shared by the server action and
+ * the client form, so it must stay free of anything server-only.
  */
 export interface ExperienceRequestConfig {
     /** Label on the pill that opens the modal. */
@@ -21,10 +15,8 @@ export interface ExperienceRequestConfig {
     /** Wording for the party-size counter: a golf group is not a spa party. */
     partyLabel: string;
     /**
-     * Upper bound on the party-size field, both the `<input max>` and the server check.
-     * Golf and spa cap small on purpose — a group that size is already a phone call, not a
-     * form. A wedding hall has no such ceiling, hence a distinct value per experience
-     * rather than one constant shared across all three.
+     * Party-size cap, for both `<input max>` and the server check. Golf and spa cap small (bigger
+     * groups phone in); a wedding hall doesn't, hence one value per experience.
      */
     maxPartySize: number;
     /** The one field that differs between the two pages. */
@@ -78,10 +70,8 @@ export const EXPERIENCE_REQUESTS: Record<ExperienceId, ExperienceRequestConfig> 
         maxPartySize: 12,
         choice: {
             label: "What are you after?",
-            // Categories, not named rituals. spa-relaxation-section.tsx describes the room
-            // and nothing else, so a list of invented treatment names would have the modal
-            // offering something the page never mentions. When that section grows a real
-            // ritual menu, these become its names — and only then.
+            // Categories, not named rituals: the spa page describes only the room, so invented
+            // names would offer what it never mentions. Real names come with a ritual menu.
             options: [
                 "Massage",
                 "Facial",

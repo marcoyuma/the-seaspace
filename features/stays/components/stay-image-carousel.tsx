@@ -20,10 +20,8 @@ import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 import type { StayImage } from "@/features/stays/types";
 import Skeleton from "@/ui/skeleton";
 
-// FRAME_WIDTH and GAP mirror the `lg:` step of FRAME_HEIGHT_CLASSES / FRAME_WIDTH_CLASSES
-// below (the frame is smaller at narrower breakpoints — see those constants). They only
-// seed the copy count — the wrap maths measures the real geometry off the DOM, and an
-// over-estimate here just means a few unused spare copies, never too few.
+// FRAME_WIDTH and GAP mirror the `lg:` step of the frame classes below. They only seed the copy
+// count — the wrap maths measures real geometry, and over-estimating just adds spare copies.
 /** Rail height at the `lg` breakpoint, in px. Basis of IMAGE_PAINT_WIDTH — kept as the
  * largest step so the `sizes` attribute never under-fetches at a smaller breakpoint. */
 const RAIL_HEIGHT = 600;
@@ -49,12 +47,8 @@ const IMAGE_QUALITY = 80;
 /** Seconds for an arrow-driven step. */
 const STEP_DURATION = 0.6;
 
-/** Sliver of the previous frame kept visible, as a fraction of one frame's width rather
- * than a fixed px — the frame itself is now responsive (FRAME_CLASSES below), and a flat
- * px peek would eat an ever-larger share of a narrower mobile frame. ~0.25 matches the
- * original 130px sliver at the desktop frame width (526px). Baked into every resting
- * position, so the reference composition survives and consecutive stops stay one frame
- * apart at any breakpoint. */
+/** Visible sliver of the previous frame, as a fraction of frame width (not px) since the frame is
+ * responsive; 0.25 ≈ the original 130px at 526px. Baked into every resting position. */
 const PEEK_RATIO = 0.25;
 
 /** Pointer travel before a press becomes a drag. Below it the gesture stays a click,
@@ -92,16 +86,9 @@ const prefersReducedMotion = () =>
  * @param images - Ordered frames; every one renders at the same width.
  */
 export default function StayImageCarousel({ images }: { images: StayImage[] }) {
-    /* Position model — everything below is arithmetic on top of this.
-     *
-     * `posRef.value` is a virtual scroll offset in px; raising it moves the rail
-     * LEFT, bringing later frames in. Frame N rests at `N * stepWidth() -
-     * INITIAL_PEEK`, so frame 0 rests at `-INITIAL_PEEK` — the peek is baked into
-     * every stop, not applied once at the start. `frameIndexAt` inverts that.
-     *
-     * Index space is unbounded in both directions: targetIndexRef just keeps
-     * counting, and only paint() folds it back onto real pixels. paint() is also
-     * the sole writer to the DOM — everything else sets posRef and calls it. */
+    /* Position model: `posRef.value` is a virtual px offset; raising it moves the rail LEFT. Frame N
+     * rests at `N * stepWidth() - INITIAL_PEEK` (`frameIndexAt` inverts it). Indices are unbounded;
+     * only paint() folds them onto pixels, and it's the sole DOM writer. */
 
     /** Clipping window, gesture surface, and the element ResizeObserver watches. */
     const viewportRef = useRef<HTMLDivElement>(null);
@@ -110,11 +97,8 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
     /** Per-frame nodes, read only by measure() to derive the set width. */
     const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-    // An object rather than a number ref because gsap.to needs a mutable target, and
-    // never state because pointer moves must paint without a render per frame. The peek
-    // is now a ratio of the measured frame width, so there is nothing meaningful to seed
-    // this with before the first measure() — it gets snapped to the real rest position
-    // there instead, before anything paints.
+    // An object because gsap.to needs a mutable target; never state, so pointer moves paint without
+    // a render. No meaningful seed before measure(), which snaps it to the real rest position.
     const posRef = useRef({ value: 0 });
     /** Measured px width of one full set (`count` frames plus gaps). Zero until the
      * first measure lands — that is what every `<= 0` guard in this file tests. */
@@ -180,12 +164,8 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
         const setWidth = setWidthRef.current;
         if (!track || setWidth <= 0) return;
 
-        // Fold the unbounded position onto [0, setWidth) — every set is identical,
-        // so any two positions one set apart are visually the same rail.
-        //
-        // Hand-rolled rather than `gsap.utils.wrap`: this runs on the very first paint,
-        // before the deferred GSAP import can have landed. JS `%` keeps the sign, hence
-        // the `+ setWidth` correction — the same shape as the dot maths below.
+        // Fold the unbounded position onto [0, setWidth) — positions a set apart look identical.
+        // Hand-rolled, not `gsap.utils.wrap`: GSAP may not have loaded by the first paint.
         const value = posRef.current.value;
         const wrapped = ((value % setWidth) + setWidth) % setWidth;
         // The extra setWidth parks the window on the SECOND copy, leaving a whole
@@ -235,11 +215,8 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
         return () => observer.disconnect();
     }, [count, paint, restPosition]);
 
-    // Pulls GSAP in after mount rather than at module scope. Its ticker reads
-    // `Date.now()` as the module evaluates, and with `cacheComponents` on that counts as
-    // reading the clock during the client prerender — which would cost this route its
-    // static shell (see the `import type` note at the top). The rail's markup and images
-    // carry no GSAP, so deferring it keeps the hero server-rendered.
+    // GSAP loads after mount: its ticker reads `Date.now()` at module eval, which under
+    // `cacheComponents` costs the static shell. The rail's markup needs no GSAP, so it stays SSR.
     useEffect(() => {
         let cancelled = false;
         import("gsap").then((module) => {
@@ -516,10 +493,8 @@ export default function StayImageCarousel({ images }: { images: StayImage[] }) {
                     ))}
                 </div>
 
-                {/* Layered OVER the rail rather than replacing it: GSAP measures the real
-                    frames on mount, and swapping the markup out from under it would leave the
-                    rail sized against a placeholder. `z-20` clears the arrows and the dot row,
-                    which have nothing to point at yet. */}
+                {/* Layered OVER the rail, not replacing it: GSAP measures the real frames on mount.
+                    `z-20` also covers the arrows and dots, which have nothing to point at yet. */}
                 <div
                     className={`pointer-events-none absolute inset-0 z-20 transition-opacity duration-500 ease-out motion-reduce:transition-none ${
                         railReady ? "opacity-0" : "opacity-100"

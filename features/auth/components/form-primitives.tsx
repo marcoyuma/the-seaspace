@@ -3,14 +3,8 @@
 import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
- * The pieces every auth form is built from.
- *
- * These started out local to auth-form.tsx, with a note that a shared field component
- * invented for a single caller tends to grow the wrong props. There are four callers now —
- * sign in, sign up, forgot password, update password — so the reason to keep them private
- * has expired.
- *
- * Styling matches the site's hairline-and-fill language; see ui/pill-link.tsx.
+ * Shared pieces for every auth form (four callers: sign in/up, forgot and update password).
+ * Styling follows the site's hairline-and-fill language; see ui/pill-link.tsx.
  */
 
 export const LABEL = "block text-[14px] font-semibold tracking-wide text-black";

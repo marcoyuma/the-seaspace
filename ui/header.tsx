@@ -43,17 +43,9 @@ function subscribeToViewport(onChange: () => void) {
 // both measure the viewport including the scrollbar, so the two agree.
 const HERO_SWEEP_MIN_WIDTH = 1024;
 
-// The sweep only exists from `lg` up: features/home/components/hero.tsx puts
-// the full-viewport fixed background behind `hidden lg:block` and stacks a
-// photo band over a blue panel in normal flow below that. So under `lg` there
-// is no background being covered, and the threshold below — calibrated
-// against the desktop hero, and reading an `innerHeight` that itself shifts
-// as the mobile URL bar collapses — just snapped the bar to full width at an
-// arbitrary scroll position. Return `false` there and the bar stays a pill.
-//
-// Above `lg` the hero occupies exactly one viewport (`h-dvh`), so by the time
-// we've scrolled ~that far the background image is 100% covered. The small
-// offset makes the pill start widening right as the sweep finishes behind it.
+// Only `lg`+ has a fixed hero background to sweep (hero.tsx hides it below), so smaller
+// screens return false and the bar stays a pill. Above `lg` the hero is one `h-dvh` tall;
+// the -100 offset starts widening the pill just as the sweep finishes behind it.
 function getHeroSweptSnapshot() {
     if (window.innerWidth < HERO_SWEEP_MIN_WIDTH) return false;
     return window.scrollY >= window.innerHeight - 100;
@@ -95,16 +87,9 @@ function Header({ profileSlot }: { profileSlot: ReactNode }) {
 
     return (
         <header
-            // Fixed & horizontally centered. Collapsed it's a compact floating
-            // pill (rounded, with a top gap). Once the hero is swept the white
-            // BACKGROUND stretches to the full viewport width and sits flush
-            // against the top edge — only the inner content (below) stays inset
-            // to line up with the stays/services sections.
-            // `max-lg:shadow-*` on the collapsed branch: under `lg` the pill
-            // never expands (see getHeroSweptSnapshot), so it now floats over
-            // the white sections too — where a white pill with a transparent
-            // border would otherwise have no visible edge at all. Desktop keeps
-            // the flat pill it has always had.
+            // Collapsed: a floating pill. Once the hero is swept, the white bar goes full-width
+            // and flush to the top while the content below stays inset. `max-lg:shadow-*` gives
+            // the never-expanding mobile pill a visible edge over the white sections.
             className={`${isHome ? "fixed" : "relative border-none"} left-1/2 z-20 -translate-x-1/2
                         h-14 bg-white text-black
                         border-b border-black/10
@@ -116,17 +101,9 @@ function Header({ profileSlot }: { profileSlot: ReactNode }) {
                         }`}
         >
             <div
-                // The bar above can go full-bleed, but the content stays capped:
-                // expanded, the inset mirrors `Container`'s mx-* at every
-                // breakpoint (48px mobile → 64px sm → 128px md → 240px lg,
-                // i.e. double Container's per-side margin) so the
-                // logo/nav/icons align with the section edges; collapsed it
-                // simply fills the pill.
-                // Side columns share equal `1fr` so the `auto` center column
-                // (the nav) stays geometrically centered between logo and
-                // account regardless of their differing widths.
-                // Same transition gate as the bar: without it the inset
-                // still animates in after every reload.
+                // Expanded, the inset is double `Container`'s per-side margin at every breakpoint
+                // so the content aligns with section edges; collapsed it fills the pill. Same
+                // transition gate as the bar, or the inset animates in after every reload.
                 className={`mx-auto flex h-full justify-between items-center
                             ${readyForTransition ? "transition-[width,padding] duration-500 ease-in-out motion-reduce:transition-none" : ""}
                             ${

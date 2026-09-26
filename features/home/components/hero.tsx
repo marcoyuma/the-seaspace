@@ -16,32 +16,21 @@ export default function Hero() {
                 on tablet/mobile. */}
             <div className="hidden lg:block">
                 <div className="fixed inset-0 -z-10 overflow-hidden">
-                    {/* Sized by HEIGHT only (`w-auto`), so the rendered width is
-                        always 1.75x the height — the photo's own aspect ratio.
-                        Widening/narrowing the window therefore never rescales
-                        the photo, it only changes how much is clipped left and
-                        right. `max-w-none` defeats preflight's `max-width:100%`;
-                        `min-w-full` + `object-cover` is the fallback for
-                        ultrawide-short viewports, where the photo already spans
-                        100% of its width and there is nothing left to crop. */}
+                    {/* Sized by HEIGHT (`w-auto`), so resizing only changes the side crop, never
+                        the photo's scale. `max-w-none` beats preflight's `max-width:100%`;
+                        `min-w-full` + `object-cover` handle ultrawide-short viewports. */}
                     <Image
                         className="absolute left-1/2 top-0 -translate-x-1/2 h-[calc(100dvh+200px)] w-auto min-w-full max-w-none object-cover object-[center_50%]"
                         src={bg}
                         placeholder="blur"
                         quality={90}
-                        // Neither variant may be `preload`ed or `loading="eager"`: BOTH sit in
-                        // the DOM (only CSS picks one), so either would fetch this 4.6 MB
-                        // photo twice. The Next 16 docs prescribe `fetchPriority` for exactly
-                        // this art-direction case — default lazy loading then skips the
-                        // `display:none` twin, which has no box to intersect the viewport.
+                        // No `preload`/eager: BOTH variants are in the DOM, so either would fetch this
+                        // 4.6 MB photo twice. `fetchPriority` is Next 16's answer for art direction;
+                        // lazy loading then skips the `display:none` twin.
                         fetchPriority="high"
-                        // The photo is sized by HEIGHT (`w-auto`), so its painted width is
-                        // 1.46 x (viewport height + 200px), floored at the viewport width by
-                        // `min-w-full`. On 16:9 that lands near 100vw, but on a shorter or
-                        // narrower window (1280x1024) it reaches ~140vw — where the old
-                        // "100vw" served an image NARROWER than it was painted, i.e. real
-                        // softness. 120vw covers the common cases; `deviceSizes` in
-                        // next.config.ts carries the 2560 rung that keeps this off 3840.
+                        // Painted width is 1.46 × (viewport height + 200px), floored at 100vw — up to
+                        // ~140vw on short windows, where "100vw" served too narrow a file. 120vw covers
+                        // common cases; next.config.ts's 2560 `deviceSizes` rung keeps it off 3840.
                         sizes="(min-width: 1024px) 120vw, 100vw"
                         alt="Beach scape views"
                         {...{ [PRELOADER_GATE_ATTR]: "hero" }}
@@ -51,10 +40,8 @@ export default function Hero() {
 
                 <div className="flex items-center w-full h-dvh pt-7.25">
                     <div className="flex flex-col items-center mb-40 justify-center inset-x-0 gap-y-5 fixed">
-                        {/* leading-[1.05], bukan `leading-14` (56px pada teks
-                            64px) seperti dulu: pada leading serapat itu baris
-                            kedua terasa menempel dan descender "y" pada
-                            "symphony" nyaris menyentuhnya. */}
+                        {/* `leading-[1.05]`: a 56px line box on 64px text crowded line two against
+                            the "y" descender in "symphony". */}
                         <h1 className="text-[64px] text-center text-white leading-[1.05] font-bold tracking-[-0.03em] max-w-151.25">
                             Embrace the symphony of waves
                         </h1>
@@ -77,11 +64,8 @@ export default function Hero() {
             </div>
 
             {/* ================= TABLET / MOBILE ( below lg ) ================= */}
-            {/* Stacked with plain block flow (no flex-direction) so the photo
-                and copy always sit top-to-bottom. The photo band fades into a
-                solid `#298BE0` panel (same blue as the amenity badge). The copy
-                is horizontally centered via `text-center` + `mx-auto`, and the
-                type scales fluidly with `clamp()` so it fits any viewport. */}
+            {/* Plain block flow so photo and copy always stack. The photo band fades into a
+                solid `#298BE0` panel (the amenity badge blue); type scales with `clamp()`. */}
             <div className="min-h-dvh bg-[#298BE0] lg:hidden">
                 {/* Photo band */}
                 <div className="relative h-[38dvh] w-full sm:h-[44dvh]">

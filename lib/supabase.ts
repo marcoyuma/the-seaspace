@@ -1,11 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Read-only Supabase client for the public site.
- *
- * Domain-free on purpose: this module knows how to reach Supabase and how long to cache,
- * nothing about stays. Feature-specific queries live in the feature that owns them
- * (see features/stays/api.ts).
+ * Read-only Supabase client for the public site. Domain-free: it knows how to reach Supabase and
+ * how long to cache, not stays — feature queries live in their feature (features/stays/actions.ts).
  */
 
 // Static property access, not process.env[name]. Next only inlines NEXT_PUBLIC_* when it
@@ -24,59 +21,29 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     );
 }
 
-// The dashboard also hands out a REST endpoint URL (…/rest/v1/). supabase-js appends its
-// own paths, so a pasted REST URL throws PGRST125 — loud and easy to catch. The same
-// mistake in a storage URL fails *silently*, producing broken images with no error at all.
-// Normalising once here closes both.
+// A pasted REST URL (…/rest/v1/) makes supabase-js throw PGRST125, and silently breaks storage
+// image URLs. Normalising to the origin once closes both.
 const SUPABASE_ORIGIN = new URL(SUPABASE_URL).origin;
 
-/** Cache tag for everything in the stays catalogue: rows, photos, amenities. */
+/**
+ * Cache tag for the stays catalogue (rows, photos, amenities). Invalidation reaches only the NEXT
+ * request; open tabs stay stale by design (2026-08-16) — create_booking() re-checks price and
+ * capacity at payment, so don't add polling, refresh-on-focus or Realtime without revisiting that.
+ */
 export const STAYS_CACHE_TAG = "stays";
 
 /**
- * Cache profile for the catalogue. One hour in production, one second in development.
- *
- * Scope note: this governs only the CACHED readers — `getStay()` behind the prerendered villa
- * detail page, `getStays()` behind generateStaticParams(), and the reviews aggregates. The
- * /stays grid and the landing preview do not go through it at all: they call the uncached
- * `*Fresh` variants in features/stays/actions.ts and stream inside a <Suspense> boundary, so
- * no interval applies to them.
- *
- * In production the tag above is invalidated on demand by the Supabase Database Webhook
- * that POSTs to app/api/revalidate/stays/route.ts, and the hourly interval is the safety
- * net behind it: pg_net is fire-and-forget, so a webhook that never arrives would
- * otherwise leave the catalogue stale forever.
- *
- * Development gets `seconds` because that webhook cannot reach it. pg_net runs on
- * Supabase's own servers, which have no route to localhost — so with `hours` the only way
- * to see a row added from the admin panel was to restart `next dev`. The default
- * "use cache" handler is an in-memory LRU with no on-disk persistence, so killing the
- * process was the only thing that dropped the entry (see the handler's own `get`: an entry
- * survives until `timestamp + revalidate`, and nothing else evicts it).
- *
- * ⚠️ None of this reaches a page that is already open in someone's browser, and nothing is
- * planned that will. Invalidating the tag only guarantees the NEXT request renders fresh;
- * an open tab keeps what it has until the visitor reloads or navigates. That was decided
- * deliberately on 2026-08-16 — a villa catalogue changes a few times a week, and the
- * freshness that actually carries risk is enforced where it belongs instead: create_booking()
- * re-reads price, discount and capacity at payment time rather than trusting the page.
- * Do not add polling, refresh-on-focus or Realtime here without revisiting that decision.
+ * Catalogue cache life: `hours` in prod, where the stays webhook (api/revalidate/stays) clears the
+ * tag and the interval backs up fire-and-forget pg_net; `seconds` in dev, which pg_net can't reach.
+ * Only cached readers use it (getStay, getStays, review aggregates); /stays uses uncached `*Fresh`.
  */
 export const STAYS_CACHE_PROFILE =
     process.env.NODE_ENV === "development" ? "seconds" : "hours";
 
 /**
- * Cache tag for reviews: the rows themselves and every aggregate over them.
- *
- * Separate from STAYS_CACHE_TAG because reviews now have a write path of their own
- * (features/reviews/server-actions.ts). Review readers tag BOTH, so the catalogue webhook
- * from 0017 keeps clearing them exactly as it did before, while a guest posting a review
- * can invalidate just this — rather than dropping the whole four-villa catalogue, which is
- * cached for an hour and did not change.
- *
- * No profile of its own: reviews are catalogue-shaped data, so they ride on
- * STAYS_CACHE_PROFILE. What makes a new review appear immediately is `updateTag`, not a
- * short interval.
+ * Cache tag for reviews and their aggregates. Readers tag BOTH this and STAYS_CACHE_TAG, so the
+ * catalogue webhook still clears them while a posted review invalidates only this. No profile of
+ * its own: reviews ride STAYS_CACHE_PROFILE, and `updateTag` makes a new one appear instantly.
  */
 export const REVIEWS_CACHE_TAG = "reviews";
 
@@ -84,30 +51,15 @@ export const REVIEWS_CACHE_TAG = "reviews";
 export const BOOKINGS_CACHE_TAG = "bookings";
 
 /**
- * Cache profile for availability: minutes, not hours.
- *
- * The catalogue can be an hour stale with no consequence — a villa's photos do not
- * change. Availability can: a stale calendar offers dates that were taken while the
- * page sat in the cache, and the guest finds out only at checkout. Minutes is the
- * shortest interval that still spares the database a query per render.
- *
- * This never caches anything guest-specific. Only booked date ranges pass through it,
- * via the get_stay_booked_ranges RPC (supabase/migrations/0010_stay_availability.sql) —
- * never the bookings rows themselves, which are per-guest and must not be shared.
+ * Availability cache life: minutes, as a stale calendar offers dates already taken. Only booked
+ * date ranges pass through it (get_stay_booked_ranges, migration 0010) — never per-guest rows.
  */
 export const BOOKINGS_CACHE_PROFILE = "minutes";
 
 /**
- * Anonymous, session-free client for the public catalogue.
- *
- * Caching is NOT attached here. It used to be, via a `global.fetch` override that forced
- * `next: { revalidate, tags }` onto every request — which meant any authenticated query
- * borrowing this client would have its response cached and served to the next visitor.
- * Under Cache Components the policy lives at the function level instead (`use cache` +
- * `cacheTag` + `cacheLife` in each feature's actions.ts), so that hazard is gone by
- * construction rather than by remembering to avoid it.
- *
- * Auth uses its own clients — see lib/supabase-server.ts and lib/supabase-browser.ts.
+ * Anonymous, session-free client for the public catalogue. Caching is deliberately per function
+ * (`use cache` in each feature's actions.ts), never on this client, so an authenticated query
+ * borrowing it can't be cached for the next visitor. Auth has its own clients.
  */
 export const supabase = createClient(SUPABASE_ORIGIN, SUPABASE_ANON_KEY, {
     // Server-side only; there is no browser session to persist and no user to refresh.
@@ -115,11 +67,8 @@ export const supabase = createClient(SUPABASE_ORIGIN, SUPABASE_ANON_KEY, {
 });
 
 /**
- * Builds the URL for an object in a public bucket.
- *
- * Rows store a bucket-relative path rather than a full URL, so moving projects or regions
- * is an env change instead of a data migration. Public buckets serve this path directly,
- * with no round-trip needed to mint it.
+ * Public-bucket object URL. Rows store bucket-relative paths, so moving project or region is an
+ * env change, not a data migration.
  */
 export function publicStorageUrl(bucket: string, path: string): string {
     return `${SUPABASE_ORIGIN}/storage/v1/object/public/${bucket}/${path}`;

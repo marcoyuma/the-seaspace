@@ -19,7 +19,7 @@ export default function Page() {
                 nesting the two would double the 120px inset. `excludeId`
                 leaves golf course + event venue, which drops it to 2 columns. */}
             <ServiceAndAmenitiesPreview
-                excludeId="spa-and-wellness"
+                excludeId="spa"
                 overline="Beyond the treatment room"
                 heading="Carry On Unwinding"
                 description="The calm doesn't end at the door — a fairway at golden hour, or a hall that holds your whole celebration."

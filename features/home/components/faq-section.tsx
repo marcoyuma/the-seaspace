@@ -24,9 +24,7 @@ const questions = [
         answer: "Absolutely. From snorkeling and paddleboarding to sunset sailing trips, our concierge can arrange a range of water activities tailored to your group.",
     },
     {
-        // Replaced a verbatim duplicate of the beach question above. The arrival flow is
-        // the thing guests actually ask about that this list never answered — see
-        // features/booking/README.md.
+        // The arrival flow is what guests actually ask about — see features/booking/README.md.
         question: "How do we get into the villa when we arrive?",
         answer: "You choose when you book. Self check-in gives you a code to scan at the door, so there is nobody to meet and no arrival time to agree on. The lock box is the same code on a mechanical keypad, which keeps working with a flat phone and no signal. Either way the code reaches you the moment the booking is made, and it works at both doors.",
     },
@@ -41,10 +39,8 @@ export default function FaqSection() {
 
     return (
         <div className="pb-27.5 px-4 sm:px-8 md:px-16 flex flex-col gap-5">
-            {/* Intro block: `gap-3` (12px) is the site-wide spacing between
-                overline/heading/text — see RESPONSIVE-AUDIT.md Bagian F.
-                The outer wrapper's `gap-5` above governs the (slightly
-                larger) gap from this block to the FAQ list below. */}
+            {/* `gap-3` is the site-wide overline/heading/text spacing (RESPONSIVE-AUDIT.md
+                Bagian F); the wrapper's larger `gap-5` spaces this block from the list. */}
             <div className="flex flex-col justify-center items-center gap-3">
                 <OverlineText>{"FAQ's"}</OverlineText>
                 <Heading className="text-center">

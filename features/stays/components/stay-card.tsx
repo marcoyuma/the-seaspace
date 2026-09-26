@@ -1,8 +1,6 @@
 import Image from "next/image";
-// SSR entry point — required in Server Components / any non-Context environment.
-// Bare `Bed`/`Users` are deprecated by the package; use the `*Icon` exports.
-// ArrowsOutSimple stands in for floor area — the four-corner "expand" glyph is
-// the closest thing Phosphor has to the m² icon used on listing sites.
+// SSR entry for Server Components; bare `Bed`/`Users` are deprecated, so use `*Icon`.
+// ArrowsOutSimple stands in for floor area — Phosphor's closest thing to an m² icon.
 import {
     ArrowsOutSimpleIcon,
     BedIcon,
@@ -31,10 +29,7 @@ interface StayCardProps {
 }
 
 /**
- * Real-estate–style listing card: a text block (title, specs, price) stacked
- * above a large rounded image. Data is currently passed in from a dummy array
- * on the stays page and will later come from Supabase — the prop shape is the
- * seam for that swap.
+ * Real-estate–style listing card: title, specs and price stacked above a large rounded image.
  */
 export default function StayCard({
     imageSrc,
@@ -57,10 +52,8 @@ export default function StayCard({
                     // Remote images get no automatic blurDataURL — it is generated at
                     // upload time and stored alongside the row.
                     blurDataURL={imageSrc.blurDataURL}
-                    // Matches the quality the source was encoded at (WebP q80 — see the
-                    // upload contract in ADMIN-PANEL-CONTEXT.md). Asking for more re-encodes
-                    // an already-lossy image at higher cost without recovering detail:
-                    // measured 387 KB at q100 vs 138 KB at q80 for the same 1080px frame.
+                    // Matches the source's WebP q80 encoding; more only re-encodes lossy data at
+                    // higher cost (387 KB at q100 vs 138 KB at q80 for the same 1080px frame).
                     quality={80}
                     fill
                     sizes="(max-width: 768px) 100vw, 50vw"

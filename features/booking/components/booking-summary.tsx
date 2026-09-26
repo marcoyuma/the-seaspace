@@ -19,14 +19,9 @@ function Row({ label, value }: { label: React.ReactNode; value: string }) {
 }
 
 /**
- * What the guest picked, priced out — sits between the spec fields and the CTA.
- *
- * Not a Client Component: it only renders props. The state lives one level up in
- * `BookingPanel`, so this stays a pure view and can be read as one.
- *
- * ⚠️ Prices are computed from the CATALOGUE here, which is right for a quote. A real
- * booking snapshots them into `bookings.unit_price_per_night` at the moment it is made —
- * see 0009. Do not later "simplify" the write path into re-reading these.
+ * The picked selection, priced — a pure view; state lives in `BookingPanel`. ⚠️ Catalogue prices
+ * suit a quote; a booking snapshots them at write time (0009), so never "simplify" the write path
+ * into re-reading these.
  */
 export default function BookingSummary({
     checkIn,

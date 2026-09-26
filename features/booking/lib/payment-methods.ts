@@ -1,15 +1,7 @@
 /**
- * The payment methods the checkout page offers.
- *
- * Split from payment-gateway.ts so the radio list can be imported by a Client Component
- * without dragging the gateway into the browser bundle. This file is plain data; that one
- * runs on the server only.
- *
- * ⚠️ **None of these is a real integration, and none of them collects an instrument.**
- * There is no card number field anywhere in this flow, on purpose: a demo site that asks
- * for a card number will eventually be given a real one. The choice made here is recorded
- * in the guest's mind only — `bookings` has no column for it, and adding one would imply a
- * payment record that does not exist.
+ * Checkout payment methods — plain data, split from payment-gateway.ts so client radios don't bundle
+ * the gateway. ⚠️ **None is a real integration or collects an instrument**: no card field anywhere,
+ * since a demo that asks for a card number will eventually be given a real one.
  */
 
 export type PaymentMethodId = "gopay" | "bank-transfer" | "card";

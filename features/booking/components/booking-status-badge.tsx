@@ -2,14 +2,9 @@ import type { BookingStatus } from "@/features/booking/types";
 import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
- * What a guest is told about the state of their reservation.
- *
- * Two columns decide it, not one: `status` and `paid_at`. 0009 keeps them separate
- * because they answer different questions — a `confirmed` booking with no `paid_at` is a
- * real, reachable state (the row is created before the payment is attempted, see 0011 §5),
- * and calling that "Confirmed" would be a lie the guest could act on.
- *
- * Deliberately never shows the raw column value. `checked_out` is a hotel-desk word.
+ * What the guest is told about their reservation, from BOTH `status` and `paid_at` — a `confirmed`
+ * row without `paid_at` is real (0011 §5), and calling it "Confirmed" would be a lie. Never the raw
+ * value: `checked_out` is a hotel-desk word.
  */
 function describe(status: BookingStatus, paidAt: string | null) {
     switch (status) {

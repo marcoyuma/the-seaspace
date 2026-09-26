@@ -10,20 +10,12 @@ import { FormBanner } from "@/features/auth/components/form-primitives";
 import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
- * The button that turns a code into a check-in.
- *
- * Used from two places with the same behaviour: the reservation page, where the guest is
- * signed in, and `/checkin/{code}`, where whoever scanned the QR may be nobody the site
- * has ever seen. That is why it never redirects — a signed-out scanner has nowhere to be
- * sent, so success is stated in place and offers a link the signed-in case can follow.
- *
- * ⚠️ The code travels as a hidden field on a POST. It must never sit on a link that a
- * `GET` could act on: prefetchers, chat previews and antivirus scanners all follow links,
- * and a guest would be checked in by a WhatsApp preview of their own booking.
+ * Turns a code into a check-in, on the reservation page and at `/checkin/{code}` (possibly signed
+ * out), so it never redirects — success is stated in place. ⚠️ The code is a hidden POST field, never
+ * a GET link: previews and scanners follow links and would check guests in.
  *
  * @param code The booking's access code, already known to open something.
- * @param label Overridden on the reservation page, where "I've arrived" reads better than
- *   the doorway's "Open the door".
+ * @param label "I've arrived" on the reservation page, instead of the doorway's "Open the door".
  */
 export default function CheckInButton({
     code,

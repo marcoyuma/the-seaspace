@@ -24,34 +24,22 @@ import PillLink from "@/ui/pill-link";
 const NO_DATES: DateSelection = { checkIn: null, checkOut: null };
 const ONE_ADULT: GuestCounts = { adults: 1, children: 0, infants: 0, pets: 0 };
 
-// The clock is an external system, so useSyncExternalStore is the right hook for reading
-// it — and the only one that can legally return a DIFFERENT value on the server than in
-// the browser, which is exactly what is needed here (see `useToday` below). Nothing ever
-// notifies, so the subscribe function hands back a no-op unsubscribe; it must be a stable
-// reference or React would resubscribe on every render.
+// The clock is an external system, and useSyncExternalStore alone may return a DIFFERENT server
+// value (see `useToday`). Nothing notifies, so subscribe returns a stable no-op unsubscribe.
 const neverChanges = () => () => {};
 
 /**
- * Today in the viewer's timezone, or `null` while rendering on the server.
- *
- * The detail page is prerendered, so a date computed during render would be frozen at
- * build time and would also disagree with the browser's clock at hydration — two
- * different bugs with the same cause. `null` on the server, the real day after
- * hydration, and no effect needed to get there.
+ * Today in the viewer's timezone, or `null` on the server — a render-time date on this prerendered
+ * page would freeze at build time and mismatch hydration. No effect needed.
  */
 function useToday(): string | null {
     return useSyncExternalStore(neverChanges, todayISO, () => null);
 }
 
 /**
- * The CTA, the summary it produces, and the modal behind it.
- *
- * The single client entry point for booking: `stay-info-section.tsx` stays a Server
- * Component and only has to render this. All the state lives here rather than in the
- * modal so a selection survives closing it.
- *
- * `Reserve` hands the selection to /stays/{slug}/book through the URL. Nothing is written
- * from here — the booking is made by a Server Action on that page.
+ * The CTA, its summary and the modal — booking's single client entry, so `stay-info-section.tsx`
+ * stays a Server Component. State lives here so a selection survives closing the modal. `Reserve`
+ * hands off to /stays/{slug}/book through the URL; nothing is written from here.
  *
  * @param staySlug - `stays.slug`, which is also the `/stays/[stayId]` segment.
  * @param bookedRanges - From `getStayBookedRanges()`. `end` is exclusive.
@@ -101,12 +89,8 @@ export default function BookingPanel({
             : null;
 
     /**
-     * One entry point for both the calendar and the typed date fields, so they cannot
-     * disagree about what a click means.
-     *
-     * Restarting the range is the default: any day at or before the current arrival, and
-     * any day once a full range already exists, begins a new selection. Only a day after
-     * an arrival that is still waiting for a departure completes one.
+     * One entry point for calendar clicks and typed dates, so they agree on what a click means.
+     * Only a day after an arrival still awaiting its departure completes a range; else it restarts.
      */
     function selectDay(day: string) {
         if (!today || day < today) return;
@@ -127,11 +111,8 @@ export default function BookingPanel({
             return;
         }
 
-        // Everything else starts a new range: a day at or before the current arrival, a
-        // day past the next booking, or the first click of all. Chosen over clamping to
-        // some nearby legal date, which would silently book dates nobody picked.
-        //
-        // An arrival, unlike a departure, can never be on a taken day.
+        // Anything else starts a new range — not clamped to a nearby legal date, which would
+        // silently book dates nobody picked. An arrival can never be on a taken day.
         if (blocked.has(day)) return;
 
         setSelection({ checkIn: day, checkOut: null });
@@ -161,11 +142,8 @@ export default function BookingPanel({
             <div className="mt-10">
                 {hasRange ? (
                     <>
-                        {/* A link, not a button: the selection travels in the URL, so a
-                            checkout page can be opened in a new tab, bookmarked or
-                            reloaded and still mean the same thing. See
-                            lib/checkout-params.ts — and note that nothing in that URL is
-                            trusted on the other side. */}
+                        {/* A link, not a button: the selection lives in the URL, so checkout can be
+                            reopened, bookmarked or reloaded (lib/checkout-params.ts — untrusted there). */}
                         <PillLink
                             href={buildCheckoutUrl(
                                 staySlug,

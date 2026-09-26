@@ -5,29 +5,9 @@ import type { NextRequest } from "next/server";
 import { STAYS_CACHE_TAG } from "@/lib/supabase";
 
 /**
- * On-demand revalidation for the stays catalogue.
- *
- * Called by the Supabase Database Webhook installed in
- * supabase/migrations/0017_stays_revalidate_webhook.sql, which fires on every write to
- * `stays`, `stay_images`, `amenities` and `stay_amenities`.
- *
- * What still depends on this: the prerendered villa detail page (`getStay()`), the reviews
- * aggregates that ride on the same tag, and generateStaticParams(). The /stays grid and the
- * landing preview no longer do — they read uncached and are current by construction. Narrower
- * than before, but not optional: without this, a corrected price sits stale on the detail page
- * for up to an hour, which is exactly the page a guest books from.
- *
- * A Route Handler rather than a Server Action: the caller is another application over
- * plain HTTP, and `updateTag` — the read-your-own-writes counterpart — may only be called
- * from a Server Action in this same app.
- *
- * The trigger lives in the database rather than in the admin panel on purpose, so a row
- * corrected by hand in the SQL Editor invalidates the cache just as a save from the admin
- * panel does. A call made by the admin panel would only ever catch its own writes.
- *
- * Depends on STAYS_REVALIDATE_SECRET, which must hold the same value as the secret stored
- * in Supabase Vault. Rotating one without the other fails silently — the webhook stops
- * being accepted and the hourly `cacheLife` timer becomes the only refresh again.
+ * On-demand catalogue revalidation, called by 0017's DB webhook (so SQL Editor fixes count too); keeps
+ * the prerendered villa page from an hour of staleness. A Route Handler: the caller is external and
+ * `updateTag` is Server-Action-only. STAYS_REVALIDATE_SECRET must equal Vault's, or it fails silently.
  */
 
 /** Header the webhook carries its shared secret in. Mirrored in the migration. */
@@ -67,13 +47,8 @@ export async function POST(request: NextRequest) {
         return Response.json({ revalidated: false }, { status: 401 });
     }
 
-    // `{ expire: 0 }` rather than the "max" profile: "max" is stale-while-revalidate, so
-    // the first page load after an admin saves would still show the old catalogue and only
-    // the second would be fresh — the exact confusion this endpoint exists to remove.
-    // Expiring outright costs one blocking query (~113 ms) on the next visit instead.
-    //
-    // One tag covers the whole catalogue: rows, photos and amenities all carry it, and so
-    // do the review queries in features/reviews/actions.ts.
+    // `{ expire: 0 }`, not "max": stale-while-revalidate would still show the old catalogue on the
+    // first load after a save. Costs one blocking query (~113 ms). The tag also covers review reads.
     revalidateTag(STAYS_CACHE_TAG, { expire: 0 });
 
     // Echoed back so the outcome is visible from the database side, where pg_net records

@@ -28,11 +28,8 @@ import type {
 } from "@/features/auth/types";
 
 /**
- * Mutations for auth. Split from actions.ts because every export in a `"use server"` file
- * is reachable as a public endpoint — reads have no business being one.
- *
- * Each is shaped for `useActionState`: `(prevState, formData) => state`. On success they
- * redirect rather than return, so a successful submit produces no state at all.
+ * Auth mutations, split from actions.ts because every `"use server"` export is a public endpoint.
+ * Each fits `useActionState`; success redirects, so it produces no state.
  */
 
 /** Supabase's own floor. Checked here too so the error lands on the field, not in a banner. */
@@ -55,14 +52,9 @@ function readPassword(formData: FormData): string {
 }
 
 /**
- * This deployment's own origin, e.g. `https://seaspace.example`.
- *
- * OAuth needs an absolute `redirectTo`, and deriving it from the request means the value
- * follows the deployment instead of needing an environment variable set correctly in three
- * places. The forwarded headers are spoofable, but they are not the security boundary:
- * Supabase only honours a `redirectTo` that matches URL Configuration → Redirect URLs, and
- * falls back to the Site URL otherwise — so a forged host never receives the code. That check
- * happens on the way back, not at /authorize; see features/auth/README.md.
+ * This deployment's origin, for OAuth's absolute `redirectTo` — derived from the request so it
+ * follows the deployment. Forwarded headers are spoofable, but Supabase honours only allow-listed
+ * Redirect URLs, so a forged host never receives the code (features/auth/README.md).
  */
 async function siteOrigin(): Promise<string> {
     const headerList = await headers();
@@ -128,13 +120,9 @@ function describeAuthError(
             };
 
         case "unexpected_failure":
-            // What Supabase returns (HTTP 500) when the SMTP relay refuses the confirmation
-            // email — its own message is the bare "Error sending confirmation email", which
-            // tells a guest nothing they can act on and advertises that the site is broken.
-            //
-            // Points at the OAuth buttons deliberately: they sit above this form and do not
-            // touch email at all, so a mail outage is an inconvenience rather than a locked
-            // door. Diagnosing the outage: features/auth/README.md, "Email delivery".
+            // Supabase's HTTP 500 when SMTP refuses the confirmation email; its own message tells a
+            // guest nothing. Points at OAuth, which needs no email. Diagnosing the outage:
+            // features/auth/README.md, "Email delivery".
             return {
                 message:
                     "We could not send the confirmation email — that is a problem on our side, not with your address. Continue with GitHub or Google above, or try again later.",
@@ -163,19 +151,12 @@ const QUIET_ERROR_CODES = new Set([
 ]);
 
 /**
- * Records an auth failure the site's operator needs to know about.
- *
- * Without this the only way to learn why a sign-up failed is to open the Supabase dashboard —
- * which is exactly how "Error sending confirmation email" cost an afternoon of guessing.
- *
- * ⚠️ **Logs the code, status and Supabase's own message — never the email address or the
- * password.** `error.code` is enough to diagnose with, and server logs are the wrong place
- * for anything that identifies a person.
+ * Logs an auth failure for the operator — otherwise it's only visible in the Supabase dashboard.
+ * ⚠️ **Code, status and Supabase's message only — never the email address or the password.**
  *
  * @param action Which action failed, e.g. `"signUp"`.
  *
- * @example
- * // [auth:signUp] code=unexpected_failure status=500 Error sending confirmation email
+ * @example // [auth:signUp] code=unexpected_failure status=500 Error sending confirmation email
  */
 function logAuthError(
     action: string,
@@ -237,27 +218,16 @@ export async function signIn(
         };
     }
 
-    // Layouts do not re-render on client-side navigation, so the header would keep showing
-    // the signed-out icon without this. `refresh()`, not `revalidatePath("/", "layout")`: the
-    // session only lives in dynamic holes, and purging every static shell on each sign-in left
-    // Vercel serving a `/` shell whose sections failed to resume ("Connection closed.").
+    // Layouts don't re-render on client navigation, so the header would stay signed-out. `refresh()`,
+    // not `revalidatePath("/", "layout")`: purging static shells left Vercel serving a broken `/`.
     refresh();
     redirect(next);
 }
 
 /**
- * Creates an account.
- *
- * The metadata sent here is a contract with `handle_new_guest()` (migration 0006): the
- * trigger reads `display_name`, `full_name` and `nationality` out of `raw_user_meta_data`
- * to build the `public.guests` row. It fires ONCE (`on conflict (id) do nothing`), so
- * metadata edited later does not flow through — /account writes to `guests` directly.
- *
- * "Confirm email" is OFF, so this action signs the guest straight in: Supabase stamps
- * `email_confirmed_at` at once, the 0006 trigger fires, and the `public.guests` row exists
- * before the redirect. Check the setting with `GET /auth/v1/settings` → `mailer_autoconfirm`
- * (**true** means confirmation is off). Why it is off, and what changes when it is switched
- * back on: features/auth/README.md.
+ * Creates an account. Metadata is a contract with 0006's `handle_new_guest()`, which builds the
+ * `guests` row ONCE from `display_name`/`full_name`/`nationality`. "Confirm email" is OFF (check
+ * `mailer_autoconfirm` = true), so the guest is signed straight in; why: features/auth/README.md.
  */
 export async function signUp(
     _prevState: AuthFormState,
@@ -311,11 +281,8 @@ export async function signUp(
         };
     }
 
-    // Everything below is why this function cannot simply trust "no error".
-    //
-    // signUp() succeeds in three materially different ways, and two of them leave the guest
-    // with no session at all. Redirecting on all three is what made a failed registration
-    // look like a completed one.
+    // signUp() "succeeds" three ways, two of them with no session — redirecting on all three made
+    // a failed registration look complete. Hence the checks below.
 
     // An empty `identities` array means the address is already registered and Supabase chose
     // to obscure that rather than confirm it — its anti-enumeration behaviour when both
@@ -327,10 +294,8 @@ export async function signUp(
         };
     }
 
-    // A user without a session means the account was created and is waiting on email
-    // confirmation. Unreachable while "Confirm email" is off, and kept because that is one
-    // dashboard toggle away from changing — at which point this becomes the normal outcome
-    // and the redirect below moves to app/auth/confirm/route.ts.
+    // Created, awaiting confirmation. Unreachable while "Confirm email" is off, but one toggle away:
+    // then it's the normal outcome and the redirect moves to app/auth/confirm/route.ts.
     if (!data.session) {
         return {
             ok: true,
@@ -346,11 +311,8 @@ export async function signUp(
 }
 
 /**
- * Starts an OAuth sign-in and hands the guest over to the provider.
- *
- * The provider's registered callback is Supabase's own
- * `https://<project-ref>.supabase.co/auth/v1/callback`; `redirectTo` is where Supabase sends
- * them afterwards, which is app/auth/callback/route.ts here.
+ * Starts an OAuth sign-in. The provider calls back Supabase's `/auth/v1/callback`; `redirectTo`
+ * then sends the guest to app/auth/callback/route.ts.
  *
  * @param formData `provider` (`github` or `google`) and an optional `next` path.
  */
@@ -412,12 +374,8 @@ export async function requestPasswordReset(
     const supabase = await createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email);
 
-    // The result never reaches the guest. Answering differently for a registered and an
-    // unregistered address would turn this form into a way to test who has an account here
-    // — the same reasoning that keeps signIn's `invalid_credentials` message vague.
-    //
-    // It does reach the operator, though. An SMTP outage here is otherwise completely silent:
-    // every guest sees the same reassuring notice while nothing is being delivered.
+    // The guest never sees the result — differing answers would reveal who has an account (as with
+    // signIn's vague `invalid_credentials`). The operator does, or an SMTP outage would be silent.
     if (error) logAuthError("requestPasswordReset", error);
 
     return {
@@ -428,11 +386,8 @@ export async function requestPasswordReset(
 }
 
 /**
- * Sets a new password for whoever the current session belongs to.
- *
- * Reached two ways, and it does not need to tell them apart: through a recovery link, which
- * app/auth/confirm/route.ts turns into a session, or by an already signed-in guest. Both are
- * legitimate, and in both cases Supabase scopes the update to the session's own user.
+ * Sets a new password for the session's user — reached via a recovery link (which
+ * app/auth/confirm turns into a session) or by a signed-in guest; Supabase scopes both to that user.
  *
  * @param formData `password` and `confirmPassword`.
  */
@@ -492,12 +447,8 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * Updates the signed-in guest's own row.
- *
- * No ownership check is written here because none belongs here: the RLS policy
- * "guests update their own row" scopes the statement to `auth.uid() = id`, with a
- * `with check` clause so the row cannot be rewritten to point at somebody else. The
- * `.eq("id", …)` below is what the policy matches against, not the authorisation itself.
+ * Updates the signed-in guest's own row. No ownership check here: RLS "guests update their own row"
+ * scopes it to `auth.uid() = id` with `with check`; `.eq("id", …)` is just what the policy matches.
  */
 export async function updateProfile(
     _prevState: ProfileFormState,
@@ -536,15 +487,9 @@ export async function updateProfile(
 }
 
 /**
- * Replaces the signed-in guest's avatar.
- *
- * Unlike `adoptProviderAvatar` in oauth-avatar.ts, these bytes come straight from a guest's
- * device and are never trustworthy as-is — see the "Upload contract" section of
- * features/account/README.md. Re-encoding through `sharp` (rather than checking the
- * extension or MIME header) is the actual control: a Server Action is a plain HTTP endpoint
- * that can be hit directly, so anything enforced only in the browser is UX, not security.
- * A file `sharp` cannot decode is rejected outright, and the re-encoded output never carries
- * over EXIF because `sharp` only copies metadata when `.withMetadata()` is called.
+ * Replaces the guest's avatar. Device bytes are untrusted (features/account/README.md, "Upload
+ * contract"): re-encoding via `sharp` is the real control, as browser checks are only UX. It
+ * rejects undecodable files and drops EXIF (metadata is copied only with `.withMetadata()`).
  */
 export async function uploadAvatar(
     _prevState: AvatarFormState,
@@ -636,18 +581,9 @@ export async function uploadAvatar(
 }
 
 /**
- * Deletes the signed-in guest's account, following ACCOUNT-DELETION-POLICY.md.
- *
- * Runs on the service-role client (lib/supabase-admin.ts) for everything past the password
- * check, not the request-scoped one: `auth.admin.deleteUser()` requires it outright, and so
- * does touching `reviews` at all — that table has no RLS `update`/`delete` policy for
- * guests (see features/account/README.md → "Planned" → My reviews), so the anon-key client
- * could not do this even scoped to the guest's own rows.
- *
- * Order matters and is enforced here, not just documented: `reviews_orphan_is_anonymised`
- * (migration 0008) rejects a review with no `guest_id` whose author columns are not already
- * overwritten, so the review rows are handled *before* the account — and the avatar path
- * that names the file to delete — are gone.
+ * Deletes the guest's account per ACCOUNT-DELETION-POLICY.md. Past the password check it uses the
+ * service-role client (`deleteUser()` needs it; guests have no RLS write on `reviews`). Order is
+ * enforced: 0008's `reviews_orphan_is_anonymised` needs reviews anonymised before the account goes.
  */
 export async function deleteAccount(
     _prevState: DeleteAccountFormState,

@@ -2,27 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 /**
- * Keeps the Supabase session alive across requests.
- *
- * `middleware.ts` in Next 15 and earlier; renamed to `proxy.ts` in Next 16. Runs on the
- * Node.js runtime, so @supabase/ssr works here without an Edge-compatible build.
- *
- * This exists because Server Components cannot write cookies. Supabase access tokens last
- * about an hour, and the rotated token has to be stored somewhere — without this file a
- * visitor appears signed out mid-session and has to log in again.
- *
- * The redirects below are OPTIMISTIC, in the sense the Next.js auth guide uses: they
- * pre-filter, they do not authorize. The real check is on the page (see
- * app/(auth)/account/page.tsx), because Proxy also runs on prefetches and must never be the
- * only line of defence.
- *
- * They still have to be here rather than only on the page. With Cache Components the root
- * layout's static shell is flushed before a page finishes rendering, so a `redirect()`
- * reached later can only be delivered as `<meta http-equiv="refresh" content="1;…">` — a
- * visible one-second stall. Redirecting here happens before anything is rendered, so it is
- * a real HTTP redirect.
- *
- * Depends on NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.
+ * Refreshes the Supabase session per request (Server Components can't store rotated cookies);
+ * Next 16's `middleware.ts`, on Node. Redirects only pre-filter — pages still authorize — but live
+ * here because under Cache Components a page `redirect()` arrives as a 1s meta refresh.
  */
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -44,34 +26,20 @@ const ANON_KEY: string = SUPABASE_ANON_KEY;
 const LOGIN_PATH = "/login";
 
 /**
- * Routes a signed-out visitor is bounced away from.
- *
- * Prefix match, so a future /account/bookings is covered without editing this list. Every
- * entry still needs its own check on the page — this list only decides who gets redirected
- * early, not who is allowed in.
+ * Prefixes a signed-out visitor is bounced from (prefix match covers future sub-routes). Pages
+ * still check for themselves — this only decides who is redirected early.
  */
 const PROTECTED_PREFIXES = ["/account"];
 
 /**
- * Checkout, which is protected but is not under a shared prefix.
- *
- * `/stays/{slug}/book` sits inside the public catalogue, one segment below a page anyone
- * may read. A booking needs `auth.uid()` to attach to (create_booking raises SB003 without
- * one), so there is no useful signed-out version of it.
- *
- * Anchored at both ends so it cannot match `/stays/book` or `/stays/a/b/book`.
+ * Checkout: protected, yet inside the public catalogue. create_booking needs `auth.uid()` (SB003
+ * without it). Anchored at both ends so `/stays/book` or `/stays/a/b/book` can't match.
  */
 const CHECKOUT_PATH = /^\/stays\/[^/]+\/book$/;
 
 /**
- * Only same-origin paths survive.
- *
- * `//evil.example` and `https://evil.example` are both valid values for a `next` query
- * parameter and both would redirect off-site, so the check is "starts with exactly one
- * slash" rather than merely "starts with a slash".
- *
- * Twin of the helper in features/auth/actions.ts. Duplicated rather than shared because
- * proxy.ts must not rely on shared modules — it can be deployed separately to a CDN.
+ * Only same-origin paths survive: exactly one leading slash, as `//evil.example` redirects
+ * off-site too. Twin of features/auth/next-path.ts — proxy.ts must not rely on shared modules.
  */
 function safeNextPath(value: string | null): string {
     if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
@@ -146,14 +114,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-    // Everything except static assets and image files. Auth is meant to run broadly — a
-    // route left out here is a route whose session silently stops being refreshed.
-    //
-    // `api` is excluded deliberately, and that exclusion has to be re-examined before any
-    // route under it is added: /api/revalidate/stays is called by a Supabase webhook that
-    // carries no cookies at all, so refreshing a session for it is a wasted round-trip to
-    // Supabase on every catalogue write. Auth routes live under /auth, not /api, and are
-    // still covered.
+    // Everything but static assets — a route left out silently stops refreshing its session.
+    // `api` is excluded because the cookie-less stays webhook would waste a Supabase round-trip;
+    // re-examine before adding routes under /api (auth lives under /auth and is covered).
     matcher: [
         "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif)$).*)",
     ],

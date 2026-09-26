@@ -5,30 +5,19 @@ import { createClient } from "@/lib/supabase-server";
 import { safeNextPath } from "@/features/auth/next-path";
 
 /**
- * The landing point for every link Supabase mails out.
+ * Landing point for every Supabase email link (`type` = signup/email or recovery). Templates must
+ * point here, not `{{ .ConfirmationURL }}`, to allow a server-side PKCE exchange. A Route Handler,
+ * since minting a session writes cookies.
  *
- * One route serves both flows because they differ only in `type`: `email`/`signup` for a new
- * registration, `recovery` for a password reset. The link is built in the dashboard's email
- * templates, which must point here rather than at the default `{{ .ConfirmationURL }}` —
- * that URL goes straight to Supabase and cannot complete a server-side PKCE exchange.
- *
- * Template shape (Authentication → Email Templates):
- *   {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/account
- *
- * A Route Handler rather than a page: verifying the token mints a session, which means
- * writing cookies, and Server Components may not.
+ * @example {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/account
  */
 
 /** Where a broken, expired or already-used link ends up. */
 const FAILURE_PATH = "/login?error=link_invalid";
 
 /**
- * Where a verified link lands when it carried no destination of its own.
- *
- * `/account` rather than `/`, matching app/auth/callback/route.ts. A template with a typo, or
- * one written as `next={{ .RedirectTo }}` while `signUp` sends no `emailRedirectTo`, renders
- * an empty `next` — and landing on the homepage looks like the confirmation failed even though
- * the session was created. /account makes being signed in unmistakable.
+ * Fallback destination, `/account` like the OAuth callback: a template typo renders an empty `next`,
+ * and landing on `/` would look like a failed confirmation despite the new session.
  */
 const DEFAULT_NEXT = "/account";
 

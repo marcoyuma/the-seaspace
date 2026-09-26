@@ -46,10 +46,8 @@ export default function AvatarUpload({
         };
     }, [previewUrl]);
 
-    // Only trust the local blob while the upload is in flight. Once `pending` flips back to
-    // false, the server action has already redirected/revalidated, so the parent Server
-    // Component has re-rendered with a fresh `avatarPath` prop — falling back to it here
-    // (instead of clearing `previewUrl` in an effect) is what keeps this a pure render.
+    // Trust the local blob only while uploading; afterwards the parent re-renders with a fresh
+    // `avatarPath`, so falling back to it (not clearing `previewUrl` in an effect) keeps render pure.
     const src =
         pending && previewUrl
             ? previewUrl

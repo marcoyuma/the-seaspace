@@ -109,11 +109,8 @@ function toStay(row: StayRow): Stay {
 }
 
 /**
- * Wraps a PostgrestError in a real Error.
- *
- * Thrown, not swallowed into an empty array: an empty catalogue renders as a legitimate
- * page while the database is down, hiding the outage from both the user and the logs.
- * The error boundary at app/(stay-list)/stays/error.tsx catches these.
+ * Wraps a PostgrestError in a real Error. Thrown, not swallowed into `[]`: an empty catalogue would
+ * render as a legitimate page and hide the outage. Caught by app/(stay-list)/stays/error.tsx.
  */
 function queryFailed(what: string, error: { message: string; code?: string }): Error {
     return new Error(`Failed to load ${what} from Supabase: ${error.message}`, {
@@ -149,13 +146,8 @@ export async function getStays(): Promise<Stay[]> {
 }
 
 /**
- * Uncached catalogue: one round trip per request, always current.
- *
- * The /stays grid reads this instead of getStays(). Under `cacheComponents` that costs the
- * page nothing visible — the heading and layout around it are still lifted into the static
- * shell, and only the grid streams in behind its <Suspense> boundary. Freshness matters more
- * here than a cache hit: this is the page a guest lands on right after a villa is added or
- * repriced in the admin panel, and an hour-stale list is the one thing they would notice.
+ * Uncached catalogue for the /stays grid — where guests land right after an admin change, so
+ * freshness beats a cache hit. The shell stays static; only the grid streams behind <Suspense>.
  */
 export async function getStaysFresh(): Promise<Stay[]> {
     return fetchStays();
@@ -178,15 +170,8 @@ export async function getStay(slug: string): Promise<Stay | undefined> {
 }
 
 /**
- * Stays flagged for the landing-page preview.
- *
- * Reuses the full select even though the preview card only needs cover, name and location.
- * A leaner query would save a few kilobytes on two rows — not worth a second mapper and a
- * second row type that could drift out of step with this one.
- *
- * Returns whatever is flagged, with no fallback to "first N": substituting other villas
- * would make an empty `is_featured` set look like a working feature instead of a
- * misconfiguration.
+ * Stays flagged for the landing preview. Reuses the full select (a leaner one isn't worth a second
+ * mapper that could drift). No "first N" fallback — an empty `is_featured` set must look broken.
  */
 async function fetchFeaturedStays(): Promise<Stay[]> {
     const { data, error } = await supabase

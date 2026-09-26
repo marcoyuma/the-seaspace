@@ -4,24 +4,14 @@
  */
 
 /**
- * The leisure pages that can send a request.
- *
- * No database CHECK backs this — there is no `experience_requests` table (see the
- * feature's README, §2). This union is the entire vocabulary; adding a page means adding
- * it here, to `EXPERIENCE_REQUESTS` in `lib/experiences.ts`, and to `STAFF_INBOXES` in
- * `lib/email-gateway.ts`.
+ * The leisure pages that can send a request — the entire vocabulary, with no DB CHECK behind it (no
+ * table, README §2). Adding one means updating `EXPERIENCE_REQUESTS` and `STAFF_INBOXES` too.
  */
 export type ExperienceId = "golf-course" | "spa" | "event-venue";
 
 /**
- * Shape returned by `submitExperienceRequest` to `useActionState`.
- *
- * `undefined` is the initial state — nothing submitted yet. Modelled on `AuthFormState`,
- * including `values`, so a rejected submit does not wipe what someone typed into six
- * fields.
- *
- * Unlike the auth actions, success returns a state instead of redirecting: the guest is
- * mid-page on a marketing route and should stay exactly where they are.
+ * What `submitExperienceRequest` returns to `useActionState`; `undefined` = nothing submitted. Like
+ * `AuthFormState`, `values` survive a rejected submit — but success returns state, not a redirect.
  */
 export type RequestFormState =
     | {

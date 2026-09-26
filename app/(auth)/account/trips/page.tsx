@@ -9,12 +9,8 @@ import TripCard from "@/features/booking/components/trip-card";
 export const metadata = { title: "Trips" };
 
 /**
- * Every reservation belonging to the signed-in guest.
- *
- * The heading and intro are static so Cache Components has a shell to prerender; the
- * reservations themselves read cookies, which is request-time data and must therefore sit
- * inside a <Suspense> boundary. Before aa44990 the deleted app/loading.tsx was that
- * boundary for the whole app — this page now carries its own.
+ * The guest's reservations. Heading and intro are the static shell; the cookie-reading list has its
+ * own <Suspense>, since the app-wide app/loading.tsx is gone (aa44990).
  */
 export default function TripsPage() {
     return (
@@ -35,11 +31,8 @@ export default function TripsPage() {
 }
 
 /**
- * The guest's reservations.
- *
- * The `redirect()` is the authoritative check even though proxy.ts already covers
- * `/account/*` — Proxy runs on prefetches and must never be the only line of defence. Same
- * arrangement, and the same reasoning, as app/(auth)/account/page.tsx.
+ * The list itself. The `redirect()` is authoritative even though proxy.ts covers `/account/*` —
+ * Proxy runs on prefetches too (same as app/(auth)/account/page.tsx).
  */
 async function TripsList() {
     const [user, bookings] = await Promise.all([

@@ -12,28 +12,16 @@ const TEXT = {
 } as const;
 
 /**
- * A villa's rating as one line: a single filled star, the average, and the review count.
- *
- * Deliberately NOT five stars with a partial fill. `RatingStars` renders
- * `Array.from({ length: rating })`, which only works for the whole numbers a single review
- * carries — an average is fractional, and rounding 4.5 and 5.0 to the same five stars would
- * flatten the only distinction the number is there to make. One star acts as the unit label
- * and the number carries the precision, which is how Airbnb prints it too.
- *
- * No `"use client"`: no state, no handlers.
+ * A villa's rating on one line: one star, the average, the count. Not five partial stars —
+ * `RatingStars` draws whole numbers only, and rounding would erase what an average distinguishes;
+ * one star as the unit and the number as the precision, like Airbnb.
  *
  * @param average - Mean rating, unrounded. Printed to two decimals here.
- * @param total - How many reviews the average is over. Omit to print the rating alone,
- *   which is what the landing-page preview card does.
- * @param size - Star size in px. 20 pairs with 16-20px text; the review cards use
- *   `RatingStars` at 24 instead. Not responsive — `size` becomes an SVG width/height
- *   attribute, and a 16px star still balances 14px text.
- * @param textScale - `"chip"` shrinks the line on phones for the overlay chip on
- *   `StayCardPreview`; see `TEXT`.
+ * @param total - Review count; omit to print the rating alone (the landing preview card does).
+ * @param size - Star px, an SVG attribute so not responsive; 20 pairs with 16–20px text.
+ * @param textScale - `"chip"` shrinks the line on phones for `StayCardPreview`'s chip; see `TEXT`.
  *
- * @example
- * <RatingSummary average={4.66} total={25} />  // ★ 4.66 · 25 reviews
- * <RatingSummary average={4.66} />             // ★ 4.66
+ * @example <RatingSummary average={4.66} total={25} /> // ★ 4.66 · 25 reviews
  */
 export default function RatingSummary({
     average,

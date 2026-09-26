@@ -9,10 +9,8 @@ import OverlineText from "@/ui/overline-text";
  */
 export default function ReviewsHeader() {
     return (
-        // `gap-3` (12px) between overline/heading — the site-wide intro-
-        // block spacing. `mb-5` (20px) from heading to the reviews panel
-        // that follows, a bit more room than the 12px used inside the
-        // block itself — see RESPONSIVE-AUDIT.md Bagian F.
+        // `gap-3` is the site-wide intro spacing; `mb-5` gives the panel below a bit more room
+        // (RESPONSIVE-AUDIT.md Bagian F).
         <div className="flex flex-col justify-center items-center gap-3 mb-5">
             <OverlineText>Reviews</OverlineText>
             <Heading id="reviews-heading" className="text-center">

@@ -10,12 +10,8 @@ import { publicStorageUrl } from "@/lib/supabase";
 // standalone header icon, it now only ever appears in that one context.
 const ICON_SIZE = 24;
 
-// `next/image` rejects any `width` that isn't literally one of
-// `next.config.ts`'s `images.imageSizes` (defaults to
-// [32, 48, 64, 96, 128, 256, 384] — a 400, not a fallback) — so the avatar
-// asks the optimizer for the nearest valid size and is then scaled back
-// down to `ICON_SIZE` with an explicit `style`, same as `AvatarUpload` does
-// at its own (valid) 96.
+// `next/image` 400s on widths outside `images.imageSizes`, so request the nearest valid size and
+// scale down to `ICON_SIZE` via `style` — as `AvatarUpload` does at 96.
 const AVATAR_IMAGE_SIZE = 32;
 
 // `/dist/ssr` rather than the package root: these render inside Server Components, and it is
@@ -23,12 +19,8 @@ const AVATAR_IMAGE_SIZE = 32;
 const ICON_PROPS = { size: ICON_SIZE, weight: "fill" } as const;
 
 /**
- * Placeholder shown while the session is still being read.
- *
- * Deliberately the signed-out state: it is what the static shell has to commit to before it
- * knows who is asking, and it is correct for every anonymous visitor — the majority.
- *
- * Exported so app/layout.tsx can use it as the <Suspense> fallback without duplicating it.
+ * Session-loading placeholder, deliberately the signed-out state: the static shell commits before
+ * it knows who's asking, and it's right for most visitors. Also app/layout.tsx's Suspense fallback.
  */
 export function ProfileIconFallback() {
     return (
@@ -40,14 +32,9 @@ export function ProfileIconFallback() {
 }
 
 /**
- * The menu panel's account row, in one of three states:
- *
- * 1. signed out — `SignInIcon`, linking to /login
- * 2. signed in without a photo — `UserCircleIcon` as a placeholder, linking to /account
- * 3. signed in with a photo — the avatar itself
- *
- * Async Server Component: it reads cookies, so it must be rendered inside a <Suspense>
- * boundary or the whole route falls out of the static shell. app/layout.tsx does that.
+ * Menu account row: signed out → `SignInIcon` to /login; signed in → avatar (or `UserCircleIcon`)
+ * to /account. Reads cookies, so it must sit inside a <Suspense> (app/layout.tsx does this) or the
+ * whole route falls out of the static shell.
  */
 export default async function ProfileIcon() {
     const profile = await getGuestProfile();

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
     PRELOADER_ACTIVE_ATTR,
     PRELOADER_GATE_ATTR,
+    PRELOADER_GROUND,
     PRELOADER_MAX_WAIT_MS,
     PRELOADER_MIN_VISIBLE_MS,
     PRELOADER_ROOT_ATTR,
@@ -34,16 +35,24 @@ const LIFT_FALLBACK_MS = 900;
 /** `idle` = curtain up, `leaving` = lift animation running, `gone` = unmounted. */
 type Phase = "idle" | "leaving" | "gone";
 
-/**
- * The arming flag is written once by `ui/preloader-flash-guard.tsx` before hydration and never
- * changes afterwards, so there is genuinely nothing to subscribe to.
- */
-function subscribeToArmedFlag() {
-    return () => {};
+/** Latched once per document, not per mount — a soft nav back to `/` re-runs no guard script. */
+let armedLatch: boolean | null = null;
+const armedListeners = new Set<() => void>();
+
+function subscribeToArmedFlag(onStoreChange: () => void) {
+    armedListeners.add(onStoreChange);
+    return () => {
+        armedListeners.delete(onStoreChange);
+    };
 }
 
 function getArmedSnapshot() {
-    return document.documentElement.hasAttribute(PRELOADER_ACTIVE_ATTR);
+    if (armedLatch === null) {
+        armedLatch =
+            document.documentElement.hasAttribute(PRELOADER_ACTIVE_ATTR) &&
+            !hasSeenPreloader();
+    }
+    return armedLatch;
 }
 
 /**
@@ -55,30 +64,32 @@ function getArmedServerSnapshot() {
     return true;
 }
 
+/** Reads throw in private modes; a throw here would arm the curtain instead of skipping it. */
+function hasSeenPreloader() {
+    try {
+        return sessionStorage.getItem(PRELOADER_SESSION_KEY) !== null;
+    } catch {
+        return false;
+    }
+}
+
+/** Drops the flag so CSS hides the overlay, then notifies — safe now that the store subscribes. */
+function disarmPreloader() {
+    armedLatch = false;
+    document.documentElement.removeAttribute(PRELOADER_ACTIVE_ATTR);
+    for (const listener of armedListeners) listener();
+}
+
 /**
- * Full-screen intro curtain for the landing page.
+ * Intro curtain for `/`: an OVERLAY on the fully server-rendered page, never a render gate, so
+ * crawlers get complete HTML. Armed by `preloader-flash-guard.tsx`. Progress is measured: it counts
+ * the `<img data-gate>` already requested (no double download), plus fonts as one unit.
  *
- * It is an OVERLAY, never a gate on rendering: `app/page.tsx` still server-renders the whole
- * page underneath, so the HTML a crawler reads is complete and this component only stacks on
- * top of it. Swapping to `{loading ? <Preloader/> : <Page/>}` would ship an empty page to
- * search engines — avoiding that is the entire point of doing it this way.
- *
- * Whether it runs at all is decided before first paint by `ui/preloader-flash-guard.tsx`;
- * this component only reads the flag that guard leaves on <html>.
- *
- * Progress is measured, not animated: it counts the `<img data-gate>` elements the page has
- * ALREADY asked the browser for, so nothing is downloaded twice and the bar tracks real bytes.
- * Fonts count as one more unit so the copy underneath does not reflow the instant it lifts.
- *
- * @example
- * // app/page.tsx — first child, above <Hero />
- * <Preloader />
+ * @example <Preloader /> // app/page.tsx, first child above <Hero />
  */
 export default function Preloader() {
-    // `useSyncExternalStore` rather than reading the DOM in an effect: the server snapshot
-    // keeps hydration matching the markup, then the client snapshot decides — no setState
-    // during an effect body, and no flash, because CSS has the element hidden either way.
-    // Same reconcile pattern as ui/header.tsx.
+    // The server snapshot keeps hydration matching the markup, then the client snapshot decides:
+    // no setState in an effect, no flash (CSS hides it either way). Same pattern as ui/header.tsx.
     const armed = useSyncExternalStore(
         subscribeToArmedFlag,
         getArmedSnapshot,
@@ -101,10 +112,8 @@ export default function Preloader() {
         previousOverflowRef.current = document.body.style.overflow;
         document.body.style.overflow = "hidden";
 
-        // Both hero variants sit in the DOM at once (`hidden lg:block` / `lg:hidden`), and the
-        // one CSS hides has no box — so the browser never fetches it and it would never
-        // settle. `getClientRects()` is the check that survives `position: fixed`, where
-        // `offsetParent` is null even when the element is perfectly visible.
+        // Both hero variants are in the DOM; the CSS-hidden one is never fetched, so it would
+        // never settle. `getClientRects()` works under `position: fixed`, unlike `offsetParent`.
         const gates = Array.from(
             document.querySelectorAll<HTMLImageElement>(
                 `img[${PRELOADER_GATE_ATTR}]`,
@@ -228,15 +237,13 @@ export default function Preloader() {
     useEffect(() => {
         if (phase !== "gone" || !armed) return;
         document.body.style.overflow = previousOverflowRef.current;
-        // The flag deliberately stays on <html>: `getArmedSnapshot` reads it every render, and
-        // a value that changes without notifying the store is exactly the stale read
-        // useSyncExternalStore warns about. With the overlay unmounted it matches nothing.
         try {
             sessionStorage.setItem(PRELOADER_SESSION_KEY, "1");
         } catch {
             // Private modes throw on write. Worst case the curtain shows again on the next
             // load — annoying, not broken.
         }
+        disarmPreloader();
         warmDeferredImages();
     }, [phase, armed]);
 
@@ -247,7 +254,15 @@ export default function Preloader() {
             {...{ [PRELOADER_ROOT_ATTR]: "" }}
             role="status"
             aria-label="Loading"
-            className={`fixed inset-0 z-100 flex-col items-center justify-center gap-6 bg-blue-gradient ${
+            // Inline, not utilities: the element has to cover the viewport before the stylesheet
+            // is live, or it paints as a plain block with the rest of the screen left white.
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 100,
+                backgroundColor: PRELOADER_GROUND,
+            }}
+            className={`flex-col items-center justify-center gap-6 bg-blue-gradient ${
                 phase === "leaving" ? "animate-preloader-lift" : ""
             }`}
             // Only this element's own lift counts — not anything animating inside it.
@@ -278,12 +293,8 @@ export default function Preloader() {
 }
 
 /**
- * Kicks off the gallery frames the curtain deliberately did not wait for.
- *
- * They are `loading="lazy"` and scroll in horizontally under GSAP, so without this they pop in
- * mid-animation. Copies `srcset`/`sizes` off the real element so the browser resolves the exact
- * same candidate URL and the later fetch is a cache hit — warming a different URL would just
- * double the bytes.
+ * Warms the lazy gallery frames the curtain skipped, so they don't pop in mid-GSAP scroll. Copies
+ * `srcset`/`sizes` so the browser picks the same URL and the later fetch is a cache hit.
  */
 function warmDeferredImages() {
     const connection = (

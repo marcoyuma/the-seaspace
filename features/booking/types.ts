@@ -2,15 +2,9 @@ import type { CheckInMethodId } from "@/features/booking/lib/check-in-methods";
 import type { PaymentMethodId } from "@/features/booking/lib/payment-methods";
 
 /**
- * A block of dates that is already taken.
- *
- * ⚠️ `end` is EXCLUSIVE, mirroring `bookings.end_date` — a range of
- * `{ start: "2026-08-10", end: "2026-08-13" }` occupies the nights of the 10th, 11th
- * and 12th, and the 13th is a valid check-in for the next guest. Everything that reads
- * this type must subtract a day; `expandBlockedDays()` in ./lib/dates.ts is the one
- * place that does, and nothing else should re-derive it.
- *
- * Both fields are `yyyy-mm-dd` strings, not `Date`. See ./lib/dates.ts for why.
+ * A block of taken dates, as `yyyy-mm-dd` strings (see ./lib/dates.ts). ⚠️ `end` is EXCLUSIVE, like
+ * `bookings.end_date`: [10th, 13th) occupies three nights and the 13th is a valid check-in.
+ * `expandBlockedDays()` is the ONE place that subtracts the day — never re-derive it.
  */
 export interface BookedRange {
     start: string;
@@ -18,12 +12,8 @@ export interface BookedRange {
 }
 
 /**
- * The guest breakdown the picker collects.
- *
- * ⚠️ UI-only. `bookings` has a single `num_guests` column, so only `adults + children`
- * survives a save (see `guestsBooked()` below). Infants are excluded by the same rule
- * the copy states, and `pets` exists solely so the disabled row has something to bind
- * to — there is no column for it and none is planned.
+ * The picker's guest breakdown. ⚠️ UI-only: `bookings` has one `num_guests`, so only adults +
+ * children survive a save (`guestsBooked()`); `pets` exists just for the disabled row — no column.
  */
 export interface GuestCounts {
     adults: number;
@@ -38,18 +28,9 @@ export function guestsBooked(guests: GuestCounts): number {
 }
 
 /**
- * The five values `bookings.status` may hold, mirroring `bookings_status_known`.
- *
- * 'confirmed' with `paidAt` still null is a real state, not a loose end: the row is
- * created before the payment is attempted so that it holds the dates while the provider
- * thinks. See supabase/migrations/0011_booking_writes.sql §5.
- *
- * 'no_show' arrived with 0012 — paid for, the stay has ended, and nobody ever checked in.
- * Without it the hourly job in 0013 would have to call that a completed stay.
- *
- * ⚠️ Only 'checked_in' has a human author (the guest, at the door). The other transitions
- * are made by `advance_booking_lifecycle()`, which is forbidden from writing that one:
- * whether anyone walked through the door is not something a calendar knows.
+ * `bookings.status` values. 'confirmed' with null `paidAt` is real: the row holds the dates during
+ * payment (0011 §5). 'no_show' (0012) = paid, ended, never checked in. ⚠️ Only 'checked_in' is
+ * human-made; `advance_booking_lifecycle()` makes the rest and may never write that one.
  */
 export type BookingStatus =
     | "confirmed"
@@ -59,11 +40,8 @@ export type BookingStatus =
     | "no_show";
 
 /**
- * One of the signed-in guest's own reservations, as the trips pages want it.
- *
- * Prices are the row's own snapshot columns, never the catalogue's current numbers —
- * re-reading `stays.price_per_night` here would silently rewrite the price of every past
- * stay, which is the entire reason 0009 stores them.
+ * One of the guest's reservations. Prices are the row's snapshot columns, never the catalogue's —
+ * re-reading `stays` would rewrite every past stay's price, which is why 0009 stores them.
  */
 export interface GuestBooking {
     id: number;
@@ -90,11 +68,8 @@ export interface GuestBooking {
      */
     checkInMethod: CheckInMethodId | null;
     /**
-     * The door credential, eight uppercase hex characters. `null` on seeded rows.
-     *
-     * ⚠️ Reaches the browser, and should: it is printed on the reservation and encoded
-     * into the QR the guest scans. It is only ever selected through the "guests read
-     * their own bookings" policy, so one guest can never see another's.
+     * Door credential, eight uppercase hex characters; `null` on seeded rows. ⚠️ Reaches the
+     * browser on purpose (printed + QR), selected only via "guests read their own bookings".
      */
     accessCode: string | null;
     /** Which method was paid with. `null` on seeded rows, whose `paidAt` is fictional. */
@@ -122,12 +97,8 @@ export interface GuestBooking {
 export type CheckoutFormState = { message: string } | undefined;
 
 /**
- * Everything a door is allowed to know about the booking behind a scanned code.
- *
- * Deliberately thin, and the thinness is the security model rather than a simplification:
- * `get_check_in_invite()` is callable by `anon`, so its return type is the allow-list.
- * Enough to say "you're arriving at Coastal Arch Retreat" and nothing more — no price, no
- * guest, no notes, not even the booking id.
+ * All a door may know about a scanned code's booking. The thinness IS the security model:
+ * `get_check_in_invite()` is `anon`-callable — no price, guest, notes, or even the booking id.
  */
 export interface CheckInInvite {
     stayName: string;
@@ -138,11 +109,8 @@ export interface CheckInInvite {
 }
 
 /**
- * What the check-in button gets back.
- *
- * `bookingId` on success so a signed-in guest can be linked straight to their reservation.
- * It is returned only *after* a successful check-in, which is the one moment holding the
- * code has already proven itself.
+ * The check-in button's result. `bookingId` comes back only after a successful check-in (when the
+ * code has proven itself), so a signed-in guest can jump to the reservation.
  */
 export type CheckInFormState =
     | { ok: true; bookingId: number }

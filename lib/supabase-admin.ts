@@ -1,12 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Service-role Supabase client. Bypasses RLS entirely and is the only client that can call
- * `auth.admin.*`.
- *
- * Import ONLY from server-only code — a `"use server"` file or a route handler. There is
- * deliberately no `NEXT_PUBLIC_` prefix on the key, unlike lib/supabase.ts and
- * lib/supabase-server.ts: it must never end up in a Client Component's bundle.
+ * Service-role client: bypasses RLS and is the only one that can call `auth.admin.*`. Import ONLY
+ * from server-only code — SUPABASE_SERVICE_ROLE_KEY has no `NEXT_PUBLIC_` prefix on purpose.
  */
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -26,12 +22,8 @@ const SUPABASE_ORIGIN = new URL(SUPABASE_URL).origin;
 const ADMIN_KEY: string = SERVICE_ROLE_KEY;
 
 /**
- * Builds a fresh admin client.
- *
- * Not a module-level singleton, to match the request-scoped clients elsewhere — a shared
- * instance has no session state to leak here (`persistSession: false`), but building it
- * lazily keeps the pattern uniform and the throw above tied to first use rather than to
- * every route that merely imports this module.
+ * Builds a fresh admin client. Not a singleton, to match the request-scoped clients elsewhere —
+ * though with `persistSession: false` there's no session to leak either way.
  *
  * @example
  * const admin = createAdminClient();

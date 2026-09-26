@@ -5,12 +5,8 @@ import AuthForm from "@/features/auth/components/auth-form";
 export const metadata = { title: "Sign in" };
 
 /**
- * Sign in and sign up, behind one toggle.
- *
- * Signed-in visitors never reach this page — proxy.ts redirects them away before it renders.
- *
- * `searchParams` is a request-time API, so the form sits inside <Suspense>: the heading and
- * layout ship in the static shell while only the `next` value streams in.
+ * Sign in and sign up behind one toggle; proxy.ts redirects signed-in visitors away. `searchParams`
+ * is request-time, so the form sits in <Suspense> while the heading ships in the static shell.
  */
 export default function LoginPage({
     searchParams,

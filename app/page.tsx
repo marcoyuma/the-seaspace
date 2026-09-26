@@ -18,10 +18,8 @@ import Preloader from "@/ui/preloader";
 export default function Page() {
     return (
         <div className="relative">
-            {/* An OVERLAY, never a gate on rendering: everything below still server-renders
-                into the HTML, so a crawler reads the full page and the curtain is only a
-                fixed layer stacked on top of it. Whether it shows at all is decided before
-                paint by <PreloaderFlashGuard /> in app/layout.tsx. */}
+            {/* An OVERLAY, never a render gate: the page below still server-renders for crawlers.
+                Whether it shows is decided before paint by <PreloaderFlashGuard /> (app/layout.tsx). */}
             <Preloader />
 
             <Hero />
@@ -32,10 +30,8 @@ export default function Page() {
                 <FamilyHistorySection />
 
                 {/* ADA MASALAH DI SINI MENGENAI RESPONSIVITAS HERO IMAGE TIDAK TERCROP */}
-                {/* `"use cache"` lives on getFeaturedStays(), not on this component, so it
-                    still needs an explicit Suspense boundary for the build to produce a
-                    static shell — loading.tsx used to provide this implicitly, but that would
-                    gate the whole static page behind one fallback instead of just this section. */}
+                {/* The section reads uncached data, so it needs its own boundary for a static
+                    shell — loading.tsx would have gated the whole page behind one fallback. */}
                 <Suspense fallback={<StaysPreviewSectionFallback />}>
                     <StaysPreviewSection />
                 </Suspense>

@@ -28,10 +28,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
     return (
-        // The flash guard in the body stamps `data-preloader-active` on <html> before React
-        // hydrates, so this element's attributes legitimately differ from the server's. The
-        // warning is dev-only and React never patches the attribute anyway; the flag is scoped
-        // to <html> itself, so real mismatches in the tree below still surface.
+        // The flash guard stamps `data-preloader-active` on <html> before hydration, so its attributes
+        // legitimately differ. Scoped to <html> only; real mismatches below still surface.
         <html
             lang="en"
             suppressHydrationWarning
@@ -44,31 +42,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <body
                 className={`${manrope.variable} ${josefin.variable} font-sans relative antialiased min-h-screen flex flex-col`}
             >
-                {/* First thing in the body on purpose: it decides whether `/` gets a
-                    preloader curtain, and it has to run before the header below is parsed
-                    or the header paints for a frame before the curtain drops over it.
-                    Static markup, so it does not cost the route its static shell. */}
+                {/* First in the body so the curtain decision beats the header's first paint.
+                    Static markup, so the route keeps its static shell. */}
                 <PreloaderFlashGuard />
 
-                {/* ChromeGate hides both on the routes listed in ui/chrome-gate.tsx —
-                    /login owns its whole viewport. It has to be a Client Component because
-                    only the client knows the current path; a layout never re-renders on
-                    navigation and cannot read one. */}
-                {/* The outer boundary is about ChromeGate, not the session: it reads
-                    usePathname(), and on a route whose dynamic segment has no
-                    generateStaticParams (/account/trips/[bookingId], /stays/[slug]/book)
-                    the path is not known until the request. Without a boundary here that
-                    read sits in the layout, ABOVE app/loading.tsx, and blocks the whole
-                    document — the "Uncached data was accessed outside of <Suspense>"
-                    build error. `null` as the fallback because the header has no sensible
-                    skeleton; on prerendered routes it resolves at build time as before. */}
+                {/* ChromeGate hides header and footer on ui/chrome-gate.tsx's routes; client-side,
+                    as a layout never re-renders on navigation and can't read the path. */}
+                {/* This boundary is for ChromeGate's usePathname(): on dynamic routes without
+                    generateStaticParams the path is request-time and would block the document.
+                    `null` fallback — the header has no sensible skeleton. */}
                 <Suspense fallback={null}>
                     <ChromeGate>
-                        {/* ProfileIcon reads cookies, which is request-time data. This
-                            inner boundary is what keeps that from dragging every route out
-                            of the static shell: the fallback is prerendered and only the
-                            session streams in. Passed as a prop because Header is a Client
-                            Component and cannot import an async Server Component itself. */}
+                        {/* ProfileIcon reads cookies; this boundary keeps every route's shell static.
+                            A prop, since Client Component Header can't import an async Server one. */}
                         <Header
                             profileSlot={
                                 <Suspense fallback={<ProfileIconFallback />}>
@@ -79,16 +65,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     </ChromeGate>
                 </Suspense>
                 <div className="flex-1 grid">
-                    {/* `min-w-0`: a grid item's default `min-width` is
-                        `auto`, which falls back to its content's min-content
-                        size — so `<main>` could grow past this grid track
-                        (and the viewport) if ANY descendant anywhere on the
-                        page had non-shrinkable content, even one that's
-                        visually clipped by its own `overflow-hidden`
-                        wrapper. That single missing override was the actual
-                        root cause behind several mobile-width bugs on `/`
-                        that looked, from the descendant side, like
-                        unrelated per-component overflow issues. */}
+                    {/* `min-w-0`: a grid item's `min-width: auto` let <main> outgrow the viewport
+                        whenever any descendant had unshrinkable content — the root cause of several
+                        mobile overflow bugs on `/` that looked component-specific. */}
                     <main className="min-w-0">{children}</main>
                     <Analytics />
                 </div>

@@ -22,24 +22,17 @@ const WEEKDAYS = [
 ];
 
 /**
- * One month of the date-range picker. Rendered twice side by side.
- *
- * Owns no state: every decision about what is selectable arrives as props, so the two
- * months cannot disagree about the same day.
+ * One month of the date-range picker, rendered twice side by side. Stateless: selectability arrives
+ * as props, so the two months can't disagree about a day.
  *
  * @param monthStart - Any day in the month to render.
- * @param today - Today in the viewer's timezone. Passed in, never computed here — see
- * the note on `todayISO()` about prerendering.
+ * @param today - Viewer's today, passed in, never computed here (see `todayISO()` on prerendering).
  * @param blocked - Days already taken, from `expandBlockedDays()`.
- * @param maxSelectable - Last day that may be chosen as a check-out, or `null` for no
- * limit. Set once a check-in exists so a range cannot span someone else's booking.
- * @param checkoutOnlyDay - A booked day that may nevertheless be chosen as a check-out,
- * because leaving on the morning someone else arrives is normal turnover. See the note
- * where it is used.
- * @param onPrevMonth,@param onNextMonth - Only passed for the one month visible below
- * `lg`, where the two side arrows in BookingModal are hidden for lack of room. Rendered
- * here, next to the month title, and hidden again at `lg` so they do not duplicate those
- * side arrows once the second month reappears.
+ * @param maxSelectable - Last choosable check-out, or `null`; set once a check-in exists so a range
+ * can't span someone else's booking.
+ * @param checkoutOnlyDay - A booked day still valid as check-out: same-day turnover (see its use).
+ * @param onPrevMonth,@param onNextMonth - Only for the single month shown below `lg`, where
+ * BookingModal's side arrows are hidden; hidden again at `lg`.
  */
 export default function MonthCalendar({
     monthStart,
@@ -114,11 +107,8 @@ export default function MonthCalendar({
 
                     const isPast = day < today;
 
-                    // A booked day is normally unselectable — except the FIRST one after
-                    // a chosen arrival. `end_date` is exclusive, so departing on the
-                    // morning the next guest arrives is same-day turnover, not a clash
-                    // (0009 spells this out). Refusing it would quietly cost a night at
-                    // every boundary.
+                    // Booked days are unselectable — except the FIRST after a chosen arrival:
+                    // `end_date` is exclusive, so leaving as the next guest arrives is turnover (0009).
                     const isCheckoutOnly = day === checkoutOnlyDay;
                     const isBooked = blocked.has(day) && !isCheckoutOnly;
 
@@ -144,10 +134,8 @@ export default function MonthCalendar({
                     return (
                         <div
                             key={day}
-                            // The band behind the middle of a range is painted on the
-                            // cell, not the button: the button is a circle, so a fill on
-                            // it would leave gaps between days instead of a continuous
-                            // strip.
+                            // The range band is painted on the cell, not the circular button, so
+                            // the strip stays continuous between days.
                             className={isBetween ? "bg-black/3" : undefined}
                         >
                             <button

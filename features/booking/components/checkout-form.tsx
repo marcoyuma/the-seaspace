@@ -19,12 +19,8 @@ import { FormBanner, LABEL, INPUT } from "@/features/auth/components/form-primit
 import { PILL_SIZE } from "@/ui/pill-styles";
 
 /**
- * One choice in a radio group, as a whole clickable card.
- *
- * The two groups on this page — how you pay, how you get in — are the same control with
- * different data, so they are the same component. `has-checked:` puts the selected border
- * on the label rather than needing state up here: the form is uncontrolled, and React
- * state for something the DOM already tracks is state that can disagree with it.
+ * One radio option as a clickable card, shared by the pay and check-in groups. `has-checked:` styles
+ * the selection without React state — the form is uncontrolled, and duplicate state can disagree.
  */
 function RadioCard({
     name,
@@ -81,22 +77,13 @@ function Step({
 }
 
 /**
- * The left-hand column of the checkout page: how to pay, how to get in, what to tell the
- * villa team, and the button that writes the booking.
- *
- * Every value the action needs travels as a hidden input rather than as a closure over
- * props, because a Server Action is a public endpoint either way — a bound argument is no
- * safer than a form field, and hidden inputs keep it obvious that all of this is
- * re-validated on the server (`payAndBook`, then `create_booking`).
- *
- * ⚠️ There is no card number field, and there must never be one. See payment-methods.ts.
+ * Checkout's left column: payment, arrival method, notes and the booking button. Values travel as
+ * hidden inputs — a bound argument is no safer, and this keeps server re-validation obvious.
+ * ⚠️ No card number field, ever (see payment-methods.ts).
  *
  * @param slug The villa's `stays.slug`, also the `/stays/[stayId]` segment.
- * @param guests All four counters. Only `adults + children` reaches `num_guests`; infants
- *   and pets ride along so a resubmitted form and the URL agree.
- * @param disabledReason Set when the page has already decided this booking cannot proceed
- *   — the dates were taken while the guest sat here, for instance. Renders the form
- *   read-only rather than hiding it, so the guest can still see what they had chosen.
+ * @param guests All four counters; only adults + children reach `num_guests`, the rest match the URL.
+ * @param disabledReason Why the page blocked this booking (e.g. dates taken); renders read-only.
  */
 export default function CheckoutForm({
     slug,

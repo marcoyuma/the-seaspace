@@ -43,10 +43,8 @@ function MarqueeLine({
 }) {
     const prefersReducedMotion = useReducedMotion();
 
-    // Position is a pure function of the section's scroll progress: the same
-    // scroll position always yields the same x. Deriving it from progress
-    // rather than accumulating scroll velocity per frame is what makes this
-    // survive a reload at any scroll position — there is no history to lose.
+    // x is a pure function of scroll progress, not accumulated velocity, so a reload at any
+    // scroll position lands on the same x — there's no history to lose.
     const x = useTransform(
         progress,
         [0, 1],
@@ -56,25 +54,9 @@ function MarqueeLine({
     return (
         <motion.h2
             style={{ x: prefersReducedMotion ? initialOffset : x }}
-            // Size ladder is the one already used for the same "one element,
-            // must shrink on mobile" job in family-history-section.tsx and
-            // ui/footer.tsx's heading (28/34/40/48) — desktop keeps its 48px,
-            // and mobile drops under the 36px landing-section headings instead
-            // of towering over them.
-            //
-            // `font-bold` stays: at `black/10` the weight is what makes the
-            // glyphs read as texture at all, and it matches the only other
-            // decorative black/10 display text in the repo (the "THE SEASPACE"
-            // watermark in ui/footer.tsx). Everything that is real copy here
-            // is `font-semibold`.
-            //
-            // Leading is a ratio, not `leading-14`: that was a fixed 56px tuned
-            // for 48px text, so at 28px it would have left a ~2x line box. 1.15
-            // reproduces the 48px rhythm and keeps the descenders in "explore"
-            // clear of the next line, which sits only `gap-px` away (same
-            // reasoning as the `leading-[1.05]` note in hero.tsx).
-            //
-            // max-w-dvw to prevent the width takes more than screen wide
+            // The 28→48px ladder shared with family-history and the footer heading keeps mobile
+            // under the 36px section headings. `font-bold` makes black/10 read as texture (like the
+            // footer watermark); `leading-[1.15]` keeps "explore"'s descenders off the next line.
             className="text-black/10 font-bold text-[28px] sm:text-[34px] md:text-[40px] lg:text-[48px] leading-[1.15] whitespace-nowrap max-w-dvw will-change-transform"
         >
             {text}

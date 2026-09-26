@@ -5,20 +5,9 @@ import ReviewsPanel from "@/features/reviews/components/reviews-panel";
 import Skeleton from "@/ui/skeleton";
 
 /**
- * Guest reviews on the landing page: a vertical carousel of the newest reviews above a row
- * of aggregate figures.
- *
- * Async Server Component that fetches its own data, matching StaysPreviewSection — the page
- * composes sections without knowing what any of them needs. Both queries are cached and
- * revalidated by the shared policy in lib/supabase.ts, so this costs the landing page
- * nothing per request.
- *
- * The content used to be a hardcoded REVIEWS array with hand-typed stats ("200+", "5.00",
- * "100%") in features/home/components/reviews.tsx.
- *
- * Still needs a <Suspense> boundary in app/page.tsx despite the caching below: `"use cache"`
- * lives on the two action functions, not on this component, so the prerenderer still treats
- * it as an ordinary async component awaiting a promise.
+ * Landing-page reviews: a carousel of the newest above aggregate figures. Fetches its own cached
+ * data, like StaysPreviewSection. Still needs app/page.tsx's <Suspense>: `"use cache"` sits on the
+ * actions, not here, so the prerenderer sees an ordinary async component.
  */
 export default async function ReviewsSection() {
     // Parallel, not sequential: neither query depends on the other, and awaiting them in
@@ -34,12 +23,7 @@ export default async function ReviewsSection() {
     if (reviews.length === 0) return null;
 
     return (
-        // Was a bare `<section>` with no horizontal inset at all (unlike
-        // every other section on this page) — its 48px heading had nothing
-        // to wrap against and overflowed every viewport narrower than the
-        // text's own unwrapped width. `Container` also owns the vertical
-        // gap now (its responsive `mb-*`), replacing the section's own
-        // fixed `mb-27.5`, matching the pattern used elsewhere on this page.
+        // `Container` supplies the inset the heading needs to wrap, and the vertical gap.
         <Container>
             <section aria-labelledby="reviews-heading">
                 <ReviewsHeader />

@@ -15,12 +15,8 @@ import DeleteAccountDialog from "@/features/account/components/delete-account-di
 export const metadata = { title: "Account" };
 
 /**
- * The guest's own profile.
- *
- * Only the heading is static, which is the point: with Cache Components every route needs
- * a shell that can be prerendered, and everything else here reads cookies. That read has
- * to sit inside <Suspense> — until aa44990 the app-wide app/loading.tsx was the boundary
- * that satisfied this, and it no longer exists.
+ * The guest's own profile. Only the heading is static: Cache Components needs a prerenderable shell,
+ * and the cookie reads below need their own <Suspense> now that app/loading.tsx is gone (aa44990).
  */
 export default function AccountPage() {
     return (
@@ -37,15 +33,9 @@ export default function AccountPage() {
 }
 
 /**
- * Everything on the page that depends on who is signed in.
- *
- * The `redirect()` below is the authoritative check, not the one users normally hit —
- * proxy.ts already bounces signed-out visitors, which is what makes that a real HTTP
- * redirect instead of a delayed meta refresh. This one still has to exist: Proxy runs on
- * prefetches and must never be the only line of defence.
- *
- * The check lives here rather than in a layout because layouts do not re-render on
- * client-side navigation — a check placed there would pass once and never run again.
+ * Everything that depends on who is signed in. The `redirect()` is authoritative — proxy.ts bounces
+ * first (a real HTTP redirect), but Proxy runs on prefetches too. Not in a layout: layouts don't
+ * re-render on client navigation, so a check there would run only once.
  */
 async function AccountSections() {
     const [user, profile, hasPassword] = await Promise.all([
@@ -87,11 +77,8 @@ async function AccountSections() {
                         </div>
 
                         <div className="mt-10">
-                            {/* Keyed by user id so switching accounts remounts the form.
-                                Its inputs are uncontrolled, and React only writes
-                                `defaultValue` into the DOM on mount — without a key that
-                                changes, a reused <input> would keep the previous guest's
-                                name. */}
+                            {/* Keyed by user id: the inputs are uncontrolled and `defaultValue` only
+                                writes on mount, so a reused <input> would keep the last guest's name. */}
                             <ProfileForm key={user.id} profile={profile} />
                         </div>
                     </section>

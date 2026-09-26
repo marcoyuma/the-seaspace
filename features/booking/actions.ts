@@ -20,39 +20,22 @@ import type {
 } from "@/features/booking/types";
 
 /**
- * Data access for this feature. Same convention as features/stays/actions.ts: read helpers
- * for Server Components, no `"use server"`. The write path is in server-actions.ts.
- *
- * Two different clients appear below, and the split is the security boundary:
- *
- * - **Availability** uses the anonymous client and `use cache`. It reads nothing
- *   guest-specific — two dates per booking, via an RPC — so one visitor's response is
- *   safe to serve to the next.
- * - **A guest's own bookings** use the session-bound server client and are **never
- *   cached**. The rows carry prices, notes and a guest uuid; a cache entry here would be
- *   one person's reservations handed to whoever asked next.
+ * Booking reads (writes: server-actions.ts). Availability: anon client + `use cache` — only two dates
+ * per booking, via an RPC. A guest's own bookings: session client, **never cached** — the rows carry
+ * prices, notes and a guest uuid, so a cache entry would hand them to the next visitor.
  */
 
-// Shape PostgREST returns for the RPC. Hand-written, like the stays row types — the
-// project has no `supabase gen types` step. A Postgres `date` arrives as a plain
-// `yyyy-mm-dd` string, which is exactly the format the picker works in, so there is
-// nothing to parse here.
+// PostgREST's shape for the RPC (hand-written; no `supabase gen types`). A Postgres `date` arrives
+// as the `yyyy-mm-dd` string the picker already uses, so nothing needs parsing.
 interface BookedRangeRow {
     start_date: string;
     end_date: string;
 }
 
 /**
- * The dates already taken at one villa, from today onward.
- *
- * Goes through the `get_stay_booked_ranges` RPC rather than selecting from `bookings`:
- * the table is closed to `anon` by design (supabase/migrations/0009_bookings.sql), and
- * the function's return type is the column allow-list. See 0010_stay_availability.sql.
- *
- * Cached for minutes, not the catalogue's hours — a stale calendar offers dates that are
- * gone. Tagged per slug as well as globally so a future revalidation can clear one villa.
- *
- * ⚠️ `end` is exclusive. See BookedRange.
+ * Dates already taken at one villa from today, via `get_stay_booked_ranges` — `bookings` is closed
+ * to `anon`, and the RPC's return type is the column allow-list (0010). Cached minutes, not hours,
+ * and tagged per slug too. ⚠️ `end` is exclusive — see BookedRange.
  *
  * @param slug - The stay's `slug`, which is also `Stay.id` in features/stays/types.ts.
  *
@@ -70,10 +53,8 @@ export async function getStayBookedRanges(slug: string): Promise<BookedRange[]> 
     });
 
     if (error) {
-        // Thrown, not swallowed into an empty array, for the same reason
-        // features/stays/actions.ts throws: an empty calendar renders as a legitimate
-        // "everything is free" page, which here would take bookings for dates that are
-        // already occupied. A visible error is the safer failure.
+        // Thrown, not swallowed: an empty calendar reads as "everything is free" and would take
+        // bookings for occupied dates. A visible error is the safer failure.
         throw new Error(
             `Failed to load availability for stay "${slug}" from Supabase: ${error.message}`,
             { cause: error },
@@ -95,12 +76,9 @@ export async function getStayBookedRanges(slug: string): Promise<BookedRange[]> 
 const STAYS_BUCKET = "stays";
 
 /**
- * One round-trip for a trip card: the booking, the villa it is for, and that villa's
- * cover photo. PostgREST assembles the embed server-side.
- *
- * `stays` and `stay_images` are readable by `authenticated` (0001), so the embed needs no
- * new policy — and the booking rows themselves are still scoped by "guests read their own
- * bookings", which is what makes selecting without a `.eq("guest_id", …)` safe here.
+ * One round-trip per trip card: booking + villa + cover, embedded by PostgREST. `stays` and
+ * `stay_images` are readable by `authenticated` (0001), and RLS "guests read their own bookings"
+ * scopes the rows — which is why no `.eq("guest_id", …)` is needed.
  */
 const GUEST_BOOKING_SELECT = `
     id, start_date, end_date, num_nights, num_guests,
@@ -186,13 +164,8 @@ function toGuestBooking(row: GuestBookingRow): GuestBooking {
 }
 
 /**
- * Every reservation belonging to whoever is signed in, newest stay first.
- *
- * Returns `[]` for a signed-out visitor rather than throwing: `bookings` has no `anon`
- * policy, so the query legitimately succeeds with no rows, and "empty" is the honest
- * answer to "what are *your* bookings" when there is no you.
- *
- * ⚠️ No `use cache`, ever. See the note at the top of this file.
+ * The signed-in guest's reservations, newest stay first. `[]` when signed out — `bookings` has no
+ * `anon` policy, so the query legitimately returns nothing. ⚠️ No `use cache`, ever (see file top).
  */
 export const getGuestBookings = cache(async (): Promise<GuestBooking[]> => {
     const user = await getAuthUser();
@@ -216,12 +189,8 @@ export const getGuestBookings = cache(async (): Promise<GuestBooking[]> => {
 });
 
 /**
- * One reservation, or `null` if it is not this guest's.
- *
- * There is no ownership check written here and none belongs here: the RLS policy scopes
- * the statement to `auth.uid() = guest_id`, so somebody else's booking id simply returns
- * no rows — indistinguishable from an id that does not exist, which is what stops this
- * page becoming a way to probe for other people's bookings.
+ * One reservation, or `null` if it isn't this guest's. No ownership check needed: RLS scopes to
+ * `auth.uid() = guest_id`, so another guest's id looks nonexistent — no probing for bookings.
  *
  * @param bookingId From the URL, so it may be anything at all.
  */
@@ -254,19 +223,9 @@ interface CheckInInviteRow {
 }
 
 /**
- * What a scanned access code resolves to, or `null` if it opens nothing.
- *
- * Goes through the `get_check_in_invite` RPC, whose **return type is the allow-list** —
- * the same doctrine as `getStayBookedRanges()` above, and for a stronger reason: this one
- * is callable by `anon`, because whoever is standing at the door may not be signed in.
- * Villa, dates, and whether check-in already happened. Nothing else exists to leak.
- *
- * `null` covers every failure the same way — an unknown code, a cancelled booking, a stay
- * that is already over — because the page turns all of them into the same 404. Telling a
- * stranger which of those it was would be telling them their guess was close.
- *
- * ⚠️ No `use cache`, ever. A cached invite would keep saying "not checked in yet" after
- * somebody had walked in.
+ * What a scanned access code resolves to, or `null` — every failure alike, so a 404 tells a stranger
+ * nothing. `get_check_in_invite` is `anon`-callable (whoever is at the door may be signed out), so
+ * its return type is the allow-list. ⚠️ Never cached: it must reflect a fresh check-in.
  *
  * @param code Straight from the URL, so it may be anything at all.
  */

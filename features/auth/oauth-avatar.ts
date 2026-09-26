@@ -3,26 +3,14 @@ import type { User } from "@supabase/supabase-js";
 import type { createClient } from "@/lib/supabase-server";
 
 /**
- * Copies a GitHub or Google profile photo into the `guests` bucket, once.
- *
- * The providers hand back `avatar_url` as a full external URL, but `guests.avatar_path`
- * stores a bucket-relative path that `publicStorageUrl()` assembles at read time — the
- * convention `0008_guest_avatars.sql` is built on. Rather than add a second, differently
- * shaped column, the bytes are adopted into the bucket so every avatar in the app has one
- * origin and one code path.
- *
- * Best-effort by design: every failure is swallowed. The worst outcome is a guest who gets
- * the `UserCircleIcon` placeholder until they upload a photo themselves, which is already
- * the supported state for everyone who signs up with a password.
+ * Adopts a GitHub/Google profile photo into the `guests` bucket once, so every avatar is a
+ * bucket-relative path (0008's convention) on one code path. Best-effort: failures are swallowed,
+ * leaving the `UserCircleIcon` placeholder that password sign-ups already get.
  */
 
 /**
- * Exactly the MIME types `0008_guest_avatars.sql` puts on the bucket, mapped to the
- * extension stored in the path. A type outside this list would be rejected by Storage
- * anyway, so it is cheaper to stop before the upload.
- *
- * Exported so the guest-initiated upload action (`uploadAvatar` in server-actions.ts) checks
- * against the same bucket limits instead of a second, driftable copy of these numbers.
+ * The bucket's MIME types (0008) mapped to stored extensions; Storage would reject anything else,
+ * so stop before uploading. Exported so `uploadAvatar` checks the same list, not a driftable copy.
  */
 export const ACCEPTED_TYPES: Record<string, string> = {
     "image/webp": "webp",
@@ -37,15 +25,9 @@ export const MAX_BYTES = 512 * 1024;
 const FETCH_TIMEOUT_MS = 5_000;
 
 /**
- * Hosts whose bytes we are willing to fetch.
- *
- * This is a server making an outbound request to a URL that arrived with a user, which is
- * the shape of an SSRF. The URL is read from `identity_data` rather than `user_metadata`
- * (see below), and this list is the second lock: without it a redirect chain or a changed
- * provider response could still point the fetch at an internal address.
- *
- * Leading dots matter — `evil-googleusercontent.com` does not end with
- * `.googleusercontent.com`.
+ * Hosts we'll fetch avatars from — the second SSRF lock after reading `identity_data`, so redirects
+ * or changed responses can't reach internal addresses. Leading dots matter:
+ * `evil-googleusercontent.com` doesn't end with `.googleusercontent.com`.
  */
 const ALLOWED_HOSTS = [".googleusercontent.com", ".githubusercontent.com"];
 
@@ -60,13 +42,8 @@ function isAllowedAvatarUrl(value: string): boolean {
 }
 
 /**
- * The avatar URL the provider supplied, or `null`.
- *
- * Read from `identities[].identity_data`, **never** from `user.user_metadata`. Metadata is
- * writable by the account holder through `updateUser({ data })`, so taking the URL from
- * there would let anyone with an account choose what address this server fetches.
- * `identity_data` is written by Supabase from the provider's response and is not user
- * editable.
+ * The provider's avatar URL, or `null` — from `identities[].identity_data` (written by Supabase),
+ * **never** `user_metadata`, which the account holder can edit to aim this server's fetch.
  */
 function providerAvatarUrl(user: User): string | null {
     for (const identity of user.identities ?? []) {
@@ -78,21 +55,14 @@ function providerAvatarUrl(user: User): string | null {
 }
 
 /**
- * Gives a guest their provider photo if they do not have one yet.
- *
- * Safe to call on every OAuth sign-in: it returns early once `avatar_path` is set, so a
- * guest who later uploads their own photo never has it overwritten. This is adoption at
- * first sign-in, not an ongoing sync.
- *
- * Uses the guest's own session client, never the service role — the storage policy
- * `"guests upload their own avatar"` matches the first path segment against `auth.uid()`,
- * which is why the path starts with the user id.
+ * Gives a guest their provider photo if they have none — adoption at first sign-in, never
+ * overwriting a later upload. Uses the guest's session client, not the service role: the storage
+ * policy matches the path's first segment (the user id) against `auth.uid()`.
  *
  * @param supabase Session-bound client, already carrying the freshly exchanged session.
  * @param user The signed-in user, as returned by `exchangeCodeForSession`.
  *
- * @example
- * after(() => adoptProviderAvatar(supabase, data.user));
+ * @example after(() => adoptProviderAvatar(supabase, data.user));
  */
 export async function adoptProviderAvatar(
     supabase: Awaited<ReturnType<typeof createClient>>,
@@ -125,11 +95,8 @@ export async function adoptProviderAvatar(
         const bytes = await response.arrayBuffer();
         if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) return;
 
-        // EXIF is deliberately NOT stripped here, unlike the manual upload path specified in
-        // features/account/README.md. These bytes never came from the guest's camera: the
-        // provider re-encoded them, and the identical file is already public at the
-        // provider's own URL, so copying it opens no exposure that did not exist. Stripping
-        // would mean adding sharp as a dependency to re-encode an image that renders at 38px.
+        // EXIF deliberately NOT stripped, unlike manual uploads: the provider already re-encoded
+        // these bytes and the same file is public at its URL, so copying exposes nothing new.
         const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
 
         const { error: uploadError } = await supabase.storage

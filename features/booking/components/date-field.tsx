@@ -5,16 +5,9 @@ import { useState } from "react";
 import { formatUsDate, parseUsDate } from "@/features/booking/lib/dates";
 
 /**
- * One of the two CHECK-IN / CHECKOUT boxes above the calendar.
- *
- * Typed input as well as display, because the reference design shows a caret and an
- * `MM/DD/YYYY` placeholder — so the box has to accept a date, not merely echo one.
- *
- * Holds its own draft string while focused: parsing on every keystroke would reject
- * "08/1" as invalid and fight the person typing "08/18/2026". The draft is committed on
- * blur and on Enter, and silently discarded if it is not a real date or the picker
- * refuses it — the calendar below is the authority on what is bookable, and it is
- * already showing why.
+ * A CHECK-IN / CHECKOUT box that accepts typing (the design shows a caret and `MM/DD/YYYY`). Keeps a
+ * draft while focused so "08/1" isn't rejected mid-typing; commits on blur/Enter, silently dropped if
+ * invalid or refused — the calendar below is the authority, and already shows why.
  *
  * @param value - The committed day, or `null` for empty.
  * @param onCommit - Given a `yyyy-mm-dd`; may reject it by leaving `value` unchanged.
@@ -35,11 +28,8 @@ export default function DateField({
     const asText = value ? formatUsDate(value) : "";
     const [draft, setDraft] = useState(asText);
 
-    // The calendar is the other way into this field, so the draft has to follow the
-    // committed value whenever it changes from outside. Adjusted DURING render rather
-    // than in an effect — React re-runs this component immediately with the new state
-    // and never paints the stale text, whereas an effect would flash it first.
-    // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+    // Follow outside changes (the calendar) during render, not in an effect, so stale text never
+    // paints. https://react.dev/reference/react/useState#storing-information-from-previous-renders
     const [lastValue, setLastValue] = useState(value);
     if (value !== lastValue) {
         setLastValue(value);
@@ -49,10 +39,8 @@ export default function DateField({
     function commit() {
         const parsed = parseUsDate(draft);
         if (parsed) onCommit(parsed);
-        // Snap back to whatever is actually selected. If the commit was accepted the
-        // adjustment above overwrites this on the next render; if it was rejected —
-        // an unparseable date, or one the picker refused — this is what undoes the
-        // invalid text.
+        // Snap back to the selected value: an accepted commit is overwritten by the adjustment
+        // above, a rejected one is undone here.
         setDraft(asText);
     }
 
