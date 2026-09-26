@@ -7,12 +7,8 @@ import {
 } from "@/features/auth/next-path";
 
 /**
- * The open-redirect guard. A `next` value arrives from a query string, a form field or a
- * cookie and is handed straight to `redirect()`, so anything that escapes same-origin here
- * is a phishing hop with the site's own domain in front of it.
- *
- * ⚠️ proxy.ts keeps a deliberate second copy of this rule (it can be deployed separately to
- * a CDN). If the rule below ever changes, that copy has to change with it.
+ * The open-redirect guard: `next` goes straight to `redirect()`, so any escape is a phishing hop
+ * under the site's own domain. ⚠️ proxy.ts keeps a deliberate copy — change both together.
  */
 
 describe("safeNextPath", () => {

@@ -36,26 +36,14 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 /**
- * Whether to offer password reset.
- *
- * `false` because resetting a password requires delivering an email, and this project has no
- * working mail sender — the form would answer with a reassuring "a link is on its way" while
- * nothing ever arrives. A link that quietly does nothing is worse than a feature that is not
- * advertised.
- *
- * `/forgot-password` and `/account/update-password` still exist and still work; they are just
- * not linked from here. Flip this to `true` the day email delivery works — that is the whole
- * restore.
+ * Password reset stays unlinked: there's no working mail sender, so "a link is on its way" would be
+ * a lie. `/forgot-password` and `/account/update-password` still work — flip this once email does.
  */
 const PASSWORD_RESET_AVAILABLE = false;
 
 /**
- * Credentials the sign-in form starts with.
- *
- * Prefilled on purpose: the README points recruiters straight at this page, and a booking
- * flow they cannot get into is not a demo. This is a seeded account on a demo database with
- * simulated payments, so there is nothing behind it worth protecting. Sign-up mode never
- * prefills — an account created with these values would collide with the demo one.
+ * Prefilled demo credentials: the README sends recruiters here, and a flow they can't enter is no
+ * demo; a seeded account with simulated payments guards nothing. Sign-up never prefills (collision).
  */
 const DEMO_EMAIL = "co@example.com";
 const DEMO_PASSWORD = "cococo";

@@ -89,11 +89,8 @@ export type AvatarFormState =
     | undefined;
 
 /**
- * Shape returned by `updatePassword` on /account/update-password.
- *
- * Separate from `AuthFormState` rather than widening it: nothing is echoed back here on
- * purpose. A rejected submit clears both fields, because re-showing a password someone just
- * mistyped only helps them repeat the mistake.
+ * `updatePassword`'s result. Separate from `AuthFormState` because nothing is echoed back — a
+ * rejected submit clears both fields rather than re-showing a mistyped password.
  */
 export type PasswordFormState =
     | {

@@ -11,12 +11,8 @@ import {
 } from "@/features/auth/components/form-primitives";
 
 /**
- * Asks for a password reset link.
- *
- * The reply is the same whether or not the address has an account — see
- * `requestPasswordReset`. That is why the form stays on screen and shows a neutral banner
- * instead of redirecting somewhere celebratory: there is nothing here that confirms the
- * address exists.
+ * Asks for a reset link. The reply is identical whether or not the address exists (see
+ * `requestPasswordReset`), so the form stays put with a neutral banner — nothing confirms it.
  */
 export default function ForgotPasswordForm() {
     const [state, action, pending] = useActionState(
