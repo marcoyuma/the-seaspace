@@ -3,24 +3,11 @@
 import { useLinkStatus } from "next/link";
 
 /**
- * Confirms a click on a card-sized `<Link>` while the navigation is still in flight.
+ * Pending hint for a card-sized `<Link>`; must sit INSIDE a `relative` link, since `useLinkStatus`
+ * reads context. Usually invisible (the route is prerendered and prefetched) — it's the safety net
+ * for slow connections. Always mounted, only opacity toggles, so a click never shifts the layout.
  *
- * Must be a DESCENDANT of the `<Link>` it reports on — `useLinkStatus` reads the link's
- * pending state from context, so wrapping the link instead of sitting inside it returns
- * `{ pending: false }` forever. The link also needs a positioning context (`relative`).
- *
- * Expect it to stay invisible most of the time, by design: `/stays/[stayId]` is prerendered
- * and `<Link>` prefetches by default, so the pending phase is usually skipped entirely. This
- * is the safety net for a cold or slow connection, not decoration.
- *
- * Always rendered with only opacity toggling — an element that appears on click would shift
- * the card's layout at the worst possible moment.
- *
- * @example
- * <Link href={`/stays/${stay.id}`} className="relative block">
- *     <StayCard {...stay} />
- *     <LinkPendingOverlay />
- * </Link>
+ * @example <Link href={href} className="relative block"><StayCard {...stay} /><LinkPendingOverlay /></Link>
  */
 export default function LinkPendingOverlay() {
     const { pending } = useLinkStatus();

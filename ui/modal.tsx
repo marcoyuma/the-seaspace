@@ -3,26 +3,14 @@
 import { useEffect, useRef } from "react";
 
 /**
- * The dialog shell every modal on the site sits in: backdrop, panel, and the four
- * behaviours a modal is wrong without.
+ * Presentational dialog shell (backdrop, panel, Escape, focus, scroll lock), extracted from
+ * `booking-modal.tsx` so new modals are consistent by construction. ⚠️ booking-modal.tsx is NOT
+ * migrated yet — it's on the paid flow's critical path — so keep the two in step by hand.
  *
- * Presentational only — it owns no feature state, just the open/close contract. The
- * behaviour here was written first inside
- * `features/booking/components/booking-modal.tsx`; extracting it means the next modal is
- * consistent by construction rather than by copy-paste.
- *
- * ⚠️ `booking-modal.tsx` has NOT been migrated onto this shell. It is on the critical path
- * of the paid flow, so that move belongs in its own commit with its own manual check.
- * Until then the two must be kept in step by hand.
- *
- * @param label - The dialog's accessible name. There is no visible-title convention here,
- *   so every caller must supply one.
+ * @param label - The dialog's accessible name; required, as there's no visible-title convention.
  * @param maxWidth - A Tailwind `max-w-*` class. The panel is otherwise full-width.
  *
- * @example
- * <Modal isOpen={isOpen} onClose={close} label="Request a tee time" maxWidth="max-w-140">
- *     <RequestForm />
- * </Modal>
+ * @example <Modal isOpen={isOpen} onClose={close} label="Request a tee time"><RequestForm /></Modal>
  */
 export default function Modal({
     isOpen,
@@ -69,10 +57,8 @@ export default function Modal({
 
     return (
         <div
-            // Kept mounted rather than conditionally rendered, as ui/menu-panel.tsx does,
-            // so the fade plays on the way out as well as in. `inert` while closed keeps
-            // the whole subtree out of the tab order and away from screen readers, which
-            // `invisible` alone would not guarantee.
+            // Kept mounted (like ui/menu-panel.tsx) so the fade also plays on exit. `inert` while
+            // closed keeps the subtree out of tab order and screen readers — `invisible` can't.
             inert={!isOpen}
             onMouseDown={(event) => {
                 // `mousedown`, and only when the press LANDED on the backdrop itself: a

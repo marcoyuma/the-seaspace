@@ -27,14 +27,9 @@ const NAV_LINK_BASE =
     "block text-[28px] font-medium leading-[1.35] tracking-tight";
 
 /**
- * One of the large serif nav links.
- *
- * On hover the white label rolls up out of the clip while a tinted copy rises
- * into its place; leaving reverses it. Both halves are plain CSS transitions
- * rather than keyframes, so a cursor that leaves mid-roll reverses from wherever
- * the motion had got to instead of snapping.
- *
- * The current route doesn't roll — the effect reads as "somewhere you can go".
+ * Large nav link whose label rolls up out of the clip on hover as a tinted copy rises in. CSS
+ * transitions, not keyframes, so leaving mid-roll reverses smoothly instead of snapping. The
+ * current route doesn't roll — the effect reads as "somewhere you can go".
  */
 function RollingNavLink({
     link,
@@ -126,20 +121,12 @@ function PanelRow({
 }
 
 /**
- * The floating orange navigation panel and its trigger.
- *
- * Owns its own open/close state instead of `Header`: Header re-renders on every
- * scroll/resize tick (the pill-sweep `useSyncExternalStore`), so keeping menu
- * state here decouples the panel from that render churn and colocates the
- * trigger, panel, and effects in one place.
- *
- * Every route hands both navigation and the account control to this panel —
- * the header bar itself only ever shows brand + trigger.
+ * The floating nav panel and its trigger; every route hands navigation and the account control
+ * here. Owns its open state because `Header` re-renders on every scroll tick (the pill sweep),
+ * which this keeps the panel out of.
  *
  * @param links - Primary nav targets, rendered as the large serif list.
- * @param profileSlot - The header's account control (sign-in link, or avatar/
- * account link once signed in), passed through from `Header` so the panel's
- * account row reflects the real session instead of a static placeholder.
+ * @param profileSlot - `Header`'s session-aware account control (sign-in or avatar link).
  */
 export default function MenuPanel({
     links,
@@ -151,10 +138,8 @@ export default function MenuPanel({
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
 
-    // Close whenever the route changes — clicking a link navigates, and the
-    // panel should retract as the new page comes in. Adjusted during render
-    // (React's recommended pattern for state that depends on a prop change)
-    // rather than in an effect, which would fire a second, cascading render.
+    // Close on route change, adjusted during render (React's pattern for state derived from a
+    // prop change) rather than in an effect, which would fire a second, cascading render.
     const [prevPathname, setPrevPathname] = useState(pathname);
     if (pathname !== prevPathname) {
         setPrevPathname(pathname);
@@ -199,13 +184,9 @@ export default function MenuPanel({
                 role="dialog"
                 aria-modal="false"
                 aria-label="Site menu"
-                // Offsets are negative because the panel hangs off the trigger:
-                // -28px/-24px put its dash exactly on the merged hamburger line
-                // (see the close button below), which holds in both the pill and
-                // the expanded header without any per-breakpoint tuning. Only
-                // 24px of the needed 32px is taken here — the last 8px is the
-                // dash's own -mr-2 — so the panel never overruns the viewport
-                // edge in the expanded header's narrowest inset.
+                // Negative offsets hang the panel off the trigger so its dash lands on the merged
+                // hamburger line in both header states. Only 24px of the needed 32px is here (the
+                // dash's -mr-2 adds the rest), so the panel never overruns the narrowest inset.
                 className={`absolute -right-6 -top-7 z-30 w-80 max-w-[calc(100vw-16px)] sm:w-96
                             origin-top-right rounded-3xl bg-linear-to-b from-[#2c8de2] via-[#267cc7] via-[#216cae] via-[#1c5c94] to-[#184d7c] px-8 py-6 text-white shadow-2xl
                             transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none
@@ -215,12 +196,9 @@ export default function MenuPanel({
                                     : "pointer-events-none invisible -translate-y-2 scale-95 opacity-0"
                             }`}
             >
-                {/* Close affordance (dash): it sits directly on top of the
-                    hamburger's merged line, so the line reads as staying put
-                    while the panel grows behind it. `-mr-2` pulls it out of
-                    `px-8`, `justify-end` makes its right edge the row's, and
-                    `w-6.5` matches the middle bar's 26px exactly. The button
-                    stays `w-8` so the hit area isn't as thin as the line. */}
+                {/* Close dash sits exactly on the hamburger's merged line, so the line seems to stay
+                    put as the panel grows. `-mr-2` escapes `px-8` and `w-6.5` matches the 26px
+                    middle bar; the button stays `w-8` for a usable hit area. */}
                 <div className="mb-8 -mr-2 flex justify-end">
                     <button
                         type="button"
@@ -261,11 +239,8 @@ export default function MenuPanel({
                         Contact us
                     </PanelRow>
 
-                    {/* Not a `PanelRow`: `profileSlot` is already a `Link`
-                        (sign-in, or account/avatar once signed in), and
-                        nesting an anchor inside `PanelRow`'s own anchor
-                        would be invalid HTML. Its own icon carries
-                        `currentColor`, so it inherits this row's white. */}
+                    {/* Not a `PanelRow`: `profileSlot` is already a `Link`, and nested anchors are
+                        invalid HTML. Its icon uses `currentColor`, so it inherits the row's white. */}
                     <div className="flex items-center gap-3 border-b border-white/25 py-4 text-[16px] font-medium text-white transition-opacity hover:opacity-80">
                         {profileSlot}
                     </div>

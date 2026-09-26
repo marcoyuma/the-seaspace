@@ -1,19 +1,9 @@
 /**
- * Creates one Supabase Auth account per distinct author in public.reviews.
+ * Creates one Auth account per distinct review author. Run BETWEEN migrations 0006 and 0007: the
+ * accounts make 0006's trigger fill public.guests, which 0007 backfills reviews from. Idempotent
+ * (existing addresses skip); `.mjs` so it runs under `node --env-file` with nothing to install.
  *
- *     node --env-file=.env.local scripts/create-seed-accounts.mjs
- *
- * Run it BETWEEN migrations 0006 and 0007. 0006 creates public.guests and the
- * trigger; this script creates the accounts, which makes the trigger fill
- * public.guests; 0007 then backfills reviews.guest_id and drops reviews.guest_ref.
- * Running 0007 first fails loudly rather than leaving orphaned reviews.
- *
- * `.mjs`, not `.mts`: the repo has no tsx/ts-node, and plain ESM runs under
- * `node --env-file` with nothing to install — the same shape as the RLS probes
- * in supabase/README.md.
- *
- * Idempotent: an address that already exists is reported as skipped, not as an
- * error, so re-running is safe.
+ * @example node --env-file=.env.local scripts/create-seed-accounts.mjs
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -31,21 +21,14 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !PASSWORD) {
     process.exit(1);
 }
 
-// Service role, and deliberately NOT lib/supabase.ts: that client uses the anon
-// key (which cannot reach auth.admin at all) and forces every request through
-// `next: { revalidate: 3600 }`, which has no meaning outside a Next render and
-// would cache admin calls.
+// Service role, not lib/supabase.ts: the anon key cannot reach auth.admin at all.
 const admin = createClient(new URL(SUPABASE_URL).origin, SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
 });
 
 /**
- * `amara-lindqvist` → `amara.lindqvist@example.com`.
- *
- * example.com is reserved by RFC 2606, so these addresses can never send or
- * receive real mail. The derivation must stay deterministic: migration 0007
- * reproduces it in SQL to backfill reviews.guest_id, and any change here
- * silently breaks that join.
+ * `amara-lindqvist` → `amara.lindqvist@example.com` (RFC 2606, never real mail). Must stay
+ * deterministic: migration 0007 reproduces it in SQL to backfill reviews.guest_id.
  */
 function emailFor(guestRef) {
     return `${guestRef.replaceAll("-", ".")}@example.com`;

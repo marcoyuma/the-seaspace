@@ -1,12 +1,6 @@
 /**
- * Whether a nav link points at the route currently being viewed.
- *
- * `/stays` also counts as active on `/stays/<stayId>` so the section stays
- * marked while you're deeper in it. Hash targets (`/#gallery`) are never
- * active — `usePathname` drops the fragment, so there's nothing to match on.
- *
- * Lives here rather than in header.tsx so menu-panel.tsx can share it without
- * importing back into its own parent.
+ * Whether a nav link points at the current route. `/stays` stays active on `/stays/<id>`; hash
+ * links never are (`usePathname` drops the fragment). Lives here so menu-panel.tsx can share it.
  *
  * @example isActiveLink("/stays", "/stays/tuscan-twilight-villa") // true
  */

@@ -1,21 +1,14 @@
 /**
- * Shared contract between the inline flash guard (ui/preloader-flash-guard.tsx), the overlay
- * itself (ui/preloader.tsx) and the CSS in app/_styles/globals.css.
- *
- * The guard runs as a raw string of JavaScript before React exists, so these values end up
- * interpolated into that string AND read by the component — one source of truth keeps the two
- * from drifting apart, which would silently leave the curtain up forever.
+ * Shared contract between the flash guard (a raw JS string, run before React), ui/preloader.tsx
+ * and globals.css. One source of truth — a drift between them would leave the curtain up forever.
  */
 
 /** sessionStorage key. Per-tab on purpose: a second visit within the same tab skips the curtain. */
 export const PRELOADER_SESSION_KEY = "seaspace:preloader-seen";
 
 /**
- * Set on <html> by the flash guard. CSS keeps the overlay `display:none` until it appears, so
- * a browser without JS — or a crawler that never runs it — never sees a curtain it cannot lift.
- *
- * The overlay removes it once the curtain lifts: the guard only runs while the document is
- * parsed, so a flag left behind would re-arm on every soft navigation back to `/`.
+ * Set on <html> by the flash guard; CSS keeps the overlay hidden without it, so no-JS visitors
+ * never see a stuck curtain. Removed on lift, or it would re-arm on soft navigation back to `/`.
  */
 export const PRELOADER_ACTIVE_ATTR = "data-preloader-active";
 

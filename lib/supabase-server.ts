@@ -2,11 +2,8 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 /**
- * Session-aware Supabase client for Server Components, Server Actions and proxy.ts.
- *
- * Separate from the `supabase` singleton in lib/supabase.ts on purpose. That one is
- * anonymous and shared across every visitor; this one carries a specific person's cookies,
- * so the two must never be the same object.
+ * Session-aware client for Server Components, Server Actions and proxy.ts. Never the same object
+ * as lib/supabase.ts's anonymous singleton — this one carries a specific person's cookies.
  */
 
 // Static property access, not process.env[name] — Next only inlines NEXT_PUBLIC_* when it
@@ -46,11 +43,8 @@ export async function createClient() {
                 return cookieStore.getAll();
             },
             setAll(cookiesToSet) {
-                // Server Components are forbidden from writing cookies, and supabase-js
-                // calls this whenever it rotates an expiring token. Swallowing the throw is
-                // the documented pattern: proxy.ts performs the same refresh on every
-                // request and writes the cookies where writing is allowed, so nothing is
-                // actually lost here.
+                // Server Components can't write cookies, yet supabase-js calls this on token
+                // rotation. Swallowing is the documented pattern: proxy.ts refreshes and writes them.
                 try {
                     for (const { name, value, options } of cookiesToSet) {
                         cookieStore.set(name, value, options);

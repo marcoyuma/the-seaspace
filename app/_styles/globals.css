@@ -1,10 +1,7 @@
 @import "tailwindcss";
 
-/* Tailwind v4 scans every non-ignored file, .md included, so a class quoted in
-   prose emits a real rule into the bundle. AGENTS.md and RESPONSIVE-AUDIT.md both
-   quote classes as examples — AGENTS.md's rule against the `!` modifier names the
-   very class it forbids, which put a live `!important` back in the CSS. Docs are
-   never a source of classes; keep them out of the scan. */
+/* Tailwind v4 scans .md too, so classes quoted in docs (AGENTS.md's `!` rule, for one) emitted
+   real rules. Docs are never a source of classes. */
 @source not "../../**/*.md";
 
 @media (prefers-reduced-motion: no-preference) {
@@ -13,22 +10,17 @@
     }
 }
 
-/* `inline` wajib, bukan sekadar gaya penulisan. Variabel --font-* didefinisikan
-   next/font pada elemen yang membawa class `.variable` (yaitu <body>), bukan di
-   :root. Dengan @theme biasa Tailwind meng-emit `:root { --font-logo:
-   var(--font-josefin) }`, dan var() di dalam custom property diresolusi di
-   tempat property itu dideklarasikan — di :root --font-josefin belum ada,
-   sehingga nilainya jadi invalid dan fontnya diam-diam tidak pernah terpakai.
-   `inline` menyubstitusi nilainya langsung ke utility-nya, sehingga var() baru
-   diresolusi di elemen pemakai yang memang mewarisinya dari <body>. */
+/* `inline` is required: next/font defines --font-* on <body>, not :root, so a plain @theme's
+   `:root { --font-logo: var(--font-josefin) }` resolves invalid and the font silently never
+   applies. `inline` substitutes into each utility, resolving where <body>'s vars are inherited. */
 @theme inline {
     --font-sans: var(--font-manrope);
     --font-logo: var(--font-josefin);
 }
 
 @theme {
-    /* Namespace harus --background-image-* agar Tailwind v4 membuat utility
-       `bg-blue-gradient`; prefix lain (mis. --bg-image-) tidak dikenali. */
+    /* Must be --background-image-* for Tailwind v4 to generate `bg-blue-gradient`;
+       other prefixes (e.g. --bg-image-) aren't recognised. */
     --background-image-blue-gradient: linear-gradient(
         to bottom,
         #2c8de2,
@@ -38,20 +30,15 @@
         #184d7c
     );
 
-    /* Carousel review vertikal
-       (features/reviews/components/review-viewport.tsx).
-       Keyframe, bukan transition antar class: kartu masuk selalu di-mount
-       ulang, jadi animasinya main dari awal dan arahnya tidak pernah salah
-       saat indeks membungkus dari item terakhir ke pertama.
-       Delay pada -enter menyamai durasi -exit agar keduanya berurutan, tidak
-       saling tumpuk di posisi yang sama. */
+    /* Vertical review carousel (review-viewport.tsx). Keyframes, not class transitions: the
+       incoming card always remounts, so direction is never wrong when the index wraps. The
+       -enter delay equals the -exit duration, so they play in sequence instead of overlapping. */
     --animate-review-enter: review-enter 320ms ease-out 180ms both;
     --animate-review-exit: review-exit 180ms ease-in both;
 }
 
-/* Tanda --review-slide (di-set inline per arah) menentukan dari sisi mana
-   kartu masuk dan ke sisi mana kartu lama keluar, sehingga satu pasang
-   keyframe melayani tombol atas maupun bawah. */
+/* The sign of --review-slide (set inline per direction) picks which side cards enter and
+   leave from, so one keyframe pair serves both the up and down buttons. */
 @keyframes review-enter {
     from {
         opacity: 0;
@@ -129,12 +116,8 @@
 
 /* ===================== Preloader (ui/preloader.tsx) ===================== */
 
-/* Hidden by default. ui/preloader-flash-guard.tsx is what sets
-   [data-preloader-active] on <html>, and it only ever ADDS the flag. So: no
-   JS, no flag; no flag, no curtain — a crawler or a JS-less browser is never
-   trapped behind an overlay it cannot lift. `display` is decided here rather
-   than by a `flex` utility on the component so one property does both the
-   hiding and the showing. */
+/* Hidden unless the flash guard ADDS [data-preloader-active], so no-JS visitors and crawlers
+   are never trapped. `display` lives here, not in a utility, so one property hides and shows. */
 [data-preloader] {
     display: none;
 }
@@ -177,10 +160,8 @@ html[data-preloader-active] [data-preloader] {
     }
 }
 
-/* A full-screen wipe is exactly the kind of motion reduced-motion users opt
-   out of. Unlayered, so it beats the Tailwind utility without !important.
-   Still an animation rather than an outright `display: none` because the
-   component waits on `animationend` to finish its teardown. */
+/* Reduced motion swaps the wipe for a fade — still an animation, since the component tears
+   down on `animationend`. Unlayered, so it beats the Tailwind utility without !important. */
 @media (prefers-reduced-motion: reduce) {
     [data-preloader].animate-preloader-lift {
         animation: preloader-fade 180ms linear forwards;

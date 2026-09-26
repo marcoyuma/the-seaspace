@@ -1,15 +1,9 @@
 import { pillClasses, PillContents, type PillVariant } from "@/ui/pill-styles";
 
 /**
- * `PillLink`'s visuals on a real `<button>`, for CTAs that act instead of navigate.
- *
- * Not a Client Component itself — it has no state and no effects, so it renders fine on
- * the server. Passing an `onClick` is what forces the *caller* to be a Client Component,
- * which is where that boundary belongs.
- *
- * Disabled pills drop to 40% and go `pointer-events-none` — without the latter the label
- * would still roll on hover, which reads as "clickable" and undoes the point of dimming
- * it.
+ * `PillLink`'s visuals on a `<button>`, for CTAs that act instead of navigate. Not a Client
+ * Component: passing `onClick` makes the *caller* the client boundary, where it belongs.
+ * Disabled also sets `pointer-events-none`, or the label would still roll and read as clickable.
  *
  * @param variant - Same three surfaces as `PillLink`.
  * @param className - Layout only. Merged last so it wins.

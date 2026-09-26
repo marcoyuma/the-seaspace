@@ -1,13 +1,7 @@
 /**
- * Measure caps for body copy.
- *
- * `default` (513px) never binds below that width, so a paragraph in a narrow
- * column just wraps at whatever its container leaves. Copy that needs its own
- * measure at small breakpoints uses `narrow`.
- *
- * Kept out of the base class list for the same reason as `SIZE` in `heading.tsx`:
- * `className` is concatenated, not merged, so a baked-in `max-w-*` would clash at
- * equal specificity with a caller's and force an `!` to break the tie.
+ * Measure caps for body copy; `narrow` for copy that needs its own measure at small breakpoints.
+ * Kept out of the base classes for the same reason as `SIZE` in `heading.tsx` — a baked-in
+ * `max-w-*` would tie with a caller's and force an `!`.
  */
 const WIDTH = {
     default: "max-w-128.25",

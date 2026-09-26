@@ -23,13 +23,9 @@ export default function Footer() {
 
             {/* Main Footer Content */}
             <div className="px-6 sm:px-10 md:px-16 pt-10 sm:pt-16 pb-10 sm:pb-20">
-                {/* CSS Grid (not flex) so the tagline column gets a fixed
-                    proportional share (2fr) while the three link/contact
-                    columns split the remainder evenly — matches the
-                    asymmetric ratio in the design rather than relying on
-                    arbitrary fixed widths (`w-[420px]`) + `ml-auto`.
-                    Single column on mobile: Sitemap/Amenities are hidden
-                    below `sm`, so only Heading + Contact remain, stacked. */}
+                {/* Grid, not flex: the tagline gets a 2fr share and the other three columns
+                    split the rest, matching the design's asymmetric ratio. Mobile is one
+                    column — Sitemap/Amenities hide below `sm`, leaving Heading + Contact. */}
                 <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr] gap-x-16 gap-y-8 sm:gap-y-0">
                     {/* Left: Heading — the one heading on the site that scales
                         per breakpoint rather than sitting at a flat 36px, so it
@@ -94,21 +90,9 @@ export default function Footer() {
                 </div>
             </div>
 
-            {/* Decorative watermark — "THE SEASPACE" bleeds past the
-                visible footer edge, clipped by `overflow-hidden` on the
-                parent <footer>. Hidden below `sm`: on mobile the footer
-                already drops Sitemap/Amenities, and at 200px this glyph
-                overwhelms the narrow viewport rather than reading as texture.
-                - `clamp()` scales the font-size with viewport width
-                  (instead of a fixed 170px) so it stays proportional on
-                  smaller screens without manual breakpoint overrides.
-                - `-mb` is a negative margin proportional to font-size
-                  (`em`-based, not px) to pull the glyph's bottom edge
-                  past the clip boundary consistently at any size.
-                - `aria-hidden` + `select-none` + `pointer-events-none`
-                  mark this as purely visual: screen readers should skip
-                  it (brand name is already conveyed elsewhere, e.g. logo),
-                  and it shouldn't be selectable or intercept clicks. */}
+            {/* Decorative watermark: `-mb` pushes the glyph past the footer's `overflow-hidden`
+                edge, and the aria/select/pointer utilities keep it purely visual. Hidden below
+                `sm`, where 200px text overwhelms the viewport instead of reading as texture. */}
             <p
                 aria-hidden="true"
                 className="hidden sm:block select-none pointer-events-none text-black/10 font-bold whitespace-nowrap leading-none

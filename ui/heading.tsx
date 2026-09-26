@@ -1,14 +1,7 @@
 /**
- * The type scale for section headings.
- *
- * Font size and leading live here rather than in the base class list because
- * `className` is concatenated, not merged: a size passed by a caller would sit at
- * the same specificity as a baked-in one, and the winner would be decided by
- * Tailwind's generation order rather than by the caller. Keeping the scale in one
- * map means no caller ever has to fight the base — and nothing needs `!`.
- *
- * `footer` is the only heading that scales per breakpoint; every other section on
- * the site is pinned to a flat 36px (see RESPONSIVE-AUDIT.md Bagian F).
+ * Section heading type scale, kept out of the base classes: `className` is concatenated, not
+ * merged, so a caller's size would tie and lose to generation order — this map means no `!`.
+ * Only `footer` scales per breakpoint; the rest are a flat 36px (RESPONSIVE-AUDIT.md Bagian F).
  */
 const SIZE = {
     section: "text-[36px] leading-none",
@@ -47,19 +40,9 @@ export default function Heading({
         // source text, so an interpolated class name is never emitted.
         <h2
             id={id}
-            // `w-full`: several callers render this inside a `flex-col
-            // items-center` wrapper, relying on the h2's box shrinking to
-            // fit its own content to look centered. As a non-stretched flex
-            // item (column cross-axis), that shrink-to-fit sizing ignores
-            // the flex container's actual available width and renders at
-            // the text's full unwrapped max-content size instead of
-            // wrapping — the root cause of several homepage sections
-            // overflowing on mobile. `w-full` forces the box to the
-            // container's real width so text wraps normally again. It does
-            // NOT default to `text-center`: some callers (StaysPreviewSection,
-            // Footer) are intentionally left-aligned; callers that relied on
-            // the old shrink-wrap-to-center trick pass `className="text-center"`
-            // explicitly instead.
+            // `w-full`: inside a `flex-col items-center` parent the h2 shrank to its unwrapped
+            // max-content and overflowed on mobile. No default `text-center` — StaysPreviewSection
+            // and Footer are left-aligned; centred callers pass `className="text-center"`.
             className={`w-full font-semibold ${SIZE[size]} ${
                 variant === "white" ? "text-white" : "text-black"
             } ${className}`}
