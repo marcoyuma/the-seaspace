@@ -1,14 +1,8 @@
 import Skeleton from "@/ui/skeleton";
 
 /**
- * Placeholder for one <StayCard />, streamed in while the /stays grid loads.
- *
- * Every block mirrors its counterpart in stay-card.tsx — the same `aspect-[3/2]` cover, the
- * same `mt-*` rhythm, and bar heights that follow the card's own `text-[15px] sm:text-[16px]`
- * type ramp. That is the whole point: the fallback and the real card occupy the same height
- * at every breakpoint, so the grid does not jump when the data lands.
- *
- * Change this whenever stay-card.tsx's geometry changes.
+ * Placeholder for one <StayCard /> while /stays streams. Mirrors stay-card.tsx block for block
+ * (aspect, `mt-*`, type ramp) so the grid doesn't jump when data lands — update it with that file.
  */
 export default function StayCardSkeleton() {
     return (

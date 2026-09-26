@@ -25,11 +25,8 @@ const StayMapCanvas = dynamic(() => import("@/features/stays/components/stay-map
 const PRELOAD_MARGIN = "200px";
 
 /**
- * Lazy wrapper around the Leaflet map on the stay detail page.
- *
- * next/dynamic alone still downloads the chunk on mount, so this also gates on
- * an IntersectionObserver: the section sits well below the fold, and visitors
- * who never scroll to it shouldn't pay ~50KB of Leaflet plus ~250KB of tiles.
+ * Lazy Leaflet map for the stay page, also gated on an IntersectionObserver: next/dynamic still
+ * loads on mount, and visitors who never scroll here shouldn't pay ~50KB of JS + ~250KB of tiles.
  *
  * @param lat - Latitude of the stay.
  * @param lng - Longitude of the stay.

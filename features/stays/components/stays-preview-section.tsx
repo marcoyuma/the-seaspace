@@ -16,18 +16,9 @@ import Skeleton from "@/ui/skeleton";
 const STAYS_PAGE_PATH = "/stays";
 
 /**
- * Curated subset of stays on the landing page, driving users toward the "Explore stays" CTA.
- *
- * The selection lives in the database (`stays.is_featured`), not in this file. It used to be
- * a hardcoded array that had drifted out of sync with the catalogue — both entries were
- * labelled "Tuscan Twilight Villa" while showing photos of two different villas. Reading
- * from the same source as /stays removes that failure mode entirely.
- *
- * Async Server Component reading the UNCACHED featured query, so the strip always reflects
- * what is flagged in the database right now — a villa featured this morning shows up on the
- * next request, not on the next cache expiry. The <Suspense> boundary in app/page.tsx is what
- * makes that free: the rest of the landing page is still prerendered as a static shell, and
- * only this section waits on Supabase.
+ * Featured stays on the landing page, flagged by `stays.is_featured` — one source with /stays, so
+ * names and photos can't drift. Read UNCACHED, so a newly flagged villa shows on the next request;
+ * app/page.tsx's <Suspense> keeps the rest of the page in the static shell.
  */
 export default async function StaysPreviewSection() {
     // Parallel: neither read depends on the other. Ratings stay cached — they are an
@@ -44,20 +35,12 @@ export default async function StaysPreviewSection() {
                 for screen readers, instead of relying on a generic <div>. */}
             <section
                 aria-labelledby="stays-preview-heading"
-                // Centered on mobile (narrow columns make left-aligned text
-                // feel cramped), back to the original left-aligned layout
-                // from `md` up. `gap-5` (20px) is the site-wide gap from the
-                // intro block (overline/heading/text/CTA) to the actual
-                // content below it — a bit more breathing room than the
-                // 12px used inside the intro block itself. See
-                // RESPONSIVE-AUDIT.md Bagian F.
+                // Centred on mobile, left-aligned from `md`. `gap-5` is the site-wide intro-to-
+                // content gap, roomier than the intro's own 12px (RESPONSIVE-AUDIT.md Bagian F).
                 className="flex flex-col items-center gap-5 text-center md:items-start md:text-left"
             >
-                {/* Intro block: `gap-3` (12px) is the site-wide spacing
-                    between overline/heading/text+CTA — see
-                    RESPONSIVE-AUDIT.md Bagian F. Isolated in its own wrapper
-                    so the section's `gap-5` above only governs the gap to
-                    the card grid, not the spacing within this block. */}
+                {/* `gap-3` is the site-wide intro spacing (RESPONSIVE-AUDIT.md Bagian F); its own
+                    wrapper, so the section's `gap-5` only spaces it from the card grid. */}
                 <div className="w-full flex flex-col items-center gap-3 md:items-start">
                     <OverlineText>Rooms and suites</OverlineText>
                     <Heading>Sea Escape</Heading>
@@ -85,23 +68,12 @@ export default async function StaysPreviewSection() {
                     </div>
                 </div>
 
-                {/* CSS Grid (not flex justify-between) keeps the gap fixed
-                    regardless of item count, matching the spacing used in
-                    ServiceAndAmenitiesPreview for visual consistency.
-                    `w-full` is load-bearing: the parent `<section>` is a
-                    flex column with `items-center` (only switching to
-                    `items-start` at `md:`), so without an explicit width
-                    this grid shrinks to its own min-content instead of
-                    stretching to the section's width. Each card's only
-                    content is an absolutely-positioned `next/image fill`,
-                    which contributes zero intrinsic width — so the
-                    `minmax(0,1fr)` columns collapsed to 0px and the whole
-                    grid (and every stay card in it) silently disappeared. */}
+                {/* Grid keeps the gap fixed, as in ServiceAndAmenitiesPreview. `w-full` is load-
+                    bearing: under `items-center` the grid shrinks to min-content, and the cards (just
+                    an absolute `fill` image) have zero intrinsic width, so they silently vanished. */}
                 <div className="w-full grid grid-cols-1 gap-6 md:grid-cols-2">
                     {featuredStays.map((stay) => (
-                        // The card looked clickable (cursor-pointer, zoom on hover) but went
-                        // nowhere while the catalogue was hardcoded. Now that each entry is a
-                        // real stay, the slug gives it somewhere to go.
+                        // Each card links to its real stay via the slug.
                         <Link
                             key={stay.id}
                             href={`${STAYS_PAGE_PATH}/${stay.id}`}
@@ -161,11 +133,8 @@ export function StaysPreviewSectionFallback() {
                     </div>
                 </div>
 
-                {/* Two placeholder cards, same `aspect-3/2` as StayCardPreview, so the grid
-                    doesn't jump in height once real cards stream in. The inner blocks stand
-                    in for the card's floating info overlay, mirroring both of its forms:
-                    two separate pills below `md`, one wide bar from `md` up. Keep these in
-                    sync with stay-card-preview.tsx. */}
+                {/* Two placeholders at StayCardPreview's `aspect-3/2`, mirroring both overlay forms
+                    (pills below `md`, one bar above) — keep in sync with stay-card-preview.tsx. */}
                 <div className="w-full grid grid-cols-1 gap-6 md:grid-cols-2">
                     {Array.from({ length: 2 }).map((_, index) => (
                         <div key={index} className="relative w-full aspect-3/2">

@@ -77,14 +77,9 @@ export default function StayInfoSection({
                     {idr.format(stay.pricePerNight)} / night
                 </p>
 
-                {/* Price and rating are the two numbers people decide on, so both sit as
-                    subtitles under the h1 — `mt-3` matches the gap from the h1 to the price,
-                    which makes the three lines read as one block.
-
-                    Absent entirely for a villa nobody has rated. Not "0 reviews" and not
-                    "No rating yet": the same call ReviewsSection makes when the table is
-                    empty, and a 0.00 average would read as a bad review rather than as no
-                    reviews. */}
+                {/* Price and rating are the deciding numbers, so both sit under the h1 (`mt-3`
+                    matches h1→price). Absent for unrated villas: a 0.00 average would read as a
+                    bad review rather than none (same call as ReviewsSection). */}
                 {ratingSummary && (
                     <RatingSummary
                         average={ratingSummary.averageRating}

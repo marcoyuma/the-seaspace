@@ -7,12 +7,8 @@ import type { Amenity } from "@/features/stays/types";
 import HorizontalLine from "@/ui/horizontal-line";
 
 /**
- * The AMENITIES panel on the stay detail page: a list of expandable rows.
- *
- * Unlike app/ui/faq-section.tsx (one answer open at a time) rows here toggle
- * independently — a spec sheet is something you compare across, not read one
- * question at a time. The reveal itself uses the same grid-rows 0fr→1fr trick,
- * which animates to auto height without measuring anything.
+ * Expandable AMENITIES rows on the stay page. Unlike faq-section.tsx, rows toggle independently —
+ * a spec sheet is compared across. Same grid-rows 0fr→1fr trick, animating to auto height.
  */
 export default function AmenitiesPanel({
     amenities,

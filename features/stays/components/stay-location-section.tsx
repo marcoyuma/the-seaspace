@@ -15,15 +15,9 @@ function MapFallback() {
 }
 
 /**
- * "How to get here": a pinned map of the stay plus ways to reach it.
- *
- * Nothing here needs an API key: the map is Leaflet over CARTO tiles, and the
- * drive link is a plain Google Maps URL. The "by air" card used to build a
- * Google Flights link from a per-stay nearest-airport code/city, but every
- * villa in the catalogue hardcoded the same 'DPS'/'Denpasar' pair with no
- * lookup table behind it — not meaningfully per-villa data — so that column
- * was dropped (0016_stays_drop_unvalidated_fields.sql) and this card is now
- * generic instead.
+ * "How to get here": a pinned map plus ways to reach the stay, with no API keys (Leaflet over
+ * CARTO, plain Google URLs). The "by air" card is generic — the per-villa airport column was the
+ * same everywhere and was dropped in 0016.
  */
 export default function StayLocationSection({ stay }: { stay: Stay }) {
     const { lat, lng } = stay.coordinates;
@@ -34,11 +28,8 @@ export default function StayLocationSection({ stay }: { stay: Stay }) {
     return (
         <div className="rounded-[20px] bg-[#F7F8F9] p-3 mt-24">
             <div className="h-105 w-full overflow-hidden rounded-2xl">
-                {/* The map is the only purely client-side part of this page, so
-                    it is also the only place likely to touch a browser API. The
-                    boundary keeps the rest of the route prerenderable if it
-                    does — under `cacheComponents` an unguarded clock read in a
-                    Client Component costs the whole page its static shell. */}
+                {/* The map is the page's only client-only part, so it's where a browser API gets
+                    touched; under `cacheComponents` an unguarded clock read costs the static shell. */}
                 <Suspense fallback={<MapFallback />}>
                     {/* And for the same reason it gets its own error boundary:
                         a Leaflet crash should cost the map, not the villa page.

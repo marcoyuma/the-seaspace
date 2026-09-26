@@ -18,13 +18,8 @@ interface StayCardPreviewProps {
 }
 
 /**
- * Preview card for a single stay/villa, used in `StaysPreviewSection`.
- * Displays a full-bleed image with floating info anchored to the bottom, and a
- * subtle zoom-on-hover effect to signal interactivity.
- *
- * The bottom overlay has two mutually exclusive forms: two separate chips below
- * `md`, one wide bar with hover-driven roll animations from `md` up. See the
- * comments on each block.
+ * Stay preview card for `StaysPreviewSection`: full-bleed image with zoom on hover, and a bottom
+ * overlay that's two chips below `md` and one bar with hover rolls from `md` up.
  */
 export default function StayCardPreview({
     imageSrc,
@@ -59,19 +54,9 @@ export default function StayCardPreview({
                 alt={`${villaNameText} in ${locationText}`}
             />
 
-            {/* Rating chip, mirroring the label at the opposite corner.
-
-                Deliberately NOT a third slot inside the bar below: that bar runs two
-                separate roll animations (name→location on the left, location→arrow on the
-                right), and both size themselves from a grid whose cell is shared by two
-                stacked lines. Adding content there changes the widths those rolls are
-                measured against.
-
-                `top-3 left-3` rather than `inset-x-3`, so the chip is as wide as its own
-                content instead of stretching across the card.
-
-                No review count here: at this size the average alone is the useful half, and
-                the label already owns the card's text budget. */}
+            {/* Rating chip at the opposite corner — not a third slot in the bar below, whose rolls
+                size from shared grid cells that extra content would change. `top-3 left-3` keeps it
+                content-wide; no review count, as the label owns the card's text budget. */}
             {ratingAverage !== undefined && (
                 <div
                     className={`absolute top-3 left-3 rounded-[20px] bg-white ${CHIP_SIZE.sm}`}
@@ -84,18 +69,9 @@ export default function StayCardPreview({
                 </div>
             )}
 
-            {/* Mobile overlay: two separate chips pushed to opposite edges.
-
-                A 3/2 card is short — a single full-width white bar would eat roughly a
-                third of it at phone widths. Splitting it lets the photo breathe. Only the
-                location is printed: the villa name at this width forced a truncation that
-                cut the name mid-word, and the name is already in the image's alt text and
-                on the /stays card this links to. The roll animations are dropped rather
-                than reimplemented — without hover there is nothing to trigger them.
-
-                `hidden` (not opacity/visibility) is what keeps this from being announced
-                twice — the `md` block below is display:none at these widths, so only one
-                of the two is ever in the accessibility tree. */}
+            {/* Mobile overlay: split chips, since a full-width bar eats a third of a short 3/2 card.
+                Location only (the name truncated mid-word; it's in the alt and on /stays); no rolls
+                without hover. `hidden`, not opacity, keeps just one overlay in the a11y tree. */}
             <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-x-3 md:hidden">
                 {/* Text size comes from CHIP_SIZE, not from the <p> — a `text-*` here would
                     collide with the token's at equal specificity. See AGENTS.md. */}
@@ -118,27 +94,15 @@ export default function StayCardPreview({
                 </span>
             </div>
 
-            {/* Desktop overlay (`md` and up): the original single floating bar.
-
-                Not on CHIP_SIZE: its height comes from `min-h-12` and the 32px arrow it
-                hosts, not from `2 × py + leading`, so the token's padding rule doesn't
-                describe it. The asymmetric `pl-4 pr-2` is what keeps that arrow inset from
-                the right edge by the same optical amount as the text on the left. */}
+            {/* Desktop overlay (`md`+). Not CHIP_SIZE: its height comes from `min-h-12` and the 32px
+                arrow, not `2 × py + leading`. Asymmetric `pl-4 pr-2` insets the arrow optically. */}
             <div className="absolute inset-x-3 bottom-3 hidden items-center justify-between gap-x-3 bg-white min-h-12 rounded-[20px] pl-4 pr-2 py-1 md:flex">
-                {/* Rolling label, same trick as `RollingNavLink` in
-                    menu-panel.tsx: the villa name and the location sit
-                    stacked one line-height apart inside a clipped box, and
-                    the whole stack shifts up on hover so the location
-                    takes over the name's exact position and styling.
-
-                    `h-6` must stay equal to `leading-6` below: a shorter clip shaves the
-                    descender on "Twilight", a taller one lets the next line peek in. */}
+                {/* Rolling label (like `RollingNavLink`): name and location stacked in a clipped
+                    box, shifting up on hover. `h-6` must equal `leading-6` — shorter shaves
+                    "Twilight"'s descender, taller lets the next line peek in. */}
                 <div className="grid h-6 overflow-hidden">
-                    {/* Both lines share the same grid cell (`col-start-1
-                        row-start-1`) so the container's width tracks
-                        whichever text is longer — an `absolute` overlay
-                        would size to the first line only and clip the
-                        other. */}
+                    {/* Both lines share one grid cell, so the width tracks the longer text; an
+                        `absolute` overlay would size to the first line and clip the other. */}
                     <p className="col-start-1 row-start-1 translate-y-0 text-black font-medium text-[16px] leading-6 tracking-normal transition-transform duration-300 ease-out group-hover:-translate-y-full motion-reduce:transition-none">
                         {villaNameText}
                     </p>
@@ -150,13 +114,8 @@ export default function StayCardPreview({
                     </p>
                 </div>
 
-                {/* Right side rolls from the (now-relocated) location text
-                    to an outlined arrow affordance on hover — same
-                    translate-y roll as the label on the left, so both
-                    sides read as one consistent motion instead of the
-                    arrow just fading in. Grid-stacked so the slot's width
-                    is driven by the wider of the two — the 32px circle
-                    never clips the text. */}
+                {/* Right side rolls from location to an outlined arrow — the same motion as the
+                    label, not a fade. Grid-stacked so the wider of the two sets the width. */}
                 <div className="grid h-8 shrink-0 items-center justify-items-end overflow-hidden">
                     <p className="col-start-1 row-start-1 translate-y-0 text-black/60 font-medium text-[16px] tracking-normal transition-transform duration-300 ease-out group-hover:-translate-y-full motion-reduce:transition-none">
                         {locationText}

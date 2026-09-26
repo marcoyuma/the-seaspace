@@ -7,14 +7,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 /**
- * CARTO Voyager — full-colour basemap (green parks, blue water, tinted roads)
- * in the spirit of the OSM standard style. Chosen over tile.openstreetmap.org
- * because the OSMF tile policy forbids production use, and over Google because
- * it needs no API key, account, or billing. Swap to `light_all` for the
- * greyscale Positron variant; that is this constant only, the attribution and
- * subdomains below are shared across all CARTO styles.
- *
- * {r} is filled with "@2x" by Leaflet when `detectRetina` is on.
+ * CARTO Voyager tiles: OSMF's policy forbids production use of tile.openstreetmap.org, and Google
+ * needs a key and billing. `light_all` swaps to greyscale Positron (attribution and subdomains are
+ * shared). Leaflet fills {r} with "@2x" under `detectRetina`.
  */
 const TILE_URL =
     "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
@@ -26,20 +21,9 @@ const TILE_ATTRIBUTION =
 const DEFAULT_ZOOM = 18;
 
 /**
- * The actual Leaflet map. Never import this directly — Leaflet touches the DOM
- * while the module is evaluated, so it must be reached through the `ssr: false`
- * dynamic import in features/stays/components/stay-map.tsx. A static import
- * would break `pnpm build`, since generateStaticParams prerenders every stay
- * page.
- *
- * Driven against Leaflet's own API rather than react-leaflet. react-leaflet@5
- * creates the map in a ref callback but destroys it in an effect cleanup, and
- * never clears the ref guard that decides whether to create one — so a single
- * teardown/re-attach cycle on this subtree (StrictMode, or a <Suspense> above
- * hiding then revealing a tree that had already committed) left the children
- * calling addLayer() on a destroyed map. The rule that replaces it is the whole
- * point of the effect below: create and destroy in the SAME effect, so every
- * teardown is necessarily followed by a rebuild.
+ * The Leaflet map — import only via stay-map.tsx's `ssr: false` dynamic import, as Leaflet touches
+ * the DOM at module eval. Plain Leaflet, not react-leaflet@5, whose stale ref guard broke re-attach
+ * cycles: the effect below creates and destroys in the SAME effect, so every teardown rebuilds.
  *
  * @param lat - Latitude of the stay.
  * @param lng - Longitude of the stay.
@@ -56,10 +40,8 @@ export default function StayMapCanvas({
 }) {
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Leaflet's default marker resolves its icon URLs from the script location,
-    // which bundlers break (404s). A divIcon sidesteps that entirely and lets
-    // the pin follow the site's black/white palette. `className: ""` clears
-    // Leaflet's own .leaflet-div-icon white box.
+    // Leaflet's default marker resolves icon URLs from the script path, which bundlers break (404s).
+    // A divIcon avoids that and follows the site palette; `className: ""` drops Leaflet's white box.
     const icon = useMemo(
         () =>
             L.divIcon({
@@ -72,10 +54,8 @@ export default function StayMapCanvas({
         [],
     );
 
-    // Detached node the popup binds to, so its contents stay JSX: Tailwind
-    // classes and rel="noopener noreferrer" survive, and `label` — which comes
-    // from the database — needs no HTML escaping. Touching `document` during
-    // render is safe here precisely because of the `ssr: false` gate above.
+    // Detached popup node, so its contents stay JSX (Tailwind classes, no escaping of the DB
+    // `label`). Touching `document` in render is safe only because of the `ssr: false` gate.
     const popupNode = useMemo(() => document.createElement("div"), []);
 
     useEffect(() => {
