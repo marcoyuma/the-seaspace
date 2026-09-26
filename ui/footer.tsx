@@ -2,19 +2,33 @@ import Heading from "@/ui/heading";
 import ParallaxImageSection from "@/ui/parallax-image-section";
 import Link from "next/link";
 
-// Sitemap navigation — paths derived from label via `.toLowerCase()`,
-// so "Home" stays the only entry that maps to "/" rather than "/home".
-const SITEMAP_LINKS = ["Home", "About", "Stays", "Contact"];
+const SITEMAP_LINKS = [
+    { label: "Home", path: "/" },
+    { label: "Stays", path: "/stays" },
+];
 
-// Amenities currently point to "#" as their destination pages don't exist
-// yet (no dedicated dining/spa/event-venue routes). Replace with real
-// hrefs once those pages are built.
-const AMENITIES_LINKS = ["Relax & Spa", "Golf Course", "Event Venue"];
+const AMENITIES_LINKS = [
+    { label: "Relax & Spa", path: "/spa" },
+    { label: "Golf Course", path: "/golf-course" },
+    { label: "Event Venue", path: "/event-venue" },
+];
 
 const CONTACT_INFO = [
     { label: "Email", value: "contact@seaspace.com" },
     { label: "Telp", value: "+62-81283625321" },
 ];
+
+// Manrope Bold metrics for "THE SEASPACE" at fontSize 100, measured with fontTools. inkLeft/Right
+// trim the T/E side bearings so glyphs touch both edges; overshoot keeps "S" tops unclipped;
+// `visible` is the cap height shown (~30px past half at 1440px). Re-measure if font/text change.
+const WATERMARK = {
+    advance: 731.6,
+    inkLeft: 1,
+    inkRight: 726.6,
+    cap: 72,
+    overshoot: 1.5,
+    visible: 51,
+} as const;
 
 export default function Footer() {
     return (
@@ -39,40 +53,42 @@ export default function Footer() {
                     </Heading>
 
                     {/* Sitemap — hidden on mobile per design, kept from sm up */}
-                    <nav aria-label="Sitemap" className="hidden sm:flex flex-col">
+                    <nav
+                        aria-label="Sitemap"
+                        className="hidden sm:flex flex-col"
+                    >
                         <span className="text-[16px] font-medium text-black/60">
                             / Sitemap
                         </span>
                         <div className="flex flex-col mt-7.5 gap-2.5">
                             {SITEMAP_LINKS.map((item) => (
                                 <Link
-                                    key={item}
-                                    href={
-                                        item === "Home"
-                                            ? "/"
-                                            : `/${item.toLowerCase()}`
-                                    }
+                                    key={item.path}
+                                    href={item.path}
                                     className="text-[16px] font-medium text-black/60 hover:text-black transition-colors"
                                 >
-                                    {item}
+                                    {item.label}
                                 </Link>
                             ))}
                         </div>
                     </nav>
 
                     {/* Amenities — hidden on mobile per design, kept from sm up */}
-                    <nav aria-label="Amenities" className="hidden sm:flex flex-col">
+                    <nav
+                        aria-label="Amenities"
+                        className="hidden sm:flex flex-col"
+                    >
                         <span className="text-[16px] font-medium text-black/60">
                             / Amenities
                         </span>
                         <div className="flex flex-col mt-7.5 gap-2.5">
                             {AMENITIES_LINKS.map((item) => (
                                 <Link
-                                    key={item}
-                                    href="#"
+                                    key={item.path}
+                                    href={item.path}
                                     className="text-[16px] font-medium text-black/60 hover:text-black transition-colors"
                                 >
-                                    {item}
+                                    {item.label}
                                 </Link>
                             ))}
                         </div>
@@ -94,29 +110,26 @@ export default function Footer() {
                 </div>
             </div>
 
-            {/* Decorative watermark — "THE SEASPACE" bleeds past the
-                visible footer edge, clipped by `overflow-hidden` on the
-                parent <footer>. Hidden below `sm`: on mobile the footer
-                already drops Sitemap/Amenities, and at 200px this glyph
-                overwhelms the narrow viewport rather than reading as texture.
-                - `clamp()` scales the font-size with viewport width
-                  (instead of a fixed 170px) so it stays proportional on
-                  smaller screens without manual breakpoint overrides.
-                - `-mb` is a negative margin proportional to font-size
-                  (`em`-based, not px) to pull the glyph's bottom edge
-                  past the clip boundary consistently at any size.
-                - `aria-hidden` + `select-none` + `pointer-events-none`
-                  mark this as purely visual: screen readers should skip
-                  it (brand name is already conveyed elsewhere, e.g. logo),
-                  and it shouldn't be selectable or intercept clicks. */}
-            <p
+            {/* Decorative watermark as SVG: the viewBox scales type, width and crop with the footer,
+                so it stays edge-to-edge and cut at the same point at any width. `textLength` pins
+                the width even while a fallback font is showing during `display: swap`. */}
+            <svg
                 aria-hidden="true"
-                className="hidden sm:block select-none pointer-events-none text-black/10 font-bold whitespace-nowrap leading-none
-                 text-[200px]
-                 -mb-15 tracking-normal"
+                viewBox={`${WATERMARK.inkLeft} ${-WATERMARK.overshoot} ${
+                    WATERMARK.inkRight - WATERMARK.inkLeft
+                } ${WATERMARK.visible + WATERMARK.overshoot}`}
+                className="block w-full select-none pointer-events-none fill-black/10 font-bold"
             >
-                THE SEASPACE
-            </p>
+                <text
+                    x="0"
+                    y={WATERMARK.cap}
+                    fontSize="100"
+                    textLength={WATERMARK.advance}
+                    lengthAdjust="spacingAndGlyphs"
+                >
+                    THE SEASPACE
+                </text>
+            </svg>
         </footer>
     );
 }
