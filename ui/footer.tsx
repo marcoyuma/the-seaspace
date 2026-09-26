@@ -2,14 +2,16 @@ import Heading from "@/ui/heading";
 import ParallaxImageSection from "@/ui/parallax-image-section";
 import Link from "next/link";
 
-// Sitemap navigation — paths derived from label via `.toLowerCase()`,
-// so "Home" stays the only entry that maps to "/" rather than "/home".
-const SITEMAP_LINKS = ["Home", "About", "Stays", "Contact"];
+const SITEMAP_LINKS = [
+    { label: "Home", path: "/" },
+    { label: "Stays", path: "/stays" },
+];
 
-// Amenities currently point to "#" as their destination pages don't exist
-// yet (no dedicated dining/spa/event-venue routes). Replace with real
-// hrefs once those pages are built.
-const AMENITIES_LINKS = ["Relax & Spa", "Golf Course", "Event Venue"];
+const AMENITIES_LINKS = [
+    { label: "Relax & Spa", path: "/spa" },
+    { label: "Golf Course", path: "/golf-course" },
+    { label: "Event Venue", path: "/event-venue" },
+];
 
 const CONTACT_INFO = [
     { label: "Email", value: "contact@seaspace.com" },
@@ -39,40 +41,42 @@ export default function Footer() {
                     </Heading>
 
                     {/* Sitemap — hidden on mobile per design, kept from sm up */}
-                    <nav aria-label="Sitemap" className="hidden sm:flex flex-col">
+                    <nav
+                        aria-label="Sitemap"
+                        className="hidden sm:flex flex-col"
+                    >
                         <span className="text-[16px] font-medium text-black/60">
                             / Sitemap
                         </span>
                         <div className="flex flex-col mt-7.5 gap-2.5">
                             {SITEMAP_LINKS.map((item) => (
                                 <Link
-                                    key={item}
-                                    href={
-                                        item === "Home"
-                                            ? "/"
-                                            : `/${item.toLowerCase()}`
-                                    }
+                                    key={item.path}
+                                    href={item.path}
                                     className="text-[16px] font-medium text-black/60 hover:text-black transition-colors"
                                 >
-                                    {item}
+                                    {item.label}
                                 </Link>
                             ))}
                         </div>
                     </nav>
 
                     {/* Amenities — hidden on mobile per design, kept from sm up */}
-                    <nav aria-label="Amenities" className="hidden sm:flex flex-col">
+                    <nav
+                        aria-label="Amenities"
+                        className="hidden sm:flex flex-col"
+                    >
                         <span className="text-[16px] font-medium text-black/60">
                             / Amenities
                         </span>
                         <div className="flex flex-col mt-7.5 gap-2.5">
                             {AMENITIES_LINKS.map((item) => (
                                 <Link
-                                    key={item}
-                                    href="#"
+                                    key={item.path}
+                                    href={item.path}
                                     className="text-[16px] font-medium text-black/60 hover:text-black transition-colors"
                                 >
-                                    {item}
+                                    {item.label}
                                 </Link>
                             ))}
                         </div>
