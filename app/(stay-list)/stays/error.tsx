@@ -1,8 +1,8 @@
 "use client";
 
 // Error boundaries must be Client Components — React needs to attach the boundary and run
-// `reset` in the browser. This is the whole reason for "use client" here; nothing in the
-// markup below is interactive beyond the retry button.
+// `unstable_retry` in the browser. This is the whole reason for "use client" here; nothing in
+// the markup below is interactive beyond the retry button.
 
 import { useEffect } from "react";
 
@@ -14,10 +14,10 @@ import Container from "@/ui/container";
  */
 export default function StaysError({
     error,
-    reset,
+    unstable_retry,
 }: {
     error: Error & { digest?: string };
-    reset: () => void;
+    unstable_retry: () => void;
 }) {
     useEffect(() => {
         // In production the message is stripped and only `digest` survives, which is what
@@ -37,9 +37,11 @@ export default function StaysError({
                     usually temporary — please try again in a moment.
                 </p>
 
+                {/* `unstable_retry` over `reset`: reset only re-renders, so a failed
+                    features/stays/actions.ts query would fail again. Retry re-fetches. */}
                 <button
                     type="button"
-                    onClick={reset}
+                    onClick={() => unstable_retry()}
                     className="mt-10 inline-block rounded-[20px] bg-[#131A2B] px-8 py-4 text-[16px] font-medium text-white transition-opacity duration-200 ease-out hover:opacity-90 motion-reduce:transition-none"
                 >
                     Try again
