@@ -9,14 +9,9 @@ import {
 import type { RequestFormState } from "@/features/experience-requests/types";
 
 /**
- * The one mutation in this feature — "mutation" loosely, since nothing here is written
- * anywhere. See `features/experience-requests/README.md` for why: there is no staff inbox
- * and no database table, only a simulated send that is honest about being one.
- *
- * Still its own file, matching every other feature here: every export of a `"use server"`
- * file is a public HTTP endpoint, so it must assume it was called directly, with any
- * arguments at all, and validate accordingly. There is no database to fall back on as a
- * second line of defence here — this file IS the validation.
+ * The feature's one "mutation" — nothing is written anywhere (README: no inbox, no table). A
+ * `"use server"` export is still a public endpoint that must validate any arguments, and with no
+ * database behind it, this file IS the validation.
  */
 
 /** Long enough for a free-text note, short enough that this cannot be used as storage. */
@@ -40,14 +35,10 @@ function looksLikeEmail(value: string): boolean {
 }
 
 /**
- * Sends an enquiry from `/golf-course` or `/spa` to the relevant desk.
+ * Sends an enquiry from a leisure page to the relevant desk. Returns `{ ok: true }` for
+ * `useActionState` instead of redirecting the guest off the page they were reading.
  *
- * Shaped for `useActionState`: `(prevState, formData) => state`. Success returns
- * `{ ok: true }` rather than redirecting — the guest is mid-page on a marketing route, and
- * sending them elsewhere to say "got it" would cost the page they were reading.
- *
- * @param formData `experience`, `name`, `email`, `phone`, `partySize`, `preferredDate`,
- *   `preference`, `message`.
+ * @param formData `experience`, `name`, `email`, `phone`, `partySize`, `preferredDate`, `preference`, `message`.
  */
 export async function submitExperienceRequest(
     _prevState: RequestFormState,

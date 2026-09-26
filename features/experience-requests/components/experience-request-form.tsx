@@ -19,11 +19,8 @@ import { submitExperienceRequest } from "@/features/experience-requests/server-a
 import type { ExperienceId } from "@/features/experience-requests/types";
 
 /**
- * A `<select>` in the shape of `Field`.
- *
- * Local rather than added to form-primitives: that file's own note says a shared field
- * invented for a single caller grows the wrong props, and this is the only select on the
- * site. It moves there when a second one appears.
+ * A `<select>` shaped like `Field`. Local, not in form-primitives: it's the only select on the site,
+ * and a shared field for one caller grows the wrong props. Moves there when a second appears.
  */
 function SelectField({
     id,
@@ -115,18 +112,11 @@ function TextareaField({
 }
 
 /**
- * The body of the request modal: six fields, or the confirmation that replaces them.
+ * The request modal's body: six fields, or the confirmation. One component for every leisure page —
+ * copy and dropdown come from `EXPERIENCE_REQUESTS`, so validation and a11y can't drift. ⚠️ Not a
+ * reservation: no table exists behind it (README §1), hence "request" and "confirm by email".
  *
- * One component for both leisure pages — the wording and the single dropdown come from
- * `EXPERIENCE_REQUESTS[experience]`, so golf and spa cannot drift apart in validation,
- * markup or accessibility. See lib/experiences.ts.
- *
- * ⚠️ Nothing on this page is a reservation. The copy says "request" and "confirm by email"
- * throughout, because that is all that happens — see `README.md` §1: there is no database
- * table behind this feature at all.
- *
- * @param experience Which page opened it. Travels to the action as a hidden input, and is
- *   re-checked there: the form is a convenience, never the validation.
+ * @param experience Which page opened it; a hidden input, re-checked by the action.
  * @param defaultName @param defaultEmail Prefill for a signed-in guest, read on the server.
  * @param onDone Closes the modal from the confirmation panel.
  */
@@ -237,11 +227,8 @@ export default function ExperienceRequestForm({
                     error={state?.errors?.partySize}
                 />
 
-                {/* No `min` on this one, deliberately. The modal is kept mounted, so it
-                    renders during the prerender of a static marketing page — a date
-                    computed here would be frozen at build time and would then grey out
-                    days that are perfectly bookable. The action rejects past dates against
-                    the villas' own timezone, which is the answer that counts. */}
+                {/* No `min`: the kept-mounted modal renders in the static prerender, so a computed
+                    date would freeze at build time. The action rejects past dates in villa time. */}
                 <Field
                     id="preferredDate"
                     label="Preferred date"

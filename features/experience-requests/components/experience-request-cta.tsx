@@ -5,19 +5,9 @@ import ExperienceRequestButton from "@/features/experience-requests/components/e
 import type { ExperienceId } from "@/features/experience-requests/types";
 
 /**
- * The CTA the leisure heroes render: the request pill, with the signed-in guest's name and
- * email already filled in.
- *
- * The Suspense boundary is the whole point of this file. `getAuthUser()` reads cookies,
- * which is request-time data — without a boundary that read sits in the hero and drags the
- * entire marketing page, preloaded LCP image and all, out of the static shell. Same
- * pattern, and the same reasoning, as `ProfileIcon` in app/layout.tsx.
- *
- * The fallback is the identical button without the prefill, so a visitor can open the
- * modal before the session resolves rather than staring at a gap where a CTA should be.
- * ⚠️ The trade-off: if someone opens the modal in that window, the swap remounts it and
- * closes it again. It is a few milliseconds on a streamed response, and the alternative —
- * a dead-looking placeholder — is worse on a page whose job is this button.
+ * Leisure-hero CTA with the guest's name/email prefilled. The Suspense boundary is the point:
+ * `getAuthUser()` reads cookies and would drag the page out of the static shell. ⚠️ The fallback is the
+ * same button unfilled; if opened before the session resolves, the swap remounts and closes it.
  */
 export default async function ExperienceRequestCta({
     experience,

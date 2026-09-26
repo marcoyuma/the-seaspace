@@ -1,31 +1,9 @@
 import type { ExperienceId } from "@/features/experience-requests/types";
 
 /**
- * A simulated staff inbox — **no email is ever sent, and no address here is real.**
- *
- * ---------------------------------------------------------------------------
- * Why simulated, and why it is still shaped like a real send
- * ---------------------------------------------------------------------------
- * There is no Seaspace golf desk or spa desk to receive this, and a real vendor (Resend,
- * Postmark) would need a verified domain and an API key for a demo whose only audience is
- * a portfolio reviewer — who could not see the inbox it landed in anyway. Mirrors the
- * reasoning in `features/booking/lib/payment-gateway.ts` for the same trade-off on the
- * payment side.
- *
- * What is kept is the *shape* a real send imposes, because that is what the rest of the
- * flow has to be built around either way:
- *
- * | Real provider | Here |
- * |---|---|
- * | The call is a network round-trip and can fail | `SEND_DELAY_MS`, and a failure path |
- * | Success returns a message id | `DEMO-…` id |
- * | Delivery is per recipient (the golf desk, the spa desk) | `STAFF_INBOXES` below |
- *
- * Swapping this file for Resend is: replace `sendExperienceRequest()`'s body with an API
- * call, keep the same return shape. Nothing in `server-actions.ts` would need to change.
- *
- * ⚠️ Server-side only, same reason as the payment gateway: a Client Component must never
- * be able to reach a "message sent" function, even a fake one.
+ * Simulated staff inbox — **no email is sent; no address is real** (no real desks, and a vendor needs
+ * a domain + key; cf. payment-gateway.ts). Keeps a real send's shape — latency, failure, message id,
+ * per-desk inboxes — so Resend only replaces `sendExperienceRequest()`'s body. ⚠️ Server-only.
  */
 
 /** Long enough that the pending state reads as real, short enough not to feel broken. */
