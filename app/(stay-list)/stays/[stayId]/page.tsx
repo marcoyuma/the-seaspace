@@ -19,15 +19,9 @@ import StayLocationSection from "@/features/stays/components/stay-location-secti
 import StayReviewsSection from "@/features/reviews/components/stay-reviews-section";
 
 /**
- * How many of a villa's reviews this page loads.
- *
- * A ceiling, not a page size: the first six are rendered in the grid and the whole lot fills
- * the "show all" dialog, so one fetch serves both. The seed averages 25 per villa, which
- * leaves real headroom.
- *
- * Past this number the dialog stops being "all reviews". `get_stay_reviews` already takes
- * an offset for that day; the honest fix then is pagination inside the dialog, not a bigger
- * constant here.
+ * A ceiling on reviews loaded, not a page size: six fill the grid and all fill the dialog, from one
+ * fetch (the seed averages 25). Past it, paginate inside the dialog (`get_stay_reviews` takes an
+ * offset) rather than raising this.
  */
 const STAY_REVIEWS_LIMIT = 50;
 
@@ -90,13 +84,8 @@ function StayDetailFallback() {
 }
 
 /**
- * Sync on purpose, and it does NOT await `params`.
- *
- * `generateStaticParams()` below only covers the villas that existed at build time, so a
- * newer slug makes `params` request-time data. Under `cacheComponents` awaiting it here
- * would put a runtime read above every boundary and block the whole document — the
- * "Runtime data was accessed outside of <Suspense>" error. Passing the promise down
- * un-awaited keeps the shell prerenderable, the same shape `book/page.tsx` uses.
+ * Sync on purpose, and does NOT await `params`: slugs newer than the build make it request-time, and
+ * awaiting here would block the whole document under `cacheComponents`. Same shape as book/page.tsx.
  */
 export default function Page({
     params,
@@ -115,10 +104,8 @@ async function StayDetail({ params }: { params: Promise<{ stayId: string }> }) {
     // `params` is a Promise in Next 16 — synchronous access was removed.
     const { stayId } = await params;
 
-    // In parallel: the four reads are independent, and they sit on different cache profiles
-    // — availability is cached in minutes against the catalogue's hours, and the two review
-    // reads carry their own tag so a posted review does not drop the catalogue. Folding any
-    // of them into getStay() would flatten those differences.
+    // Parallel, and kept separate: the reads sit on different cache profiles (availability in
+    // minutes, reviews on their own tag), which folding them into getStay() would flatten.
     const [stay, bookedRanges, ratingSummaries, reviews] = await Promise.all([
         getStay(stayId),
         getStayBookedRanges(stayId),

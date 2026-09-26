@@ -71,12 +71,8 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * One reservation. Also the page a guest lands on straight after paying.
- *
- * The back link is all there is to prerender — the heading itself depends on the booking's
- * status. This route has no `generateStaticParams()`, so even `params` is request-time data
- * under Cache Components and has to be awaited inside the boundary below. `params` is
- * therefore passed down un-awaited, the same way /login hands `searchParams` to its form.
+ * One reservation — also where a guest lands after paying. Only the back link prerenders: with no
+ * `generateStaticParams()`, `params` is request-time, so it goes down un-awaited (like /login).
  */
 export default function TripPage({
     params,
@@ -100,15 +96,8 @@ export default function TripPage({
 }
 
 /**
- * The reservation itself.
- *
- * No ownership check is written here and none belongs here: `getGuestBooking()` reads
- * through the "guests read their own bookings" policy, so somebody else's id returns
- * `null` and becomes a 404 — indistinguishable from an id that never existed, which is
- * what stops this page from being a way to enumerate other people's bookings.
- *
- * Every number below comes from the row's own snapshot columns, never from the catalogue.
- * A villa's price may have changed since; this reservation's did not.
+ * The reservation itself. No ownership check: RLS turns another guest's id into `null` → 404,
+ * indistinguishable from a missing one. Every number comes from the row's snapshot columns.
  */
 async function TripDetail({
     params,
@@ -139,15 +128,9 @@ async function TripDetail({
     const isRefundable =
         isCancellable && withinFreeCancellation(booking.checkIn, today);
 
-    // Only a completed stay may be reviewed, and 'checked_out' is the one status that means
-    // it: 0013's hourly job writes it, and that job is forbidden from writing 'checked_in'
-    // because a calendar cannot know whether anybody walked through the door. 'no_show' is
-    // excluded on purpose — paid for, but there is no experience to rate.
-    //
-    // Read only when it can matter. `getOwnBookingReview()` is uncached (it reads cookies),
-    // so skipping it for the other four statuses skips a round trip on most page loads.
-    // `upsert_stay_review` re-checks the same rule with SB017 regardless — this decides what
-    // is rendered, not what is permitted.
+    // Only 'checked_out' is a completed stay (0013's job writes it; a 'no_show' has nothing to
+    // rate). Skipping the uncached review read otherwise saves a round trip on most loads;
+    // `upsert_stay_review` re-checks with SB017 — this decides rendering, not permission.
     const canReview = booking.status === "checked_out";
     const ownReview = canReview ? await getOwnBookingReview(id) : null;
 
@@ -163,10 +146,8 @@ async function TripDetail({
                 />
             </div>
 
-            {/* The unpaid-but-confirmed case. Reachable when the process died between
-                create_booking() and settle_booking_payment() — a real provider's
-                "pending" state, and the one thing on this page a guest may need to
-                chase. */}
+            {/* Unpaid but confirmed: the process died between create_booking() and
+                settle_booking_payment() — a provider's "pending", the one thing to chase. */}
             {booking.status === "confirmed" && !booking.paidAt && (
                 <p className="mt-6 max-w-160 rounded-2xl border border-amber-600/25 bg-amber-50 px-5 py-4 text-[15px] text-amber-900">
                     These dates are held for you, but the payment was never
@@ -212,10 +193,8 @@ async function TripDetail({
                         {booking.numGuests}{" "}
                         {booking.numGuests === 1 ? "guest" : "guests"}
                     </p>
-                    {/* Check-in and check-out times are a property-wide policy rather
-                        than per-booking data, which is why 0009 stores dates and not
-                        timestamps. Stated here so the exclusive end date reads as
-                        turnover instead of a missing night. */}
+                    {/* Times are property-wide policy (0009 stores dates, not timestamps), stated so
+                        the exclusive end date reads as turnover rather than a missing night. */}
                     <p className="mt-4 text-[16px] font-medium text-black/60">
                         Check in from 3:00 PM, check out by 11:00 AM.
                     </p>

@@ -27,20 +27,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * Checkout. The selection arrives in the query string; everything else is looked up here.
- *
- * ⚠️ Nothing in the URL is trusted. The dates and headcount are re-parsed
- * (`parseCheckoutParams`), the price is re-read from the catalogue, availability is
- * re-checked against the database, and then `create_booking` checks all of it a second
- * time — because this page is not what performs the write.
- *
- * Dynamic by construction: it reads `params`, `searchParams` and the session cookie, none
- * of which exist at build time. Under Cache Components that whole read has to live inside
- * <Suspense> — until aa44990 the app-wide app/loading.tsx was the boundary, and it is gone
- * — so the promises are passed down un-awaited and the heading stays in the static shell.
- *
- * There is no `generateStaticParams()` here on purpose, unlike the stay page one level up:
- * enumerating every villa for a page that is per-request anyway buys nothing.
+ * Checkout. ⚠️ Nothing in the URL is trusted: dates and headcount are re-parsed, price re-read,
+ * availability re-checked — and `create_booking` checks it all again. Per-request by nature, so the
+ * promises go down un-awaited into <Suspense>, and `generateStaticParams()` would buy nothing.
  */
 export default function BookPage({
     params,
@@ -113,10 +102,8 @@ async function CheckoutSection({
 
     if (!stay) notFound();
 
-    // The authoritative check. proxy.ts already bounces signed-out visitors from
-    // `/stays/*/book` so the redirect is a real HTTP one rather than a delayed meta
-    // refresh, but Proxy also runs on prefetches and must never be the only line of
-    // defence — same reasoning as app/(auth)/account/page.tsx.
+    // Authoritative check: proxy.ts already bounces `/stays/*/book` (a real HTTP redirect), but
+    // Proxy also runs on prefetches — same reasoning as app/(auth)/account/page.tsx.
     if (!user) {
         const next = buildCheckoutUrl(stayId, checkIn, checkOut, guests);
         redirect(`/login?next=${encodeURIComponent(next)}`);
@@ -144,10 +131,8 @@ async function CheckoutSection({
             : undefined;
 
     return (
-        // Stacked on mobile/tablet, recap first — a guest should see which villa and what
-        // it costs before working through payment and check-in. `order-*` restores the
-        // original left-form/right-recap reading order at lg, where the grid switches to
-        // two columns side by side.
+        // Stacked below `lg`, recap first so villa and price come before payment; `order-*`
+        // restores form-left/recap-right at `lg`.
         <div className="mt-14 grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_26rem]">
             <div className="order-1 lg:order-2">
                 <CheckoutRecap

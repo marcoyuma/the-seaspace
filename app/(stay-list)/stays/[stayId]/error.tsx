@@ -10,18 +10,9 @@ import Link from "next/link";
 import Container from "@/ui/container";
 
 /**
- * Catches failures from the villa page itself, one segment below the catalogue's boundary.
- *
- * It exists because `app/(stay-list)/stays/error.tsx` was inheriting this segment: any failure
- * here — including a client-side one from the map — rendered "We couldn't load the collection"
- * on a page that had already resolved its villa. The copy now matches the route it guards, and
- * the log label differs so the two can be told apart in the console.
- *
- * Not a substitute for the map's own boundary in stay-location-section.tsx: that one catches
- * first and keeps the rest of the page alive. This is the outer net.
- *
- * As with the parent boundary, the visible copy says nothing about databases or Supabase —
- * useless to a guest, and it leaks infrastructure. The real message goes to the console/logs.
+ * The villa page's own boundary, so its failures (the map's included) stop showing the catalogue's
+ * "couldn't load the collection"; a distinct log label tells them apart. The map's boundary catches
+ * first. Copy never mentions Supabase — useless to guests, and it leaks infrastructure.
  */
 export default function StayDetailError({
     error,

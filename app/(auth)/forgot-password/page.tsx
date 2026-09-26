@@ -3,12 +3,8 @@ import ForgotPasswordForm from "@/features/auth/components/forgot-password-form"
 export const metadata = { title: "Reset password" };
 
 /**
- * Requests a password reset link.
- *
- * No <Suspense> and no request-time reads: unlike /login this page takes no `next`, so it
- * prerenders whole. The form below is a Client Component that ships with the static shell.
- *
- * Rendered without the site chrome, like /login — see ui/chrome-gate.tsx.
+ * Requests a reset link. Unlike /login it takes no `next`, so it prerenders whole with no
+ * <Suspense>. Chrome-free like /login (ui/chrome-gate.tsx).
  */
 export default function ForgotPasswordPage() {
     return (

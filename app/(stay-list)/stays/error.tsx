@@ -9,13 +9,8 @@ import { useEffect } from "react";
 import Container from "@/ui/container";
 
 /**
- * Catches failures from the Supabase queries in features/stays/api.ts.
- *
- * Scoped to the stays route group rather than the app root on purpose: a database outage
- * should not replace unrelated pages like /spa, which render entirely from local assets.
- *
- * The visible copy deliberately says nothing about databases or Supabase — that detail is
- * useless to a guest and leaks infrastructure. The real message goes to the console/logs.
+ * Catches features/stays/actions.ts query failures, scoped to the stays group so an outage never
+ * replaces unrelated pages like /spa. Copy never mentions Supabase; the real message goes to logs.
  */
 export default function StaysError({
     error,
