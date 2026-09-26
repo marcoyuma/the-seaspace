@@ -36,4 +36,10 @@
   (redirects, auth checks, header rewrites, etc.).
 - Flag any code that depends on a specific environment variable.
 
-- Keep comments short — ideally 1–2 lines. Avoid paragraph-length comments.
+- Keep comments short — ideally 1–2 lines, **never more than 3**. This is a hard limit:
+    - A `//` run, a `/* */` block, or a JSX `{/* */}` block holds at most 3 lines of text.
+    - In JSDoc, the description is at most 3 lines; `/**`, `*/` and tags (`@param`,
+      `@returns`, `@example`) don't count, but keep each tag to one line where possible.
+    - Compress rather than split: don't stack several short blocks to dodge the limit.
+      History ("was 0.15, now 0.25") belongs in git, not in the comment.
+- SQL files under `supabase/` are exempt — migration headers are the record of what was run.
