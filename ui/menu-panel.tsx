@@ -2,9 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
-import { isActiveLink } from "@/lib/nav";
+import { isActiveLink, useRoutePathname } from "@/lib/nav";
 import HamburgerIcon from "@/ui/hamburger-icon";
 
 type NavLink = { label: string; href: string };
@@ -149,7 +148,7 @@ export default function MenuPanel({
     profileSlot: ReactNode;
 }) {
     const [isOpen, setIsOpen] = useState(false);
-    const pathname = usePathname();
+    const pathname = useRoutePathname();
 
     // Close whenever the route changes — clicking a link navigates, and the
     // panel should retract as the new page comes in. Adjusted during render
