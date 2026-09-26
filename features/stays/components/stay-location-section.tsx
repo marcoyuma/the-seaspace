@@ -15,9 +15,9 @@ function MapFallback() {
 }
 
 /**
- * "How to get here": a pinned map plus ways to reach the stay, with no API keys (Leaflet over
- * CARTO, plain Google URLs). The "by air" card is generic — the per-villa airport column was the
- * same everywhere and was dropped in 0016.
+ * "How to get here": a pinned map plus ways to reach the stay, with no billing account (Leaflet
+ * over CARTO's free keyed tiles, plain Google URLs). The "by air" card is generic — the per-villa
+ * airport column was the same everywhere and was dropped in 0016.
  */
 export default function StayLocationSection({ stay }: { stay: Stay }) {
     const { lat, lng } = stay.coordinates;

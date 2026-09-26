@@ -6,7 +6,7 @@ import {
     isExperienceId,
 } from "@/features/experience-requests/lib/experiences";
 import { idr } from "@/lib/format";
-import { isActiveLink } from "@/lib/nav";
+import { isActiveLink, normalizePathname } from "@/lib/nav";
 import { publicStorageUrl } from "@/lib/supabase";
 
 /**
@@ -58,6 +58,18 @@ describe("isActiveLink", () => {
         // `usePathname` drops the fragment, so there is nothing to match on.
         expect(isActiveLink("/#gallery", "/")).toBe(false);
         expect(isActiveLink("/#gallery", "/#gallery")).toBe(false);
+    });
+});
+
+describe("normalizePathname", () => {
+    it("maps the homepage's function path back to /", () => {
+        expect(normalizePathname("/index")).toBe("/");
+        expect(normalizePathname("/")).toBe("/");
+    });
+
+    it("leaves every other route alone", () => {
+        expect(normalizePathname("/stays")).toBe("/stays");
+        expect(normalizePathname("/stays/index-villa")).toBe("/stays/index-villa");
     });
 });
 

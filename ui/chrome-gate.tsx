@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+
+import { useRoutePathname } from "@/lib/nav";
 
 /**
  * Full-viewport routes without header/footer: until you sign in, a nav bar is only a distraction.
@@ -17,7 +18,7 @@ const CHROME_FREE_ROUTES = ["/login", "/forgot-password"];
  * @example <ChromeGate><Footer /></ChromeGate>
  */
 export default function ChromeGate({ children }: { children: ReactNode }) {
-    const pathname = usePathname();
+    const pathname = useRoutePathname();
 
     if (CHROME_FREE_ROUTES.includes(pathname)) return null;
 

@@ -61,7 +61,7 @@ not just the ones that survived. Every claim below points at a file you can open
   Postgres (RLS, `SECURITY DEFINER` functions), and a connection-string ORM connects as a
   privileged user with no JWT, which makes `auth.uid()` null and every policy a no-op.
 - **GSAP** + **Motion** — scroll and interaction animation
-- **Leaflet** / **react-leaflet** — the stay-location map, on CARTO tiles (no API key, no
+- **Leaflet** / **react-leaflet** — the stay-location map, on CARTO tiles (a free key, no
   billing account)
 - **`qrcode`** — check-in QR codes, rendered to inline SVG on the server
 - **`sharp`** — avatar re-encoding and EXIF stripping
@@ -172,13 +172,18 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 SEED_ACCOUNT_PASSWORD=
 STAYS_REVALIDATE_SECRET=
+NEXT_PUBLIC_CARTO_API_KEY=
 ```
 
 The two `NEXT_PUBLIC_` values come from your project's API settings and are required just to
 build — the public catalogue client fails fast at module load if either is missing.
 `SUPABASE_SERVICE_ROLE_KEY` and `SEED_ACCOUNT_PASSWORD` are only needed for the demo-account
 seed script, and `STAYS_REVALIDATE_SECRET` only if you wire up the catalogue-revalidation
-webhook. On Vercel, the same five go in the project's Environment Variables.
+webhook. `NEXT_PUBLIC_CARTO_API_KEY` is a free key from
+[carto.com/basemaps/apikey](https://carto.com/basemaps/apikey/). Without it the stay map still
+renders, but CARTO stamps every tile with an "API KEY REQUIRED" watermark. On Vercel, the same
+six go in the project's Environment Variables. `NEXT_PUBLIC_` values are inlined at build time,
+so redeploy after changing one.
 
 ### 3. Set up the database
 
