@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+
+import { useRoutePathname } from "@/lib/nav";
 
 /**
  * Routes that render without the site header and footer.
@@ -31,7 +32,7 @@ const CHROME_FREE_ROUTES = ["/login", "/forgot-password"];
  * </ChromeGate>
  */
 export default function ChromeGate({ children }: { children: ReactNode }) {
-    const pathname = usePathname();
+    const pathname = useRoutePathname();
 
     if (CHROME_FREE_ROUTES.includes(pathname)) return null;
 

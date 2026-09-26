@@ -6,7 +6,7 @@ import {
     useSyncExternalStore,
     type ReactNode,
 } from "react";
-import { usePathname } from "next/navigation";
+import { useRoutePathname } from "@/lib/nav";
 import Logo from "@/ui/logo";
 import MenuPanel from "@/ui/menu-panel";
 
@@ -65,8 +65,7 @@ function getHeroSweptSnapshot() {
  * so it can only receive that subtree as a prop from a server parent (app/layout.tsx).
  */
 function Header({ profileSlot }: { profileSlot: ReactNode }) {
-    const pathname = usePathname();
-    const isHome = pathname === "/";
+    const isHome = useRoutePathname() === "/";
 
     // Feeds both the bar and the panel; off the homepage the `/#` anchors would
     // scroll nowhere, so interior routes swap in real destinations.
