@@ -14,7 +14,7 @@ import { StaticImageData } from "next/image";
  * swapped for an API response without touching the render layer.
  */
 interface ServicePreview {
-    id: string;
+    path: "spa" | "event-venue" | "golf-course";
     imageSrc: StaticImageData;
     serviceName: string;
     bookButtonText: string;
@@ -26,19 +26,19 @@ interface ServicePreview {
  */
 const FEATURED_SERVICES: ServicePreview[] = [
     {
-        id: "spa-and-wellness",
+        path: "spa",
         imageSrc: spaImg,
         serviceName: "Spa & Wellness",
         bookButtonText: "Book spa",
     },
     {
-        id: "event-venue",
+        path: "event-venue",
         imageSrc: eventVenueImg,
         serviceName: "Event venue",
         bookButtonText: "Reserve now",
     },
     {
-        id: "golf-course",
+        path: "golf-course",
         imageSrc: golfCourseImg,
         serviceName: "Golf course",
         bookButtonText: "Swing yours",
@@ -47,10 +47,10 @@ const FEATURED_SERVICES: ServicePreview[] = [
 
 interface ServiceAndAmenitiesPreviewProps {
     /**
-     * The service the current page already *is* (e.g. `/spa` passes "spa-and-wellness"), so the
-     * row cross-sells the rest. Layout follows from the resulting count.
+     * The service the current page already *is* (e.g. `/spa` passes "spa"), so the row
+     * cross-sells the rest. Typed as the path union so a stale value fails to compile.
      */
-    excludeId?: string;
+    excludeId?: ServicePreview["path"];
     overline?: string;
     heading?: string;
     description?: string;
@@ -63,7 +63,7 @@ export default function ServiceAndAmenitiesPreview({
     description = "Unlock experiences reserved only for those who dream deeply, Golf courses, wellness temples, and venues for your grandest visions.",
 }: ServiceAndAmenitiesPreviewProps = {}) {
     const shownServices = excludeId
-        ? FEATURED_SERVICES.filter((service) => service.id !== excludeId)
+        ? FEATURED_SERVICES.filter((service) => service.path !== excludeId)
         : FEATURED_SERVICES;
 
     // The full trio is the landing page's row; a filtered pair is the cross-sell outro on an
@@ -90,9 +90,7 @@ export default function ServiceAndAmenitiesPreview({
                     }`}
                 >
                     <OverlineText>{overline}</OverlineText>
-                    <Heading id="services-preview-heading">
-                        {heading}
-                    </Heading>
+                    <Heading id="services-preview-heading">{heading}</Heading>
                     <Text>{description}</Text>
                 </div>
 
@@ -107,11 +105,12 @@ export default function ServiceAndAmenitiesPreview({
                     }`}
                 >
                     {shownServices.map((service) => (
-                        // `id` used as key, not the array index — `excludeId`
+                        // `path` used as key, not the array index — `excludeId`
                         // changes which entries render, so index keys would
                         // reconcile the wrong card into the wrong slot.
                         <ServiceCard
-                            key={service.id}
+                            key={service.path}
+                            path={service.path}
                             imageSrc={service.imageSrc}
                             serviceName={service.serviceName}
                             bookButtonText={service.bookButtonText}
