@@ -18,12 +18,8 @@ import type { Review } from "@/features/reviews/types";
  */
 export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
     /**
-     * The three values move together on every step, so they live in one state
-     * object — separate `useState`s could tear (a render seeing the new index
-     * with the old direction) and send a card out the wrong side.
-     *
-     * `previousIndex` is the card currently animating out; `null` only before
-     * the first step.
+     * Index, previous index (the card animating out; `null` before the first step) and direction
+     * change together, so one state object — separate states could tear and exit the wrong side.
      */
     const [carousel, setCarousel] = useState<{
         index: number;
@@ -45,10 +41,8 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
     }
 
     return (
-        // No fixed height: the box follows the active quote. `overflow-hidden`
-        // stops a mid-slide card from bleeding past the border while the height
-        // catches up — the 19px of vertical padding gives it room to do that
-        // unseen.
+        // No fixed height: the box follows the active quote. `overflow-hidden` keeps a mid-slide
+        // card inside the border while the height catches up, hidden by the 19px padding.
         <div className="flex flex-row justify-between border border-black/10 rounded-[20px] w-full max-w-161 px-6.5 py-4.75 overflow-hidden">
             <ReviewViewport
                 reviews={reviews}

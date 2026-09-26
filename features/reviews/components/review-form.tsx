@@ -20,20 +20,11 @@ const QUOTE_MIN_LENGTH = 20;
 const QUOTE_MAX_LENGTH = 500;
 
 /**
- * The review form, as it appears inside the dialog on a reservation page.
+ * The review form in a reservation page's dialog — writing and editing both, as one booking carries
+ * one review. Reuses the auth form primitives (as profile-form.tsx does), but not `Field`, which
+ * renders an `<input>` where this needs a textarea and a radio group.
  *
- * Serves both writing and editing — one booking may carry one review
- * (`reviews_booking_id_key`), so a second submission is an edit and `upsert_stay_review`
- * handles it as one. That is why there is no separate edit component.
- *
- * The form primitives come from `features/auth/components/form-primitives.tsx` rather than
- * being redefined here. Cross-feature, and that is already the established path:
- * `features/account/components/profile-form.tsx` imports the same three constants. `Field`
- * is deliberately not used — it renders an `<input>`, and this form needs a `<textarea>`
- * and a radio group.
- *
- * @param bookingId - Travels in a hidden input. Not trusted: `upsert_stay_review` re-checks
- *   that it belongs to the caller and that the stay is finished.
+ * @param bookingId - A hidden input, not trusted: `upsert_stay_review` re-checks owner and status.
  * @param existing - The guest's current review when editing, so the fields start filled.
  * @param onClose - Called on cancel, and on a successful save.
  */

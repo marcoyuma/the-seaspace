@@ -8,18 +8,9 @@ import { getAuthUser } from "@/features/auth/actions";
 import type { ReviewFormState } from "@/features/reviews/types";
 
 /**
- * The two mutations in this feature: writing a review, and withdrawing it.
- *
- * Separate from actions.ts for the reason every other feature here states — each export of
- * a `"use server"` file is a public HTTP endpoint, so reads have no business being one.
- * That also means both functions below must assume they were called directly, with any
- * arguments at all, by anyone: the form is a convenience, never the validation.
- *
- * Nothing here is the last line of defence. Identity, ownership, whether the stay actually
- * happened, and the bounds on rating and length are all re-checked inside
- * `upsert_stay_review` (supabase/migrations/0018_reviews_write_path.sql), which is the only
- * thing that can write to `public.reviews`. The checks in this file exist to produce
- * sentences a guest can act on.
+ * Review mutations. Every `"use server"` export is a public endpoint, so both assume direct calls
+ * with any arguments. `upsert_stay_review` (0018) re-checks identity, ownership, stay and bounds —
+ * the checks here only produce sentences a guest can act on.
  */
 
 /**
@@ -55,11 +46,8 @@ function readString(formData: FormData, key: string): string {
 }
 
 /**
- * Turns a Postgrest failure into a sentence, logging the ones we did not anticipate.
- *
- * Same shape as `CREATE_BOOKING_ERRORS` handling in features/booking/server-actions.ts: an
- * unmapped code is a real bug, so it goes to the log with its code attached rather than
- * disappearing behind a generic message.
+ * Turns a Postgrest failure into a sentence. Unmapped codes are real bugs, so they're logged with
+ * their code (as with `CREATE_BOOKING_ERRORS` in features/booking/server-actions.ts).
  */
 function describeFailure(
     where: string,
@@ -80,21 +68,9 @@ function describeFailure(
 }
 
 /**
- * Posts a review, or rewrites the guest's existing one for the same stay.
- *
- * One booking may carry one review (`reviews_booking_id_key`), so a second submission for
- * the same stay is an edit rather than a conflict — which is why there is no separate
- * "update" action. There is deliberately no review window, and that is precisely why
- * editing has to exist: a typo with no expiry would otherwise be permanent.
- *
- * Note what is NOT sent: no stay, no guest id, no author name, no timestamp. The villa and
- * the guest come from the booking row inside `upsert_stay_review`, and the displayed
- * identity is copied from `public.guests` there — so the denormalised author columns are a
- * real snapshot rather than three strings the browser supplied.
- *
- * Shaped for `useActionState`: `(prevState, formData) => state`. Returns `{ ok: true }`
- * rather than redirecting — the guest is on their own reservation page and the modal closes
- * over it, so sending them elsewhere to say "got it" would cost them the page they were on.
+ * Posts or rewrites the guest's review: one per booking, so a resubmit is an edit (there's no review
+ * window, so typos must be fixable). Sends no stay, guest or author — the RPC derives them from the
+ * booking. Returns `{ ok: true }` for `useActionState` instead of redirecting off the page.
  *
  * @param formData `bookingId`, `rating`, `quote`.
  */
@@ -169,15 +145,8 @@ export async function saveStayReview(
 }
 
 /**
- * Withdraws the guest's review of one booking.
- *
- * A real DELETE, and the contrast with `bookings` is deliberate: 0009 refuses to delete a
- * booking because it is a financial record with a retention obligation behind it. A review
- * is an opinion — nothing depends on it and no law requires keeping it.
- *
- * Removing it also frees the booking to be reviewed again, since `reviews_booking_id_key`
- * no longer holds it. That is intended: withdrawing a review should not lock somebody out
- * of writing a better one.
+ * Withdraws the guest's review with a real DELETE — unlike a booking (a retained financial record,
+ * 0009), a review is an opinion. It frees `reviews_booking_id_key`, so a better one can follow.
  */
 export async function removeStayReview(
     _prevState: ReviewFormState,

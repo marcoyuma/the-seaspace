@@ -1,7 +1,5 @@
-// Client because of `useState`/`useEffect` and a ResizeObserver. In practice this module is
-// already in the client graph via ReviewCarousel, but a hooks module without the directive
-// fails with a confusing error the day someone imports it from a Server Component — the
-// directive is cheap and documents the boundary.
+// Client for hooks and a ResizeObserver. Already client via ReviewCarousel, but the directive
+// documents the boundary and avoids a confusing error if a Server Component imports it.
 "use client";
 
 import { useEffect, useRef, useState } from "react";

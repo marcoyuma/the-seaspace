@@ -16,26 +16,9 @@ import type {
 } from "@/features/reviews/types";
 
 /**
- * Data access for this feature. Reads only — the write path is in server-actions.ts, kept
- * apart because a `"use server"` export is a public HTTP endpoint and these should not be.
- *
- * Two clients appear below, and the split is the security boundary — the same arrangement
- * features/booking/actions.ts documents:
- *
- * - **Public reviews** use the anonymous client and `use cache`. Nothing in them is
- *   guest-specific, so one visitor's response is safe to serve to the next.
- * - **A guest's own review** uses the session-bound server client and is **never cached**.
- *   It answers a question about one person's reservation.
- *
- * ⚠️ Every read here goes through an `.rpc()`, never `.from("reviews")`.
- * `0018_reviews_write_path.sql` revoked SELECT on the table from `anon` and
- * `authenticated`, because `booking_id` maps a reservation to the guest who made it and the
- * anon key ships to the browser. Each function's RETURN TYPE is the column allow-list —
- * the same doctrine 0010 uses for availability and 0014 states outright: RLS filters rows,
- * not columns, so a function is what restricts a column.
- *
- * A `.select()` added here later will not fail loudly — it will come back as a permission
- * error that looks like a broken query. There is no table read to fall back to.
+ * Review reads (writes: server-actions.ts). Public reviews: anon client + `use cache`; a guest's own
+ * review: session client, never cached. ⚠️ RPCs only — 0018 revoked table SELECT (booking_id exposes
+ * guests), so return types are the column allow-list and a `.from("reviews")` is a permission error.
  */
 
 /**
@@ -50,20 +33,15 @@ export const CAROUSEL_SIZE = 8;
 export const STAY_REVIEWS_PREVIEW_SIZE = 6;
 
 /**
- * Shape the review RPCs return. Written by hand rather than generated — the project has no
- * `supabase gen types` step.
- *
- * `get_latest_reviews` and `get_stay_reviews` return the same seven columns, so one
- * interface serves both.
+ * Shape the review RPCs return (hand-written; no `supabase gen types`). `get_latest_reviews` and
+ * `get_stay_reviews` return the same seven columns, so one interface serves both.
  */
 interface ReviewRow {
     id: number;
     author_display_name: string;
     author_nationality: string;
-    // The avatar seam from 0008. Still unrendered: ReviewContent draws a Phosphor icon, and
-    // no guest has uploaded one. Returned by the RPC because it belongs to the read
-    // contract, and dropped in `toReview` below rather than being carried as a field
-    // nothing reads.
+    // Avatar seam from 0008, still unrendered (ReviewContent draws an icon). Part of the RPC's
+    // read contract, but dropped in `toReview` rather than carried as an unread field.
     author_avatar_path: string | null;
     rating: number;
     quote: string;
@@ -84,14 +62,9 @@ function toReview(row: ReviewRow): Review {
 }
 
 /**
- * Wraps a PostgrestError in a real Error.
- *
- * Thrown, not swallowed into an empty array: an empty result is a legitimate state here (it
- * hides the section), so returning one on failure would make a database outage look like a
- * property with no reviews yet.
- *
- * Twin of the helper in features/stays/actions.ts. Kept local because features in this repo
- * never share helpers; if a third reader appears, promote it to lib/supabase.ts.
+ * Wraps a PostgrestError in a real Error. Thrown, since an empty result hides the section and would
+ * disguise an outage as "no reviews yet". Twin of the helper in features/stays/actions.ts — promote
+ * it to lib/supabase.ts if a third reader appears.
  */
 function queryFailed(
     what: string,
@@ -103,11 +76,8 @@ function queryFailed(
 }
 
 /**
- * Both cache tags, on every read here.
- *
- * `STAYS_CACHE_TAG` keeps the catalogue webhook from 0017 clearing these exactly as it did
- * before this feature existed; `REVIEWS_CACHE_TAG` is the narrow door the write path uses,
- * so posting one review does not drop the whole hour-cached catalogue.
+ * Tags every read with both: `STAYS_CACHE_TAG` so the catalogue webhook still clears it, and
+ * `REVIEWS_CACHE_TAG` so posting a review doesn't drop the whole hour-cached catalogue.
  */
 function tagReviewRead() {
     cacheTag(STAYS_CACHE_TAG, REVIEWS_CACHE_TAG);
@@ -115,19 +85,9 @@ function tagReviewRead() {
 }
 
 /**
- * The newest reviews, most recent first — at most one per author — for the landing-page
- * carousel.
- *
- * Recency sets the priority (there is no curation column, so `created_at` decides who gets
- * in), but not the selection on its own: 100 seeded reviews come from 62 guests, and the
- * same name twice in a loop that holds eight cards reads as a bug.
- *
- * The dedupe used to be an overfetch plus a JS pass, with a note that PostgREST has no
- * `distinct on` and an `.rpc()` would be the fix. This is that rpc — the deduping is now
- * `distinct on` inside `get_latest_reviews`, keyed so that several deleted accounts do not
- * collapse into one row.
- *
- * `limit` is a ceiling, not a promise. ReviewsSection already handles a short result.
+ * Newest reviews, at most one per author, for the landing carousel. Recency decides (no curation
+ * column); `distinct on` inside `get_latest_reviews` stops 62 authors of 100 seeded reviews from
+ * repeating. `limit` is a ceiling — ReviewsSection handles a short result.
  */
 export async function getLatestReviews(
     limit = CAROUSEL_SIZE,
@@ -145,16 +105,9 @@ export async function getLatestReviews(
 }
 
 /**
- * Aggregates over *every* review, not just the carousel slice — the stats row describes the
- * property, not what happens to be on screen.
- *
- * Aggregated in SQL now. It used to pull a hundred `smallint`s and reduce them in JS,
- * because PostgREST's own aggregates (`rating.avg()`) depend on a server flag that is not
- * guaranteed to be on. Inside a function there is no such flag, and the zero-row guard that
- * used to live here is a `coalesce` in `get_review_stats` instead.
- *
- * ⚠️ Postgres `numeric` arrives over PostgREST as a **string**, not a number. Coerced here;
- * without it `averageRating.toFixed(2)` throws at render.
+ * Aggregates over *every* review — the stats row describes the property, not the carousel slice;
+ * computed in `get_review_stats`. ⚠️ `numeric` arrives as a **string**: coerced here, or
+ * `averageRating.toFixed(2)` throws at render.
  */
 export async function getReviewStats(): Promise<ReviewStats> {
     "use cache";
@@ -211,20 +164,10 @@ export async function getStayReviews(
 }
 
 /**
- * Every villa's rating, keyed by slug.
+ * Every villa's rating keyed by slug — one call, so both readers share a cache entry. ⚠️ Unrated
+ * villas are ABSENT, not zero: treat `undefined` as "render nothing" (0.00 reads as a bad review).
  *
- * One call rather than one per villa: the whole catalogue is four rows, and both readers
- * (the detail page for one villa, the landing-page preview grid for two) then share a
- * single cache entry.
- *
- * ⚠️ A villa with no reviews is **absent from the map**, not present with zeros. Callers
- * must treat `undefined` as "render nothing" — a 0.00 average would read as a bad review
- * rather than as no reviews. Same stance as ReviewsSection returning `null` when the table
- * is empty.
- *
- * @example
- * const ratings = await getStayRatingSummaries();
- * const rating = ratings.get("coastal-arch-retreat"); // StayRatingSummary | undefined
+ * @example const rating = (await getStayRatingSummaries()).get("coastal-arch-retreat");
  */
 export async function getStayRatingSummaries(): Promise<
     Map<string, StayRatingSummary>
@@ -266,21 +209,9 @@ export interface OwnReview {
 }
 
 /**
- * The signed-in guest's review of one booking, or `null` if they have not written one.
- *
- * Goes through `get_booking_review`, which scopes itself by `auth.uid()` internally — so
- * somebody else's booking id returns nothing rather than erroring, indistinguishable from a
- * booking that does not exist. That is what stops this becoming a way to ask "has reservation
- * #57 been reviewed".
- *
- * ⚠️ No `use cache`, ever. This reads cookies, and a cache entry here would be one guest's
- * review handed to whoever asked next. Wrapped in React's `cache` instead, so the page and
- * the prompt component asking the same question during one render share one round trip —
- * the same distinction features/auth/actions.ts draws.
- *
- * Returns `null` rather than throwing on failure: for a signed-out visitor the RPC
- * legitimately returns nothing, and "you have no review" is the honest answer to "what is
- * *your* review" when there is no you.
+ * The signed-in guest's review of one booking, or `null`. The RPC scopes by `auth.uid()`, so another
+ * guest's id looks nonexistent. ⚠️ Never `use cache` (reads cookies); React `cache` dedupes within a
+ * render. Failures return `null` too — "you have no review" is honest when there is no you.
  *
  * @param bookingId From the URL, so it may be anything at all.
  */

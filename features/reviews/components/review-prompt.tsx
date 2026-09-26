@@ -17,20 +17,11 @@ const TEXT_ACTION =
     "text-[16px] font-medium text-black underline underline-offset-4 transition-opacity duration-300 ease-out hover:opacity-60 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none";
 
 /**
- * "How was your stay?" on a reservation page — the panel that opens the review form, or
- * shows the review already written.
+ * "How was your stay?" panel: opens the review form, or shows the one written. ⚠️ Doesn't check
+ * reviewability — the page renders it only for `checked_out` bookings instead of a dead button;
+ * `upsert_stay_review` raises SB017 anyway, so this is presentation, not security.
  *
- * ⚠️ **This component assumes the stay is reviewable and does not check.** Whether a booking
- * qualifies is decided by the page that renders it: only `status === 'checked_out'` does,
- * and for anything else the page omits this section entirely rather than rendering a
- * disabled button. A dead control with no explanation is worse than no control — and the
- * page already carries a `BookingStatusBadge` that says what state the reservation is in.
- *
- * The database enforces the same rule regardless: `upsert_stay_review` raises SB017 for a
- * booking that is not checked out, so hiding the section is presentation, not security.
- *
- * @param existing - The guest's review of this booking, or `null` if they have not written
- *   one. Decides between the two states below.
+ * @param existing - The guest's review of this booking, or `null`; picks between the two states.
  */
 export default function ReviewPrompt({
     bookingId,

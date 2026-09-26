@@ -11,28 +11,14 @@ import { StarIcon } from "@phosphor-icons/react/dist/ssr";
 const RATINGS = [1, 2, 3, 4, 5] as const;
 
 /**
- * The 1–5 star picker in the review form.
+ * The review form's 1–5 star picker: five real radios hidden behind the stars, so arrow keys, Space
+ * and FormData work natively. State drives the hover preview ONLY — the checked radio stays the
+ * truth, surviving a failed submit. Uncontrolled via `defaultValue`, like every form here.
  *
- * Built on five real `<input type="radio">`s, visually hidden behind the stars rather than
- * replaced by them. That is not decoration:
- *
- * - Arrow keys move between options and Space selects, because that is what a radio group
- *   already does. A div-based picker has to reimplement all of it, usually badly.
- * - The value reaches the Server Action through ordinary form submission, so
- *   `saveStayReview` reads `formData.get("rating")` with no client state involved.
- * - React state here drives the hover preview ONLY. The checked radio stays the source of
- *   truth, so a failed submit re-renders with the guest's choice intact.
- *
- * `defaultValue` rather than a controlled `value`, matching every other form in this repo
- * (see features/account/components/profile-form.tsx): the field starts filled when editing
- * an existing review and is uncontrolled thereafter.
- *
- * @param defaultValue - The guest's existing rating when editing, or `undefined` for a new
- *   review. No star is filled until they pick one.
+ * @param defaultValue - The existing rating when editing; `undefined` leaves every star empty.
  * @param name - The FormData key. Defaults to `rating`, which is what the action reads.
  *
- * @example
- * <RatingInput defaultValue={4} />
+ * @example <RatingInput defaultValue={4} />
  */
 export default function RatingInput({
     defaultValue,
@@ -78,10 +64,8 @@ export default function RatingInput({
                                 value={value}
                                 defaultChecked={value === defaultValue}
                                 onChange={() => setSelected(value)}
-                                // `sr-only`, not `hidden` or `appearance-none`: the input has
-                                // to stay focusable and reachable by arrow keys. The ring
-                                // below is what makes that focus visible, since the input
-                                // itself is off-screen.
+                                // `sr-only`, not `hidden`/`appearance-none`: it must stay
+                                // focusable and arrow-key reachable; the ring below shows focus.
                                 className="peer sr-only"
                             />
 

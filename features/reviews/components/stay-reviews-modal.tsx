@@ -1,33 +1,21 @@
 "use client";
 
-// Client-side only for the open/closed flag. Everything shown inside is rendered on the
-// server and handed in as `children`, so no review data and no data-fetching code crosses
-// the boundary — the same arrangement ReviewsPanel (server) uses around ReviewCarousel
-// (client).
+// Client only for the open flag. The contents are server-rendered `children`, so no review data
+// or fetching crosses the boundary (as ReviewsPanel does around ReviewCarousel).
 import { useState } from "react";
 
 import Modal from "@/ui/modal";
 import PillButton from "@/ui/pill-button";
 
 /**
- * "Show all reviews" — the trigger, and the dialog it opens.
+ * "Show all reviews" trigger + dialog, on `ui/modal.tsx` — not `booking-modal.tsx`, which predates
+ * the shared shell, sits on the paid flow and is kept in step by hand until migrated.
  *
- * Built on `ui/modal.tsx`, which already owns the four behaviours a modal is wrong without
- * (Escape, backdrop click, focus move, scroll lock). Deliberately not on
- * `features/booking/components/booking-modal.tsx`: that one predates the shared shell, sits
- * on the critical path of the paid flow, and its own note says the two must be kept in step
- * by hand until it is migrated. Nothing here touches it.
- *
- * @param triggerLabel - Carries the count, e.g. "Show all 25 reviews", so the button says
- *   what it opens rather than making the reader guess how much more there is.
- * @param label - The dialog's accessible name. `Modal` has no visible-title convention, so
- *   every caller supplies one.
+ * @param triggerLabel - Carries the count ("Show all 25 reviews"), so the button says what it opens.
+ * @param label - The dialog's accessible name; `Modal` has no visible-title convention.
  * @param children - The full review list, server-rendered.
  *
- * @example
- * <StayReviewsModal triggerLabel="Show all 25 reviews" label="Reviews for Coastal Arch Retreat">
- *     <ul>…</ul>
- * </StayReviewsModal>
+ * @example <StayReviewsModal triggerLabel="Show all 25 reviews" label="Reviews"><ul>…</ul></StayReviewsModal>
  */
 export default function StayReviewsModal({
     triggerLabel,
