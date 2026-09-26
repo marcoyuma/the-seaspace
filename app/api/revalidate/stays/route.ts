@@ -7,7 +7,7 @@ import { STAYS_CACHE_TAG } from "@/lib/supabase";
 /**
  * On-demand catalogue revalidation, called by 0017's DB webhook (so SQL Editor fixes count too); keeps
  * the prerendered villa page from an hour of staleness. A Route Handler: the caller is external and
- * `updateTag` is Server-Action-only. ⚠️ STAYS_REVALIDATE_SECRET must equal Vault's, or it fails silently.
+ * `updateTag` is Server-Action-only. STAYS_REVALIDATE_SECRET must equal Vault's, or it fails silently.
  */
 
 /** Header the webhook carries its shared secret in. Mirrored in the migration. */

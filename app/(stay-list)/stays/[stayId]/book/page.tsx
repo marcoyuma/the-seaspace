@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Checkout. ⚠️ Nothing in the URL is trusted: dates and headcount are re-parsed, price re-read,
+ * Checkout. Nothing in the URL is trusted: dates and headcount are re-parsed, price re-read,
  * availability re-checked — and `create_booking` checks it all again. Per-request by nature, so the
  * promises go down un-awaited into <Suspense>, and `generateStaticParams()` would buy nothing.
  */
