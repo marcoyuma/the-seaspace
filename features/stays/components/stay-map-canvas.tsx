@@ -7,17 +7,31 @@ import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 /**
+ * Needs NEXT_PUBLIC_CARTO_API_KEY. It is browser-visible by design (a free quota key, no billing).
+ * CARTO watermarks keyless tiles since 2026-09-23 (docs.carto.com/faqs/carto-basemaps).
+ */
+const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY;
+
+/**
  * CARTO Voyager — full-colour basemap (green parks, blue water, tinted roads)
  * in the spirit of the OSM standard style. Chosen over tile.openstreetmap.org
  * because the OSMF tile policy forbids production use, and over Google because
- * it needs no API key, account, or billing. Swap to `light_all` for the
- * greyscale Positron variant; that is this constant only, the attribution and
- * subdomains below are shared across all CARTO styles.
+ * it needs no billing account (only a free key). Keyless still renders, just
+ * watermarked, so a missing key never breaks the page. Swap to `light_all` for
+ * the greyscale Positron variant; attribution and subdomains are shared.
  *
  * {r} is filled with "@2x" by Leaflet when `detectRetina` is on.
  */
-const TILE_URL =
-    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const TILE_URL = `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png${
+    CARTO_API_KEY ? `?key=${encodeURIComponent(CARTO_API_KEY)}` : ""
+}`;
+
+if (!CARTO_API_KEY && process.env.NODE_ENV === "development") {
+    console.warn(
+        "NEXT_PUBLIC_CARTO_API_KEY is not set, so map tiles will carry CARTO's watermark. " +
+            "Get a free key at https://carto.com/basemaps/apikey/",
+    );
+}
 
 /** Required by both OSM and CARTO's licences — must stay visible on the map. */
 const TILE_ATTRIBUTION =

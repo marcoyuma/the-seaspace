@@ -66,8 +66,8 @@ villa's actual location — and the customer-facing map renders at zoom 18, wher
 centroid-only pin would visibly miss.
 
 **Why Nominatim over a paid geocoder (e.g. Mapbox):** the customer site's own map
-(`stay-map-canvas.tsx`) already chose CARTO tiles over Google specifically because it "needs no
-API key, account, or billing." Nominatim is the geocoding counterpart of that same tile stack
+(`stay-map-canvas.tsx`) already chose CARTO tiles over Google specifically because it needs no
+billing account (only a free key, which CARTO has required since Sep 2026). Nominatim is the geocoding counterpart of that same tile stack
 and keeps that principle intact for the admin panel too. Mapbox's geocoder is more accurate
 out of the box, but the accuracy gap is exactly what the manual pin-drag step already closes —
 so it isn't worth trading away the no-key/no-billing property for.
