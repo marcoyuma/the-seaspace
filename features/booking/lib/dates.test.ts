@@ -25,13 +25,8 @@ import {
 } from "@/features/booking/lib/dates";
 
 /**
- * The calendar's arithmetic, which everything downstream of the date picker trusts.
- *
- * Two rules are load-bearing and are asserted repeatedly below rather than once:
- * check-out is EXCLUSIVE (a stay of [10th, 13th) occupies three nights, not four), and a
- * calendar day is a `yyyy-mm-dd` string compared lexicographically, never a `Date`.
- *
- * The suite runs with TZ pinned to Asia/Jakarta by vitest.config.ts — see the note there.
+ * The calendar arithmetic everything downstream trusts. Asserted repeatedly: check-out is EXCLUSIVE,
+ * and a day is a lexicographically compared `yyyy-mm-dd` string. TZ is pinned by vitest.config.ts.
  */
 
 describe("toISO / fromISO", () => {
@@ -294,10 +289,8 @@ describe("selectionHorizon", () => {
     });
 
     it("is tomorrow when nothing is booked", () => {
-        // ⚠️ The JSDoc on this function claims "a year out when nothing is booked". The code
-        // does not do that, and this test pins what it actually does. The comment is what
-        // looks wrong — firstBlockedAfter has nothing to find past the last booking — but
-        // changing either is a separate decision.
+        // ⚠️ Pins actual behaviour, which contradicts the JSDoc's "a year out when nothing is
+        // booked" (there's nothing past the last booking to find). Changing either is separate.
         expect(selectionHorizon([], "2026-08-01")).toBe("2026-08-02");
     });
 });

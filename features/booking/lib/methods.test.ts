@@ -14,11 +14,8 @@ import {
 } from "@/features/booking/lib/payment-methods";
 
 /**
- * The two radio lists at checkout, and the narrowing guards `payAndBook` runs them through.
- *
- * `paymentMethodLabel` and `checkInMethod` both end in a non-null assertion, which is only
- * safe while every id in the list is findable and the guards are the sole way in — the
- * lookup and uniqueness tests below are what keep that true.
+ * Checkout radio lists and `payAndBook`'s narrowing guards. The lookups' non-null assertions are
+ * safe only while every id is findable and the guards are the sole way in — these tests keep it so.
  */
 
 describe("isPaymentMethod", () => {

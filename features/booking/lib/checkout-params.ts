@@ -2,22 +2,9 @@ import { fromISO, toISO } from "@/features/booking/lib/dates";
 import type { GuestCounts } from "@/features/booking/types";
 
 /**
- * How a selection travels from the date picker to the checkout page.
- *
- * The picker is client state; the checkout page is a Server Component on another URL.
- * The URL is the handover, and it is deliberately the *whole* handover — there is no
- * store, no cookie and no draft row. Two things follow, and both are the point:
- *
- * 1. A checkout link can be bookmarked, shared or reloaded and still means the same
- *    thing. Nothing is lost by a refresh.
- * 2. Everything in it is untrusted input, exactly like a hand-typed URL, so the server
- *    re-validates all of it — see `parseCheckoutParams()` and, past that, the
- *    `create_booking` function in supabase/migrations/0011_booking_writes.sql.
- *
- * ⚠️ **No price ever appears in these parameters.** Not the nightly rate, not the total.
- * A price in the URL is a price the visitor can edit, and the checkout page would then be
- * quoting a number it was handed rather than one it looked up. The page re-reads the
- * catalogue; the database re-reads it again when the row is written.
+ * The URL is the WHOLE picker → checkout handover (no store, cookie or draft): links survive reloads
+ * and sharing, and all of it is untrusted — re-validated by `parseCheckoutParams()` and
+ * `create_booking`. ⚠️ **Never a price in these params**; page and database re-read the catalogue.
  */
 
 /** Where the `Reserve` button points. */
@@ -28,9 +15,7 @@ export function checkoutPath(slug: string): string {
 /**
  * The checkout URL for one selection, e.g.
  * `/stays/coastal-arch-retreat/book?checkIn=2026-09-16&checkOut=2026-09-17&adults=2`.
- *
- * Zero counts are omitted rather than written out as `children=0`: the URL stays short and
- * readable, and `parseCheckoutParams()` treats a missing count as zero anyway.
+ * Zero counts are omitted: shorter, and parsing treats a missing count as zero.
  */
 export function buildCheckoutUrl(
     slug: string,
@@ -86,13 +71,9 @@ function readCount(value: string, max: number): number | null {
 }
 
 /**
- * Reads a selection back out of the URL, or `null` if it is not a coherent one.
- *
- * `null` covers a link that was truncated, hand-edited, or kept from a stay that has since
- * changed — the checkout page turns it into a redirect back to the villa rather than a
- * half-filled form. What it does **not** cover is whether the dates are still free or
- * within capacity: those need the database, and are checked by the page and again by
- * `create_booking`.
+ * Reads a selection back from the URL, or `null` if incoherent (truncated, edited, stale) — the page
+ * then redirects to the villa. Availability and capacity need the database; the page checks them,
+ * and `create_booking` again.
  *
  * @param searchParams The awaited `searchParams` of the checkout page.
  *

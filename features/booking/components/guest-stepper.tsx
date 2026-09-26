@@ -67,13 +67,9 @@ function StepperRow({
 }
 
 /**
- * Adults / Children / Infants / Pets, as the reference design lays them out.
- *
- * ⚠️ Only `adults + children` is a real number here — that is what `bookings.num_guests`
- * would store. Infants are excluded by the same rule the footnote states, and the Pets
- * row is permanently disabled: the schema has no column for a pet, so an enabled control
- * would promise storage that does not exist. It is rendered rather than dropped because
- * "Pets aren't allowed" is itself the information a guest came for.
+ * The four guest rows from the design. ⚠️ Only adults + children is real (`num_guests`); infants are
+ * excluded, and Pets is permanently disabled (no column) yet shown, because "Pets aren't allowed" is
+ * itself what a guest came to learn.
  *
  * @param capacity - `stays.capacity`. Caps adults + children.
  */

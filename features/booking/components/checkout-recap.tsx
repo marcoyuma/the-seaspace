@@ -6,13 +6,9 @@ import type { GuestCounts } from "@/features/booking/types";
 import type { Stay } from "@/features/stays/types";
 
 /**
- * The right-hand column of the checkout page: which villa, and what it costs.
- *
- * A Server Component — it only renders props, and the prices come from the catalogue read
- * the page already did. ⚠️ This is a *quote*, not a record: the numbers stored on the
- * booking are snapshotted by `create_booking` from `stays` at insert time. The two agree
- * because both read the same row seconds apart, but the database's copy is the one that
- * counts. Do not later "simplify" the write path into trusting anything rendered here.
+ * Checkout's right column: the villa and its price. ⚠️ A *quote*, not a record — `create_booking`
+ * snapshots prices from `stays` at insert time, and the database's copy counts. Never make the
+ * write path trust anything rendered here.
  *
  * @param stay The villa, already fetched by the page.
  * @param checkIn Arrival, `yyyy-mm-dd`.

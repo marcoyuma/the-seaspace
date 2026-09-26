@@ -1,38 +1,9 @@
 import type { PaymentMethodId } from "@/features/booking/lib/payment-methods";
 
 /**
- * A simulated payment provider — **no money moves, and no card is ever collected.**
- *
- * ---------------------------------------------------------------------------
- * Why simulated, and why it is still shaped like a real one
- * ---------------------------------------------------------------------------
- * A real integration (Stripe Checkout in test mode, Midtrans Snap sandbox) would add a
- * redirect to a hosted page, a webhook endpoint, a signing secret and a tunnel for local
- * development — and a demo whose bookings silently stop completing whenever the webhook
- * is not running is a worse portfolio piece than an honest simulation. The interesting
- * decisions in this project are in the schema and the availability rules, not in who
- * charges the card.
- *
- * What is kept is the *shape* a provider imposes, because that is what the rest of the
- * system has to be built around either way:
- *
- * | Real provider | Here |
- * |---|---|
- * | Booking is created before the charge, holding the dates | same — see 0011's §5 |
- * | The call is slow and can fail | `SETTLEMENT_DELAY_MS`, and a decline path |
- * | Success returns an opaque reference | `DEMO-…` reference |
- * | Settlement is a second step | `settle_booking_payment()` |
- * | Refunding a settled charge is a separate call | `refundDemoPayment()` |
- *
- * So swapping this file for Stripe is: replace `chargeDemoPayment()` with a call that
- * creates a PaymentIntent, and move the `settle_booking_payment()` call into a webhook
- * route. Nothing else in the flow changes shape. That seam is the whole reason this is a
- * module and not four lines inside the Server Action.
- *
- * ⚠️ Server-side only. It is deliberately NOT in payment-methods.ts, which the checkout
- * form imports — a Client Component must never be able to reach a "payment succeeded"
- * function, even a fake one, because the shape it is standing in for cannot be trusted to
- * the browser.
+ * Simulated payment provider — **no money moves, no card is collected**; a real sandbox would add
+ * redirects, webhooks and tunnels. Keeps a provider's shape (row before charge, failable call, opaque
+ * ref, separate settle/refund), so Stripe only swaps `chargeDemoPayment()` + a webhook. ⚠️ Server-only.
  */
 
 /**
@@ -48,14 +19,9 @@ export type PaymentOutcome =
 /**
  * "Charges" an amount and returns a provider-shaped outcome.
  *
- * @param amountIdr Whole rupiah. Passed only so the amount is logged and echoed like a
- *   real charge would be — it is never the source of what gets stored, which the database
- *   computes from its own snapshot columns.
+ * @param amountIdr Whole rupiah, logged and echoed like a real charge — never what gets stored.
  * @param method Which of the demo methods the guest picked.
- * @param declineOnPurpose Set by the checkout form's "simulate a declined payment" toggle.
- *   The failure path exists in the UI and in the database (a cancelled, unpaid booking),
- *   so there has to be a way to actually reach it — a demo that can only succeed never
- *   proves it handles failure.
+ * @param declineOnPurpose The checkout "simulate a declined payment" toggle, so failure is reachable.
  *
  * @example
  * const outcome = await chargeDemoPayment({ amountIdr: 475_000, method: "gopay" });

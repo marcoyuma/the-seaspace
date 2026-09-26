@@ -23,12 +23,9 @@ import HorizontalLine from "@/ui/horizontal-line";
 export type ActiveLeg = "checkIn" | "checkOut";
 
 /**
- * The one modal: dates and guests together, centred, dismissed by the backdrop or Escape.
- *
- * Stateless about the booking itself — `BookingPanel` owns the selection so it survives
- * closing. The only thing kept here is which month pair is on screen, which is a property
- * of the view and should reset with it.
- *
+ * The one modal: dates and guests together, centred, dismissed by the backdrop or Escape. Stateless
+ * about the booking — `BookingPanel` owns the selection so it survives closing; only the visible
+ * month pair lives here, as it should reset with the view.
  * @param today - Today in the viewer's timezone, resolved by the parent after mount.
  * @param blocked - Days already taken, from `expandBlockedDays()`.
  * @param maxSelectable - Cap for the check-out leg, or `null`. See `firstBlockedAfter()`.
@@ -103,10 +100,8 @@ export default function BookingModal({
         };
     }, [isOpen]);
 
-    // Re-centre on today's month each time it opens, so a guest who paged six months
-    // ahead and closed does not reopen somewhere they have forgotten about. Adjusted
-    // during render rather than in an effect: the corrected month is painted on the
-    // first frame instead of one frame after it.
+    // Re-centre on today's month on each open, so a guest who paged ahead doesn't reopen somewhere
+    // forgotten. Adjusted during render, not in an effect, so the right month paints on frame one.
     const [wasOpen, setWasOpen] = useState(isOpen);
     if (isOpen !== wasOpen) {
         setWasOpen(isOpen);
@@ -122,10 +117,8 @@ export default function BookingModal({
 
     return (
         <div
-            // Kept mounted rather than conditionally rendered, as ui/menu-panel.tsx does,
-            // so the fade plays on the way out as well as in. `inert` while closed keeps
-            // the whole subtree out of the tab order and away from screen readers, which
-            // `invisible` alone would not guarantee.
+            // Kept mounted (like ui/menu-panel.tsx) so the fade also plays on exit. `inert` while
+            // closed keeps the subtree out of tab order and screen readers — `invisible` can't.
             inert={!isOpen}
             onMouseDown={(event) => {
                 // `mousedown`, and only when the press LANDED on the backdrop itself: a
@@ -183,10 +176,8 @@ export default function BookingModal({
                     </div>
                 </div>
 
-                {/* Calendars. Below `lg` only the left month is shown — see MonthCalendar's
-                    own prev/next arrows next to its title, passed only here. The side
-                    arrows below stay for `lg`+, where both months are visible and pinned
-                    to the outer edges no matter how many rows a month needs. */}
+                {/* Below `lg` only the left month shows, with MonthCalendar's own arrows by its
+                    title; these side arrows are for `lg`+, pinned to the outer edges. */}
                 <div className="mt-8 flex items-start gap-4">
                     <button
                         type="button"

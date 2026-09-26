@@ -1,15 +1,7 @@
 /**
- * How a guest chooses to be let in, picked at checkout — before the booking is made,
- * because "how do I get in" is something you want to know before you pay.
- *
- * Twin of payment-methods.ts, and plain data for the same reason: a Client Component
- * renders these radios, and nothing here should drag server code into the browser bundle.
- *
- * ⚠️ **This is a preference, not an authorisation.** There is one `access_code` per
- * booking and it works at both doors — see supabase/migrations/0012 for why a second
- * credential would have been two things to keep in sync for no gain. A guest who chose the
- * lock box can still scan; one whose phone is flat can still type. That flexibility is the
- * entire reason the lock box exists.
+ * How a guest chooses to be let in, picked before paying. Plain data like payment-methods.ts, for
+ * the client radios. ⚠️ **A preference, not an authorisation**: one `access_code` works at both
+ * doors (0012), so a lock-box guest can still scan and one with a flat phone can still type.
  */
 
 export type CheckInMethodId = "smart-lock" | "lock-box";

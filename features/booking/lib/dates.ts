@@ -1,23 +1,9 @@
 import type { BookedRange } from "@/features/booking/types";
 
 /**
- * Calendar arithmetic for the date picker.
- *
- * Hand-rolled rather than pulling in date-fns: the project has no date dependency, the
- * picker needs about eight operations, and `Intl` already ships in every runtime.
- *
- * ---------------------------------------------------------------------------
- * Two rules that everything here depends on
- * ---------------------------------------------------------------------------
- * 1. A calendar day is a `yyyy-mm-dd` STRING, never a `Date`. It is the format Postgres
- *    hands back for a `date` column, it compares correctly with `<` and `>` because ISO
- *    dates sort lexicographically, and it is safe as a Set key and a React key. `Date`
- *    is only ever a local intermediate.
- * 2. Where a `Date` is unavoidable it is built at LOCAL NOON. `new Date("2026-08-18")`
- *    parses as UTC midnight, which is the previous day in every timezone west of
- *    Greenwich — so the picker would render Bali's dates one day off for a visitor in
- *    New York. Noon is far enough from both midnights that no DST shift can cross a day
- *    boundary either.
+ * Hand-rolled calendar arithmetic (no date dependency; `Intl` suffices). 1) A day is a `yyyy-mm-dd`
+ * STRING — Postgres's format, sortable, a safe key. 2) Any `Date` is built at LOCAL NOON: ISO parsing
+ * gives UTC midnight (the day before, west of Greenwich), and no DST shift crosses noon.
  */
 
 /** `yyyy-mm-dd` for a local calendar day. */
@@ -50,29 +36,16 @@ export function nightsBetween(checkIn: string, checkOut: string): number {
 }
 
 /**
- * Today, in the viewer's timezone.
- *
- * ⚠️ Must only be called on the client. The detail page is prerendered, so a value
- * captured during the build would be frozen at build time and would also disagree with
- * whatever the browser computes at hydration. BookingPanel resolves it in an effect for
- * exactly that reason.
+ * Today in the viewer's timezone. ⚠️ Client only: the detail page is prerendered, so a build-time
+ * value would freeze and mismatch hydration — BookingPanel resolves it in an effect.
  */
 export function todayISO(): string {
     return toISO(new Date());
 }
 
 /**
- * Today at the villas, regardless of where the server or the visitor is.
- *
- * The counterpart to `todayISO()`, and the one to use on the SERVER. Vercel's clock is
- * UTC, so a guest in Jakarta booking at 07:00 on the 3rd would otherwise be told the 3rd
- * had already started — or, worse, be offered a night that Bali has already begun.
- * `Asia/Makassar` is WITA (UTC+8), the villas' own zone, and the same zone
- * `create_booking` compares against in supabase/migrations/0011_booking_writes.sql. The
- * two must not drift apart.
- *
- * `en-CA` is not a stylistic choice: it is the locale whose short date format is
- * `yyyy-mm-dd`, which is the format every day in this feature is a string of.
+ * Today at the villas — the SERVER's version (Vercel runs UTC). `Asia/Makassar` (WITA, UTC+8) must
+ * match `create_booking` (0011); `en-CA` because its short date format is `yyyy-mm-dd`.
  */
 export function propertyTodayISO(): string {
     return new Intl.DateTimeFormat("en-CA", {
@@ -96,11 +69,8 @@ export function startOfMonth(iso: string): string {
 }
 
 /**
- * One month laid out as calendar cells, Sunday-first.
- *
- * `null` is a leading blank before the 1st. Trailing blanks are trimmed — the grid is
- * only as tall as the month needs, which is why August renders six rows and September
- * five, matching the reference design.
+ * One month as Sunday-first cells; `null` is a leading blank. Trailing blanks are trimmed, so August
+ * renders six rows and September five, matching the design.
  *
  * @param monthStart - Any day in the month; the 1st is derived.
  * @returns Cells in reading order, length a multiple of 7.
@@ -132,13 +102,9 @@ export function monthGrid(monthStart: string): (string | null)[] {
 }
 
 /**
- * Every individual day covered by a booking.
- *
- * ⚠️ This is the ONE place the exclusive end date is turned into occupied days, and it
- * is why the loop stops before `range.end`. A booking of [10th, 13th) blocks the 10th,
- * 11th and 12th; the 13th is free from 11:00 AM for the next guest, so it stays
- * selectable as a check-in. Re-deriving this anywhere else is how a picker starts
- * losing one day per booking.
+ * Every day a booking covers. ⚠️ The ONE place exclusive ends become occupied days, hence stopping
+ * before `range.end`: [10th, 13th) blocks 10–12, and the 13th stays a valid check-in. Re-deriving
+ * this elsewhere is how a picker starts losing a day per booking.
  */
 export function expandBlockedDays(ranges: BookedRange[]): Set<string> {
     const blocked = new Set<string>();
@@ -153,16 +119,9 @@ export function expandBlockedDays(ranges: BookedRange[]): Set<string> {
 }
 
 /**
- * Whether every night of `[checkIn, checkOut)` is still free.
- *
- * ⚠️ The loop stops **before** `checkOut` for the same reason `expandBlockedDays()` does:
- * the departure day is not a night, and a stay ending the morning another begins is normal
- * turnover, not a clash. Checking `<=` here would refuse exactly the bookings the calendar
- * offers.
- *
- * A read-time answer, and therefore not a guarantee — `bookings_no_overlap` in the
- * database is what actually prevents a double booking. This exists to say so before a
- * payment is attempted rather than after.
+ * Whether every night of `[checkIn, checkOut)` is free — stops before `checkOut`, since departure is
+ * turnover, not a clash. A read-time answer, not a guarantee (`bookings_no_overlap` is); it just
+ * says so before payment.
  */
 export function rangeIsFree(
     checkIn: string,
@@ -176,16 +135,8 @@ export function rangeIsFree(
 }
 
 /**
- * The first taken day strictly after `checkIn`, or `null` if the rest of the window is
- * free.
- *
- * This is what stops a selection straddling somebody else's stay: once an arrival is
- * chosen, every day from here onward is unselectable, so a range can only ever be
- * carved out of one contiguous free block.
- *
- * Bounded by `horizon` rather than scanning forever — there is nothing beyond the last
- * booked day to find, and an unbounded loop on a villa with no future bookings would
- * never return.
+ * First taken day strictly after `checkIn`, or `null` — later days become unselectable, so a range
+ * can't straddle another stay. Bounded by `horizon`, or a villa with no future bookings never returns.
  */
 export function firstBlockedAfter(
     checkIn: string,
@@ -275,14 +226,9 @@ export function parseUsDate(value: string): string | null {
 }
 
 /**
- * The day the free-cancellation window runs out. Cancelling must happen BEFORE it, which
- * `withinFreeCancellation()` below is the check for.
- *
- * Airbnb's "Flexible" policy: a full refund if the guest cancels at least 24 hours
- * before check-in. Airbnb measures that against the 3:00 PM local check-in time; this
- * site stores `date`, not `timestamptz`, so the deadline is rounded to the whole day
- * before arrival — which is the same answer for every hour a guest would actually
- * cancel at, and never promises a refund Airbnb's rule would refuse.
+ * Last day of the free-cancellation window (cancel BEFORE it; see `withinFreeCancellation()`).
+ * Airbnb "Flexible" (24h before the 3 PM check-in), rounded to the whole day before arrival since we
+ * store `date` — never promising a refund Airbnb would refuse.
  */
 export function freeCancellationDeadline(checkIn: string): string {
     return addDays(checkIn, -1);
