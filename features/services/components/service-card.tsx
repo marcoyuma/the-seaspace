@@ -14,12 +14,9 @@ interface ServiceCardProps {
 }
 
 /**
- * Preview card for a single bookable service/amenity, used in
- * `ServiceAndAmenitiesPreview`. At rest the bottom pill shows only the
- * centred service name; on hover it rolls (translate-y, same mechanic as
- * `StayCardPreview`'s label) into a split layout — booking CTA text left,
- * arrow affordance right. Below `md` (no hover) it stays on the centred
- * rest state.
+ * Service card for `ServiceAndAmenitiesPreview`. At rest the bottom pill shows the centred name;
+ * on hover it rolls (like `StayCardPreview`'s label) into CTA text + arrow. Below `md` (no hover)
+ * it stays at rest.
  */
 export default function ServiceCard({
     imageSrc,
@@ -28,11 +25,7 @@ export default function ServiceCard({
     fluid = false,
 }: ServiceCardProps) {
     return (
-        // Was a fixed 385x445 inline style on the non-`fluid` path — same
-        // "hero image tidak tercrop" root cause as stay-card-preview.tsx.
-        // `aspect-385/445` keeps the original photo proportions while
-        // `w-full` lets the grid column (1-up mobile, up to 3-up at md+ in
-        // ServiceAndAmenitiesPreview) drive the actual rendered width.
+        // `aspect-*` + `w-full` keep the photo's proportions while the grid column drives width.
         <div
             className={`relative w-full overflow-hidden rounded-[20px] cursor-pointer group ${
                 fluid ? "aspect-4/3" : "aspect-385/445"
@@ -52,13 +45,9 @@ export default function ServiceCard({
                 alt={`${serviceName} service preview`}
             />
 
-            {/* Floating info pill anchored to the bottom edge of the card.
-                `h-12` (not `min-h-12`) is load-bearing: the two layouts
-                inside are `absolute inset-0` and roll vertically, so the
-                pill needs a fixed height for `translate-y-full` to resolve
-                against and for `overflow-hidden` to actually clip the roll.
-                40 → 48px is the same ramp as `CHIP_SIZE.md`, which this bar can't use
-                directly: its children are `absolute`, so padding wouldn't set its height. */}
+            {/* Fixed height, not `min-h`: the rolling layers are `absolute inset-0`, so the roll and
+                clip need a definite height — padding can't set it, which is why this can't reuse
+                `CHIP_SIZE.md` despite the same 40 → 48px ramp. */}
             <div className="absolute inset-x-3 bottom-3 h-10 overflow-hidden rounded-[20px] bg-white sm:h-12">
                 {/* Rest state: just the service name, centred. This is
                     also the permanent state below `md`, where there's no
@@ -69,13 +58,8 @@ export default function ServiceCard({
                     </p>
                 </div>
 
-                {/* Hover state: `StayCardPreview`-style split layout — CTA
-                    text left, outlined arrow right. Starts parked one pill
-                    -height below (`translate-y-full`) and rolls up into
-                    view on hover, same as the rest state rolls out above
-                    it. There's no separate CTA button anymore: the whole
-                    card is the click target (booking flow not wired up
-                    yet). */}
+                {/* Hover state: CTA text + outlined arrow, parked one pill-height below and rolled
+                    up on hover. No separate button — the whole card is the target (booking not wired). */}
                 <div
                     aria-hidden
                     className="absolute inset-0 flex translate-y-full items-center justify-between gap-x-3 py-1 pl-4 pr-2 transition-transform duration-300 ease-out md:group-hover:translate-y-0 motion-reduce:transition-none"
