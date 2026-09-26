@@ -3,18 +3,14 @@ import Image from "next/image";
 import jacuzziImg from "@/public/leisure/spa/jacuzzi.jpg";
 
 /**
- * Wide image band followed by a two-column heading/paragraph split.
- *
- * Carries `id="treatments"`. Nothing links to it since `SpaHero` dropped its
- * secondary CTA; kept as a stable target for anyone linking in from outside.
+ * Wide image band. `id="treatments"` has no internal link since `SpaHero` dropped its secondary
+ * CTA — kept as a stable inbound target.
  */
 export default function SpaRelaxationSection() {
     return (
         <div id="treatments" className="scroll-mt-14 pt-6">
-            {/* Matches `SpaHero`'s single remaining image size on
-                mobile/tablet (`h-70`/`sm:h-96`) so the two images left on the
-                page read as the same size once the hero drops to one column,
-                then returns to its original `h-155` at `lg`. */}
+            {/* Matches `SpaHero`'s image size below `lg` (`h-70`/`sm:h-96`), so both images
+                read the same once the hero is one column; `h-155` at `lg`. */}
             <div className="relative h-70 w-full overflow-hidden rounded-[20px] sm:h-96 lg:h-155">
                 <Image
                     src={jacuzziImg}
