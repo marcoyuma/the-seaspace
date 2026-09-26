@@ -16,8 +16,8 @@ function MapFallback() {
 /**
  * "How to get here": a pinned map of the stay plus ways to reach it.
  *
- * Nothing here needs an API key: the map is Leaflet over CARTO tiles, and the
- * drive link is a plain Google Maps URL. The "by air" card used to build a
+ * Nothing here needs a billing account: the map is Leaflet over CARTO's free
+ * keyed tiles, and the drive link is a plain Google Maps URL. The "by air" card used to build a
  * Google Flights link from a per-stay nearest-airport code/city, but every
  * villa in the catalogue hardcoded the same 'DPS'/'Denpasar' pair with no
  * lookup table behind it — not meaningfully per-villa data — so that column
