@@ -50,7 +50,11 @@ unused-and-duplicate-assets-report.md
 # internal reference docs — not for the repo
 ARCHITECTURE.md
 DATA-LAYER.md
-ACCOUNT-DELETION-POLICY.md 
+ACCOUNT-DELETION-POLICY.md
+RESPONSIVE-AUDIT.md
+STAYS-INPUT-DECISIONS.md
+GUEST_PLANNING_TABLE.md
+GIT-PRACTICE.md
 # Written for the admin panel repo, whose readers are explicitly stated to have
 # no access to this repo — so keeping it here defeats its own purpose.
 # Its content now belongs to that repo. The last version here can still be
