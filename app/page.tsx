@@ -30,7 +30,6 @@ export default function Page() {
 
                 <FamilyHistorySection />
 
-                {/* ADA MASALAH DI SINI MENGENAI RESPONSIVITAS HERO IMAGE TIDAK TERCROP */}
                 {/* A regenerated Vercel shell once failed to resume this section; with no error
                     boundary that took down the whole page instead of just the section. */}
                 <SectionErrorBoundary>
@@ -60,11 +59,6 @@ export default function Page() {
                 </SectionErrorBoundary>
 
                 <FaqSection />
-
-                {/* <ParallaxImageSection /> */}
-
-                {/* ADA MASALAH DI SINI MENGENAI RESPONSIVITAS HERO IMAGE TIDAK TERCROP */}
-                {/* <Footer /> */}
             </div>
         </div>
     );
