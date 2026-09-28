@@ -14,6 +14,7 @@ import ReviewsSection, {
 import FaqSection from "@/features/home/components/faq-section";
 import Hero from "@/features/home/components/hero";
 import Preloader from "@/ui/preloader";
+import SectionErrorBoundary from "@/ui/section-error-boundary";
 
 export default function Page() {
     return (
@@ -30,11 +31,15 @@ export default function Page() {
                 <FamilyHistorySection />
 
                 {/* ADA MASALAH DI SINI MENGENAI RESPONSIVITAS HERO IMAGE TIDAK TERCROP */}
-                {/* The section reads uncached data, so it needs its own boundary for a static
-                    shell — loading.tsx would have gated the whole page behind one fallback. */}
-                <Suspense fallback={<StaysPreviewSectionFallback />}>
-                    <StaysPreviewSection />
-                </Suspense>
+                {/* A regenerated Vercel shell once failed to resume this section; with no error
+                    boundary that took down the whole page instead of just the section. */}
+                <SectionErrorBoundary>
+                    {/* The section reads uncached data, so it needs its own boundary for a static
+                        shell — loading.tsx would have gated the whole page behind one fallback. */}
+                    <Suspense fallback={<StaysPreviewSectionFallback />}>
+                        <StaysPreviewSection />
+                    </Suspense>
+                </SectionErrorBoundary>
 
                 <ServiceAndAmenitiesPreview />
 
@@ -47,10 +52,12 @@ export default function Page() {
                 */}
                 <Gallery />
 
-                {/* Same reasoning as StaysPreviewSection's boundary above. */}
-                <Suspense fallback={<ReviewsSectionFallback />}>
-                    <ReviewsSection />
-                </Suspense>
+                {/* Same reasoning as StaysPreviewSection's boundaries above. */}
+                <SectionErrorBoundary>
+                    <Suspense fallback={<ReviewsSectionFallback />}>
+                        <ReviewsSection />
+                    </Suspense>
+                </SectionErrorBoundary>
 
                 <FaqSection />
 

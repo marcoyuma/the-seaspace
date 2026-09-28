@@ -41,9 +41,9 @@ export const STAYS_CACHE_PROFILE =
     process.env.NODE_ENV === "development" ? "seconds" : "hours";
 
 /**
- * Cache tag for reviews and their aggregates. Readers tag BOTH this and STAYS_CACHE_TAG, so the
- * catalogue webhook still clears them while a posted review invalidates only this. No profile of
- * its own: reviews ride STAYS_CACHE_PROFILE, and `updateTag` makes a new one appear instantly.
+ * Cache tag for reviews and aggregates; readers tag BOTH this and STAYS_CACHE_TAG, so the webhook
+ * still clears them while a posted review invalidates only this. Rides STAYS_CACHE_PROFILE. Write
+ * paths use `revalidateTag(…, "max")`, never `updateTag` (why: features/reviews/README.md §6).
  */
 export const REVIEWS_CACHE_TAG = "reviews";
 

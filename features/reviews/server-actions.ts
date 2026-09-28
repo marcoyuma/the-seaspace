@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { createClient } from "@/lib/supabase-server";
 import { REVIEWS_CACHE_TAG } from "@/lib/supabase";
@@ -131,10 +131,10 @@ export async function saveStayReview(
         return { message: describeFailure("save", error), values };
     }
 
-    // The landing-page carousel and the villa's own rating are cached for an hour, and both
-    // are now wrong. `updateTag`, not `revalidateTag`: this is read-your-own-writes, so the
-    // next render must wait for fresh data instead of being served the stale average.
-    updateTag(REVIEWS_CACHE_TAG);
+    // The carousel and villa ratings are now stale. "max", not updateTag: the guest's own review
+    // is read uncached, and a hard expiry from an action left Vercel caching a broken `/`
+    // (see deleteAccount). The public reads catch up one visit later.
+    revalidateTag(REVIEWS_CACHE_TAG, "max");
 
     // The trips pages read per-request and are never cached, so this is only about the
     // client-side router cache — without it the guest would navigate back to a page still
@@ -170,7 +170,8 @@ export async function removeStayReview(
         return { message: describeFailure("remove", error) };
     }
 
-    updateTag(REVIEWS_CACHE_TAG);
+    // Same reasoning as saveStayReview().
+    revalidateTag(REVIEWS_CACHE_TAG, "max");
     revalidatePath(`/account/trips/${bookingId}`);
 
     return { ok: true };
