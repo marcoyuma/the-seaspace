@@ -236,10 +236,13 @@ Every public read tags **both** `STAYS_CACHE_TAG` and `REVIEWS_CACHE_TAG`:
 - `REVIEWS_CACHE_TAG` is the narrow door the write path uses, so posting one review does not
   drop the whole four-villa catalogue — which is cached for an hour and did not change.
 
-Reviews ride on `STAYS_CACHE_PROFILE` (hours in production, seconds in development). What
-makes a new review appear immediately is not a short interval but `updateTag` — **not**
-`revalidateTag`: this is read-your-own-writes, so the next render must wait for fresh data
-rather than being served the stale average. Same call, same reason, as `payAndBook()`.
+Reviews ride on `STAYS_CACHE_PROFILE` (hours in production, seconds in development). Writes
+invalidate with `revalidateTag(REVIEWS_CACHE_TAG, "max")` — **never** `updateTag`. A hard
+expiry from a Server Action re-renders `/` inside that action, and on Vercel the resulting shell
+failed to resume `StaysPreviewSection` and `ReviewsSection` (`Error: Connection closed.`,
+digest `1701699860`) and was CDN-cached for every visitor. With `"max"` the next visitor gets
+the stale carousel while a normal background regeneration refreshes it. The guest still sees
+their own review at once, because `getOwnBookingReview()` below is uncached.
 
 ⚠️ **`getOwnBookingReview()` is never cached.** It reads cookies, and a cache entry there
 would be one guest's review handed to whoever asked next. It is wrapped in React's `cache`

@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { refresh, updateTag } from "next/cache";
+import { refresh, revalidateTag } from "next/cache";
 import { cookies, headers } from "next/headers";
 import type { Provider } from "@supabase/supabase-js";
 
@@ -673,9 +673,10 @@ export async function deleteAccount(
     // the same way signOut() does rather than leaving a dead session behind.
     await supabase.auth.signOut();
 
-    // Their reviews were just anonymised or erased, so the cached review reads are wrong
-    // now; the header only needs the client refresh, same as signOut().
-    updateTag(REVIEWS_CACHE_TAG);
+    // Their reviews changed, so the review reads are stale. "max", never updateTag: a hard expiry
+    // here re-renders `/` inside this action and Vercel cached a shell that failed to resume
+    // ("Connection closed.", digest 1701699860). The header only needs refresh(), as in signOut().
+    revalidateTag(REVIEWS_CACHE_TAG, "max");
     refresh();
     redirect("/");
 }
